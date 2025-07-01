@@ -52,15 +52,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       gameState.board[moveData.to] = piece;
       delete gameState.board[moveData.from];
       
-      // Update game state on server
+      // Toggle turn in game state
+      const nextTurn = game.currentTurn === 'white' ? 'black' : 'white';
+      gameState.currentTurn = nextTurn;
+      
+      // Update game state on server (includes the new turn)
       await storage.updateGameState(gameId, gameState);
+      
+      // Update current turn in database
+      await storage.updateGameTurn(gameId, nextTurn);
       
       // Add the move to history
       const move = await storage.addMove(moveData);
-
-      // Toggle turn
-      const nextTurn = game.currentTurn === 'white' ? 'black' : 'white';
-      await storage.updateGameTurn(gameId, nextTurn);
 
       res.json(move);
     } catch (error: any) {

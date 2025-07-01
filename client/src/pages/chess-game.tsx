@@ -82,9 +82,10 @@ export default function ChessGame() {
       });
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/games", gameId, "moves"] });
+    onSuccess: async () => {
+      // Immediately refetch the game state to get the updated turn
+      await queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/games", gameId, "moves"] });
       setSelectedSquare(null);
       setValidMoves([]);
     },
