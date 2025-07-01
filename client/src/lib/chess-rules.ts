@@ -78,8 +78,8 @@ export class ChessRules {
   }
 
   static getInitialPosition(rules: GameRules): { [square: string]: any } {
-    // Standard starting position
-    const standardBoard = {
+    // Standard chess starting position
+    return {
       'a8': { type: 'rook', color: 'black' },
       'b8': { type: 'knight', color: 'black' },
       'c8': { type: 'bishop', color: 'black' },
@@ -113,18 +113,5 @@ export class ChessRules {
       'g1': { type: 'knight', color: 'white' },
       'h1': { type: 'rook', color: 'white' },
     };
-
-    if (rules === 'fischer') {
-      // Randomize back rank pieces (Chess960)
-      return this.generateFischerPosition(standardBoard);
-    }
-
-    return standardBoard;
-  }
-
-  private static generateFischerPosition(standardBoard: any): any {
-    // This is a simplified Fischer Random implementation
-    // In a real implementation, you'd generate a random but valid Chess960 position
-    return standardBoard; // For now, just return standard position
   }
 }
