@@ -4,6 +4,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import ChessBoard from "@/components/chess-board";
 import RuleSelectionModal from "@/components/rule-selection-modal";
+import PawnPromotionModal from "@/components/pawn-promotion-modal";
 import GameStatus from "@/components/game-status";
 import MoveHistory from "@/components/move-history";
 import CapturedPieces from "@/components/captured-pieces";
@@ -18,6 +19,8 @@ export default function ChessGame() {
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [validMoves, setValidMoves] = useState<string[]>([]);
   const [showRuleModal, setShowRuleModal] = useState(false);
+  const [showPromotionModal, setShowPromotionModal] = useState(false);
+  const [promotionMove, setPromotionMove] = useState<{from: string, to: string, piece: any} | null>(null);
   const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState("00:00");
   const { toast } = useToast();
@@ -135,6 +138,24 @@ export default function ChessGame() {
       if (validMoves.includes(square)) {
         const fromPiece = gameState.board[selectedSquare];
         if (fromPiece) {
+          // Check if this is a pawn promotion
+          if (fromPiece.type === 'pawn') {
+            const toRank = parseInt(square[1]);
+            const shouldPromote = (fromPiece.color === 'white' && toRank === 8) || 
+                                 (fromPiece.color === 'black' && toRank === 1);
+            
+            if (shouldPromote) {
+              // Show promotion modal
+              setPromotionMove({
+                from: selectedSquare,
+                to: square,
+                piece: fromPiece
+              });
+              setShowPromotionModal(true);
+              return;
+            }
+          }
+          
           const captured = piece ? `${piece.color}-${piece.type}` : undefined;
           makeMoveMutation.mutate({
             from: selectedSquare,
@@ -186,6 +207,24 @@ export default function ChessGame() {
       title: "Draw Offered",
       description: "Game ended in a draw.",
     });
+  };
+
+  const handlePawnPromotion = (pieceType: 'queen' | 'rook' | 'bishop' | 'knight') => {
+    if (!promotionMove || !game) return;
+    
+    const currentGameState = game.gameState as ChessGameState;
+    const targetPiece = currentGameState?.board?.[promotionMove.to];
+    const captured = targetPiece ? `${targetPiece.color}-${targetPiece.type}` : undefined;
+      
+    makeMoveMutation.mutate({
+      from: promotionMove.from,
+      to: promotionMove.to,
+      piece: `${promotionMove.piece.color}-${pieceType}`, // Use selected piece type
+      captured,
+    });
+    
+    setShowPromotionModal(false);
+    setPromotionMove(null);
   };
 
   const getCapturedPieces = () => {
@@ -348,6 +387,14 @@ export default function ChessGame() {
         onOpenChange={setShowRuleModal}
         onRuleSelect={handleRuleSelection}
       />
+      
+      {promotionMove && (
+        <PawnPromotionModal
+          open={showPromotionModal}
+          onSelectPiece={handlePawnPromotion}
+          color={promotionMove.piece.color}
+        />
+      )}
     </div>
   );
 }

@@ -52,6 +52,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       gameState.board[moveData.to] = piece;
       delete gameState.board[moveData.from];
       
+      // Check for pawn promotion
+      if (piece && piece.type === 'pawn') {
+        const toRank = parseInt(moveData.to[1]);
+        const shouldPromote = (piece.color === 'white' && toRank === 8) || 
+                             (piece.color === 'black' && toRank === 1);
+        
+        if (shouldPromote) {
+          // Extract piece type from moveData.piece (format: "color-pieceType")
+          const [_, promotedPieceType] = moveData.piece.split('-');
+          gameState.board[moveData.to] = {
+            type: promotedPieceType as any,
+            color: piece.color
+          };
+        }
+      }
+      
       // Toggle turn in game state
       const nextTurn = game.currentTurn === 'white' ? 'black' : 'white';
       gameState.currentTurn = nextTurn;
