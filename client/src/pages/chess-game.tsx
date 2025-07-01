@@ -163,6 +163,13 @@ export default function ChessGame() {
     const piece = gameState.board[square];
 
     if (selectedSquare) {
+      // If clicking on the same square, deselect
+      if (selectedSquare === square) {
+        setSelectedSquare(null);
+        setValidMoves([]);
+        return;
+      }
+      
       // Trying to make a move
       if (validMoves.includes(square)) {
         const fromPiece = gameState.board[selectedSquare];
