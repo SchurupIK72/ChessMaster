@@ -152,6 +152,10 @@ export default function ChessGame() {
         setSelectedSquare(square);
         const moves = chessLogic.getValidMoves(gameState, square);
         setValidMoves(moves);
+      } else {
+        // Clear selection if clicking on wrong color or empty square
+        setSelectedSquare(null);
+        setValidMoves([]);
       }
     }
   };

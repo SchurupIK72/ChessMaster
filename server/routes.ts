@@ -38,14 +38,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameId,
       });
 
-      // Add the move to history
-      const move = await storage.addMove(moveData);
-      
-      // Update game state and turn
+      // Get current game state
       const game = await storage.getGame(gameId);
       if (!game) {
         return res.status(404).json({ message: "Game not found" });
       }
+
+      // Update the board state by making the move
+      const gameState = game.gameState as any;
+      const piece = gameState.board[moveData.from];
+      
+      // Move the piece
+      gameState.board[moveData.to] = piece;
+      delete gameState.board[moveData.from];
+      
+      // Update game state on server
+      await storage.updateGameState(gameId, gameState);
+      
+      // Add the move to history
+      const move = await storage.addMove(moveData);
 
       // Toggle turn
       const nextTurn = game.currentTurn === 'white' ? 'black' : 'white';
