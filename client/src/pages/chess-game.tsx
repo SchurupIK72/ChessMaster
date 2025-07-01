@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import ChessBoard from "@/components/chess-board";
 import RuleSelectionModal from "@/components/rule-selection-modal";
 import PawnPromotionModal from "@/components/pawn-promotion-modal";
+import GameOverModal from "@/components/game-over-modal";
 import GameStatus from "@/components/game-status";
 import MoveHistory from "@/components/move-history";
 import CapturedPieces from "@/components/captured-pieces";
@@ -20,6 +21,7 @@ export default function ChessGame() {
   const [validMoves, setValidMoves] = useState<string[]>([]);
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [showPromotionModal, setShowPromotionModal] = useState(false);
+  const [showGameOverModal, setShowGameOverModal] = useState(false);
   const [promotionMove, setPromotionMove] = useState<{from: string, to: string, piece: any} | null>(null);
   const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState("00:00");
@@ -127,6 +129,33 @@ export default function ChessGame() {
     return () => clearInterval(interval);
   }, [gameStartTime]);
 
+  // Game over detection effect
+  useEffect(() => {
+    if (!game || !game.gameState) return;
+    
+    const gameState = game.gameState as ChessGameState;
+    
+    // Check for checkmate
+    if (gameState.isCheckmate) {
+      const winner = gameState.currentTurn === 'white' ? 'black' : 'white';
+      setShowGameOverModal(true);
+      updateStatusMutation.mutate({ status: 'completed', winner });
+      return;
+    }
+    
+    // Check for stalemate
+    if (gameState.isStalemate) {
+      setShowGameOverModal(true);
+      updateStatusMutation.mutate({ status: 'draw' });
+      return;
+    }
+    
+    // Check if game is already completed
+    if (game.status === 'completed' || game.status === 'draw') {
+      setShowGameOverModal(true);
+    }
+  }, [game]);
+
   const handleSquareClick = (square: string) => {
     if (!game || !game.gameState) return;
 
@@ -195,6 +224,7 @@ export default function ChessGame() {
     if (!game) return;
     const winner = game.currentTurn === 'white' ? 'black' : 'white';
     updateStatusMutation.mutate({ status: 'completed', winner });
+    setShowGameOverModal(true);
     toast({
       title: "Game Resigned",
       description: `${game.currentTurn} player resigned. ${winner} wins!`,
@@ -203,10 +233,60 @@ export default function ChessGame() {
 
   const handleOfferDraw = () => {
     updateStatusMutation.mutate({ status: 'draw' });
+    setShowGameOverModal(true);
     toast({
       title: "Draw Offered",
       description: "Game ended in a draw.",
     });
+  };
+
+  const handleGameOverClose = () => {
+    setShowGameOverModal(false);
+  };
+
+  const handleNewGameFromModal = () => {
+    setShowGameOverModal(false);
+    setShowRuleModal(true);
+    setGameId(null);
+    setSelectedSquare(null);
+    setValidMoves([]);
+    setGameStartTime(null);
+  };
+
+  const getGameResult = () => {
+    if (!game) return null;
+    
+    const gameState = game.gameState as ChessGameState;
+    
+    if (gameState.isCheckmate) {
+      return {
+        result: 'checkmate' as const,
+        winner: gameState.currentTurn === 'white' ? 'black' as const : 'white' as const
+      };
+    }
+    
+    if (gameState.isStalemate) {
+      return {
+        result: 'stalemate' as const,
+        winner: null
+      };
+    }
+    
+    if (game.status === 'draw') {
+      return {
+        result: 'draw' as const,
+        winner: null
+      };
+    }
+    
+    if (game.status === 'completed' && game.winner) {
+      return {
+        result: 'resignation' as const,
+        winner: game.winner as 'white' | 'black'
+      };
+    }
+    
+    return null;
   };
 
   const handlePawnPromotion = (pieceType: 'queen' | 'rook' | 'bishop' | 'knight') => {
@@ -395,6 +475,19 @@ export default function ChessGame() {
           color={promotionMove.piece.color}
         />
       )}
+
+      {(() => {
+        const gameResult = getGameResult();
+        return gameResult && (
+          <GameOverModal
+            open={showGameOverModal}
+            result={gameResult.result}
+            winner={gameResult.winner}
+            onNewGame={handleNewGameFromModal}
+            onClose={handleGameOverClose}
+          />
+        );
+      })()}
     </div>
   );
 }

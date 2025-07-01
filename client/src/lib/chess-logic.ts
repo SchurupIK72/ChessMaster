@@ -37,6 +37,32 @@ export class ChessLogic {
     return moves.filter(move => !this.wouldBeInCheck(gameState, fromSquare, move, piece.color));
   }
 
+  // Check if the current player has any legal moves
+  hasLegalMoves(gameState: ChessGameState, color: 'white' | 'black'): boolean {
+    for (const [square, piece] of Object.entries(gameState.board)) {
+      if (piece && piece.color === color) {
+        const moves = this.getValidMovesForPiece(gameState, square, piece, true);
+        if (moves.length > 0) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // Update game state to detect checkmate and stalemate
+  updateGameStatus(gameState: ChessGameState): ChessGameState {
+    const currentPlayerInCheck = this.isKingInCheck(gameState, gameState.currentTurn);
+    const hasLegalMoves = this.hasLegalMoves(gameState, gameState.currentTurn);
+
+    return {
+      ...gameState,
+      isCheck: currentPlayerInCheck,
+      isCheckmate: currentPlayerInCheck && !hasLegalMoves,
+      isStalemate: !currentPlayerInCheck && !hasLegalMoves
+    };
+  }
+
   private getPawnMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece): string[] {
     const moves: string[] = [];
     const [file, rank] = fromSquare;

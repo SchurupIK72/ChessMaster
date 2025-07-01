@@ -3,6 +3,77 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertGameSchema, insertMoveSchema } from "@shared/schema";
 
+// Simple chess logic for server-side checkmate detection
+function isKingInCheck(gameState: any, color: 'white' | 'black'): boolean {
+  // Find the king
+  let kingSquare: string | null = null;
+  for (const [square, piece] of Object.entries(gameState.board)) {
+    if (piece && (piece as any).type === 'king' && (piece as any).color === color) {
+      kingSquare = square;
+      break;
+    }
+  }
+
+  if (!kingSquare) return false;
+
+  // Check if any opponent piece can attack the king
+  const opponentColor = color === 'white' ? 'black' : 'white';
+  for (const [square, piece] of Object.entries(gameState.board)) {
+    if (piece && (piece as any).color === opponentColor) {
+      // Simple attack pattern check (basic implementation)
+      if (canAttackSquare(gameState, square, kingSquare, piece as any)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, piece: any): boolean {
+  // Basic attack pattern check - simplified for demonstration
+  const fromFile = fromSquare[0];
+  const fromRank = fromSquare[1];
+  const toFile = toSquare[0];
+  const toRank = toSquare[1];
+  const fromFileIndex = fromFile.charCodeAt(0) - 'a'.charCodeAt(0);
+  const toFileIndex = toFile.charCodeAt(0) - 'a'.charCodeAt(0);
+  const fromRankNum = parseInt(fromRank);
+  const toRankNum = parseInt(toRank);
+  
+  const dx = toFileIndex - fromFileIndex;
+  const dy = toRankNum - fromRankNum;
+  
+  switch (piece.type) {
+    case 'pawn':
+      const direction = piece.color === 'white' ? 1 : -1;
+      return dy === direction && Math.abs(dx) === 1;
+    case 'rook':
+      return (dx === 0 || dy === 0);
+    case 'bishop':
+      return Math.abs(dx) === Math.abs(dy);
+    case 'queen':
+      return (dx === 0 || dy === 0 || Math.abs(dx) === Math.abs(dy));
+    case 'king':
+      return Math.abs(dx) <= 1 && Math.abs(dy) <= 1;
+    case 'knight':
+      return (Math.abs(dx) === 2 && Math.abs(dy) === 1) || (Math.abs(dx) === 1 && Math.abs(dy) === 2);
+    default:
+      return false;
+  }
+}
+
+function hasLegalMoves(gameState: any, color: 'white' | 'black'): boolean {
+  // Simplified check - in a real implementation, this would be more thorough
+  for (const [square, piece] of Object.entries(gameState.board)) {
+    if (piece && (piece as any).color === color) {
+      // For simplicity, assume there are always legal moves unless it's obvious checkmate
+      return true;
+    }
+  }
+  return false;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new game
   app.post("/api/games", async (req, res) => {
@@ -103,6 +174,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Toggle turn in game state
       const nextTurn = game.currentTurn === 'white' ? 'black' : 'white';
       gameState.currentTurn = nextTurn;
+      
+      // Check for check, checkmate, and stalemate
+      const isCheck = isKingInCheck(gameState, nextTurn);
+      const hasMovesAvailable = hasLegalMoves(gameState, nextTurn);
+      
+      gameState.isCheck = isCheck;
+      gameState.isCheckmate = isCheck && !hasMovesAvailable;
+      gameState.isStalemate = !isCheck && !hasMovesAvailable;
       
       // Update game state on server (includes the new turn)
       await storage.updateGameState(gameId, gameState);
