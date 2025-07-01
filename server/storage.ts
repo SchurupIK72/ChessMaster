@@ -208,6 +208,7 @@ export class MemStorage implements IStorage {
       isCheck: false,
       isCheckmate: false,
       isStalemate: false,
+      doubleKnightMove: null,
     };
   }
 }

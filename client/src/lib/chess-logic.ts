@@ -7,6 +7,16 @@ export class ChessLogic {
       return [];
     }
 
+    // Check for double knight rule restriction
+    if (gameState.doubleKnightMove) {
+      // Must move the specific knight that was moved in the first part
+      if (fromSquare !== gameState.doubleKnightMove.knightSquare || 
+          piece.type !== 'knight' || 
+          piece.color !== gameState.doubleKnightMove.color) {
+        return []; // Can only move the required knight
+      }
+    }
+
     const moves: string[] = [];
     const [file, rank] = fromSquare;
     const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);

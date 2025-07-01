@@ -93,6 +93,11 @@ export type ChessGameState = {
   isCheck: boolean;
   isCheckmate: boolean;
   isStalemate: boolean;
+  // For double knight rule
+  doubleKnightMove?: {
+    knightSquare: string;
+    color: 'white' | 'black';
+  } | null;
 };
 
-export type GameRules = 'standard';
+export type GameRules = 'standard' | 'double-knight';

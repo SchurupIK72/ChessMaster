@@ -12,10 +12,7 @@ interface GameStatusProps {
 
 const ruleDescriptions: Record<string, { name: string; description: string; status: 'active' | 'inactive' }> = {
   standard: { name: 'Standard Chess', description: 'Classic rules', status: 'active' },
-  koth: { name: 'King of the Hill', description: 'Win by reaching center', status: 'inactive' },
-  atomic: { name: 'Atomic Chess', description: 'Captures cause explosions', status: 'inactive' },
-  threetime: { name: 'Three-Check', description: 'Check 3 times to win', status: 'inactive' },
-  fischer: { name: 'Fischer Random', description: 'Randomized starting position', status: 'inactive' },
+  'double-knight': { name: 'Double Knight', description: 'Must move knight twice in a row', status: 'active' },
 };
 
 export default function GameStatus({ game, elapsedTime, onChangeRules }: GameStatusProps) {
@@ -88,6 +85,21 @@ export default function GameStatus({ game, elapsedTime, onChangeRules }: GameSta
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Double Knight Special Status */}
+          {game.rules === 'double-knight' && gameState.doubleKnightMove && (
+            <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse" />
+                <div>
+                  <p className="font-medium text-yellow-800">Second Knight Move Required</p>
+                  <p className="text-sm text-yellow-600">
+                    Must move the {gameState.doubleKnightMove.color} knight on {gameState.doubleKnightMove.knightSquare}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="flex items-center justify-between">
             <span className="text-slate-600">Current Turn:</span>
             <div className="flex items-center space-x-2">

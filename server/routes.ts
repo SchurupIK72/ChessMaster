@@ -74,6 +74,38 @@ function hasLegalMoves(gameState: any, color: 'white' | 'black'): boolean {
   return false;
 }
 
+function applyDoubleKnightRule(gameState: any, fromSquare: string, toSquare: string): any {
+  const piece = gameState.board[fromSquare];
+  const newGameState = { ...gameState };
+
+  // If we're in the middle of a double knight move
+  if (gameState.doubleKnightMove) {
+    // This is the second move with the same knight
+    if (fromSquare === gameState.doubleKnightMove.knightSquare && 
+        piece?.type === 'knight' && 
+        piece.color === gameState.doubleKnightMove.color) {
+      // Complete the double move - clear the flag and switch turns
+      newGameState.doubleKnightMove = null;
+      newGameState.currentTurn = gameState.currentTurn === 'white' ? 'black' : 'white';
+    }
+  } else {
+    // First move with a knight
+    if (piece?.type === 'knight') {
+      // Set up for required second move
+      newGameState.doubleKnightMove = {
+        knightSquare: toSquare,
+        color: piece.color
+      };
+      // Don't switch turns yet - same player must move again with this knight
+    } else {
+      // Normal move with non-knight piece
+      newGameState.currentTurn = gameState.currentTurn === 'white' ? 'black' : 'white';
+    }
+  }
+
+  return newGameState;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new game
   app.post("/api/games", async (req, res) => {
@@ -116,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update the board state by making the move
-      const gameState = game.gameState as any;
+      let gameState = game.gameState as any;
       const piece = gameState.board[moveData.from];
       
       // Check for en passant move (capturing) BEFORE resetting enPassantTarget
@@ -171,9 +203,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameState.fullmoveNumber++; // Increment after black's move
       }
       
-      // Toggle turn in game state
-      const nextTurn = game.currentTurn === 'white' ? 'black' : 'white';
-      gameState.currentTurn = nextTurn;
+      // Apply special rules before changing turns
+      let nextTurn: 'white' | 'black';
+      if (game.rules === 'double-knight') {
+        gameState = applyDoubleKnightRule(gameState, moveData.from, moveData.to);
+        nextTurn = gameState.currentTurn;
+      } else {
+        // Standard rules - toggle turn normally
+        nextTurn = game.currentTurn === 'white' ? 'black' : 'white';
+        gameState.currentTurn = nextTurn;
+      }
       
       // Check for check, checkmate, and stalemate
       const isCheck = isKingInCheck(gameState, nextTurn);

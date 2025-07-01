@@ -21,6 +21,13 @@ const gameRules = [
     badges: ['Default', 'Classic'],
     badgeColors: ['bg-green-100 text-green-800', 'bg-blue-100 text-blue-800'],
   },
+  {
+    id: 'double-knight' as GameRules,
+    name: 'Double Knight',
+    description: 'After moving a knight, you must make a second move with the same knight',
+    badges: ['Special', 'Tactical'],
+    badgeColors: ['bg-purple-100 text-purple-800', 'bg-orange-100 text-orange-800'],
+  },
 ];
 
 export default function RuleSelectionModal({ open, onOpenChange, onRuleSelect }: RuleSelectionModalProps) {
