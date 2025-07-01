@@ -48,13 +48,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gameState = game.gameState as any;
       const piece = gameState.board[moveData.from];
       
+      // Check for en passant move (capturing) BEFORE resetting enPassantTarget
+      const currentEnPassantTarget = gameState.enPassantTarget;
+      if (piece && piece.type === 'pawn' && moveData.to === currentEnPassantTarget) {
+        // This is an en passant capture
+        const captureRank = piece.color === 'white' ? '5' : '4';
+        const captureSquare = moveData.to[0] + captureRank;
+        delete gameState.board[captureSquare]; // Remove the captured pawn
+      }
+      
+      // Reset en passant target (will be set again if needed)
+      gameState.enPassantTarget = null;
+      
       // Move the piece
       gameState.board[moveData.to] = piece;
       delete gameState.board[moveData.from];
       
-      // Check for pawn promotion
+      // Check for pawn double move (set en passant target)
       if (piece && piece.type === 'pawn') {
+        const fromRank = parseInt(moveData.from[1]);
         const toRank = parseInt(moveData.to[1]);
+        
+        if (Math.abs(toRank - fromRank) === 2) {
+          // Pawn moved two squares, set en passant target
+          const enPassantRank = piece.color === 'white' ? '3' : '6';
+          gameState.enPassantTarget = moveData.to[0] + enPassantRank;
+        }
+        
+        // Check for pawn promotion
         const shouldPromote = (piece.color === 'white' && toRank === 8) || 
                              (piece.color === 'black' && toRank === 1);
         
@@ -66,6 +87,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             color: piece.color
           };
         }
+      }
+      
+      // Update move counters
+      if (piece?.type === 'pawn' || moveData.captured) {
+        gameState.halfmoveClock = 0; // Reset on pawn move or capture
+      } else {
+        gameState.halfmoveClock++;
+      }
+      
+      if (game.currentTurn === 'black') {
+        gameState.fullmoveNumber++; // Increment after black's move
       }
       
       // Toggle turn in game state
