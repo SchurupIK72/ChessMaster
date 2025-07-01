@@ -16,38 +16,10 @@ interface RuleSelectionModalProps {
 const gameRules = [
   {
     id: 'standard' as GameRules,
-    name: 'Standard Sword',
+    name: 'Standard',
     description: 'Classic chess rules with traditional gameplay',
-    badges: ['Default', 'Beginner Friendly'],
+    badges: ['Default', 'Classic'],
     badgeColors: ['bg-green-100 text-green-800', 'bg-blue-100 text-blue-800'],
-  },
-  {
-    id: 'koth' as GameRules,
-    name: 'King of the Hill',
-    description: 'Win by moving your king to the center four squares (d4, d5, e4, e5)',
-    badges: ['Aggressive', 'Fast Paced'],
-    badgeColors: ['bg-orange-100 text-orange-800', 'bg-purple-100 text-purple-800'],
-  },
-  {
-    id: 'atomic' as GameRules,
-    name: 'Atomic Sword',
-    description: 'Captures cause explosions that destroy surrounding pieces',
-    badges: ['Explosive', 'Chaotic'],
-    badgeColors: ['bg-red-100 text-red-800', 'bg-yellow-100 text-yellow-800'],
-  },
-  {
-    id: 'threetime' as GameRules,
-    name: 'Three-Check',
-    description: 'Win by putting your opponent in check three times',
-    badges: ['Tactical', 'Strategic'],
-    badgeColors: ['bg-indigo-100 text-indigo-800', 'bg-green-100 text-green-800'],
-  },
-  {
-    id: 'fischer' as GameRules,
-    name: 'Fischer Random (Chess960)',
-    description: 'Randomized starting position for back-rank pieces',
-    badges: ['Creative', 'Unpredictable'],
-    badgeColors: ['bg-teal-100 text-teal-800', 'bg-pink-100 text-pink-800'],
   },
 ];
 

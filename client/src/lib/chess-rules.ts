@@ -2,27 +2,8 @@ import { ChessGameState, GameRules } from "@shared/schema";
 
 export class ChessRules {
   static applySpecialRules(gameState: ChessGameState, rules: GameRules, fromSquare: string, toSquare: string): ChessGameState {
-    const newGameState = { ...gameState };
-
-    switch (rules) {
-      case 'koth':
-        newGameState = this.applyKingOfTheHill(newGameState, fromSquare, toSquare);
-        break;
-      case 'atomic':
-        newGameState = this.applyAtomicRules(newGameState, fromSquare, toSquare);
-        break;
-      case 'threetime':
-        newGameState = this.applyThreeCheck(newGameState, fromSquare, toSquare);
-        break;
-      case 'fischer':
-        // Fischer Random doesn't have special move rules, just different starting position
-        break;
-      default:
-        // Standard chess - no special rules
-        break;
-    }
-
-    return newGameState;
+    // Only standard chess rules - no special rules to apply
+    return gameState;
   }
 
   private static applyKingOfTheHill(gameState: ChessGameState, fromSquare: string, toSquare: string): ChessGameState {

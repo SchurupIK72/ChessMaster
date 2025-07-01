@@ -95,4 +95,4 @@ export type ChessGameState = {
   isStalemate: boolean;
 };
 
-export type GameRules = 'standard' | 'koth' | 'atomic' | 'threetime' | 'fischer';
+export type GameRules = 'standard';
