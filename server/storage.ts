@@ -61,8 +61,8 @@ export class MemStorage implements IStorage {
     
     const game: Game = {
       id,
-      whitePlayerId: insertGame.whitePlayerId,
-      blackPlayerId: insertGame.blackPlayerId,
+      whitePlayerId: insertGame.whitePlayerId || null,
+      blackPlayerId: insertGame.blackPlayerId || null,
       gameState: initialGameState as any,
       currentTurn: "white",
       status: "active",
@@ -116,6 +116,8 @@ export class MemStorage implements IStorage {
     const move: Move = {
       id,
       ...insertMove,
+      captured: insertMove.captured || null,
+      special: insertMove.special || null,
       timestamp: new Date(),
     };
     this.moves.set(id, move);
@@ -187,7 +189,7 @@ export class MemStorage implements IStorage {
     for (let rank = 1; rank <= 8; rank++) {
       for (let file = 'a'; file <= 'h'; file = String.fromCharCode(file.charCodeAt(0) + 1)) {
         const square = `${file}${rank}`;
-        board[square] = standardBoard[square] || null;
+        board[square] = (standardBoard as any)[square] || null;
       }
     }
 

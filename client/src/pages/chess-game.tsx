@@ -27,12 +27,14 @@ export default function ChessGame() {
   // Query for current game
   const { data: game, isLoading: gameLoading } = useQuery<Game>({
     queryKey: ["/api/games", gameId],
+    queryFn: () => fetch(`/api/games/${gameId}`).then(res => res.json()),
     enabled: !!gameId,
   });
 
   // Query for game moves
   const { data: moves = [] } = useQuery<Move[]>({
     queryKey: ["/api/games", gameId, "moves"],
+    queryFn: () => fetch(`/api/games/${gameId}/moves`).then(res => res.json()),
     enabled: !!gameId,
   });
 
@@ -216,7 +218,7 @@ export default function ChessGame() {
     return formatted;
   };
 
-  if (!game && !gameLoading) {
+  if (!gameId) {
     return (
       <div className="min-h-screen bg-slate-50 font-inter">
         <header className="bg-white shadow-sm border-b border-slate-200">
@@ -263,7 +265,7 @@ export default function ChessGame() {
     );
   }
 
-  if (gameLoading) {
+  if (gameLoading || (gameId && !game)) {
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>;
   }
 
@@ -308,7 +310,7 @@ export default function ChessGame() {
               selectedSquare={selectedSquare}
               validMoves={validMoves}
               onSquareClick={handleSquareClick}
-              currentTurn={game!.currentTurn}
+              currentTurn={game!.currentTurn as 'white' | 'black'}
             />
 
             {/* Game Controls */}
