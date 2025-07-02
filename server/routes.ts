@@ -31,6 +31,9 @@ function isKingInCheck(gameState: any, color: 'white' | 'black', gameRules?: str
 }
 
 function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, piece: any, gameRules?: string[]): boolean {
+  if (piece.type === 'bishop' && gameRules && gameRules.includes('xray-bishop')) {
+    console.log(`Checking bishop xray attack from ${fromSquare} to ${toSquare}`);
+  }
   const fromFile = fromSquare[0];
   const fromRank = fromSquare[1];
   const toFile = toSquare[0];
@@ -86,10 +89,17 @@ function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, p
         
         // Стандартный ход или рентген-ход через одну фигуру
         if (piecesEncountered === 0) {
+          if (piece.type === 'bishop' && gameRules && gameRules.includes('xray-bishop')) {
+            console.log(`Bishop standard attack: ${fromSquare} to ${toSquare} - pieces encountered: ${piecesEncountered}`);
+          }
           return true; // Стандартный ход
         } else if (piecesEncountered === 1) {
           // Рентген-ход доступен только при включенном правиле xray-bishop
-          return !!(gameRules && gameRules.includes('xray-bishop'));
+          const canXray = !!(gameRules && gameRules.includes('xray-bishop'));
+          if (piece.type === 'bishop' && gameRules && gameRules.includes('xray-bishop')) {
+            console.log(`Bishop xray attack: ${fromSquare} to ${toSquare} - pieces encountered: ${piecesEncountered}, can xray: ${canXray}`);
+          }
+          return canXray;
         }
         return false;
       }
