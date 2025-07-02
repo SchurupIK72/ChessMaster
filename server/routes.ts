@@ -155,9 +155,20 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
           // In PawnRotation mode, check if pawn has moved from its current starting position
           const pawnRotationMoves = gameState.pawnRotationMoves || {};
           
-          // Check if this specific pawn position has moved
-          const currentSquare = `${fromFile}${fromRankNum}`;
-          const hasPawnMoved = pawnRotationMoves[currentSquare];
+          // Check if this pawn has moved from its original starting position
+          let hasPawnMoved = false;
+          if (fromRankNum === startRank) {
+            // Pawn is on standard starting rank - check if it moved
+            const standardOriginalSquare = `${fromFile}${startRank}`;
+            hasPawnMoved = pawnRotationMoves[standardOriginalSquare];
+          } else if (gameRules.includes('pawn-wall')) {
+            // Pawn is on wall starting rank - check if it moved
+            const pawnWallStartRank = piece.color === 'white' ? 3 : 6;
+            if (fromRankNum === pawnWallStartRank) {
+              const wallOriginalSquare = `${fromFile}${pawnWallStartRank}`;
+              hasPawnMoved = pawnRotationMoves[wallOriginalSquare];
+            }
+          }
           
           canDoubleMoveForward = canDoubleMoveForward && !hasPawnMoved;
         }
@@ -186,9 +197,21 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
       if (gameRules && gameRules.includes('pawn-rotation')) {
         const pawnRotationMoves = gameState.pawnRotationMoves || {};
         
-        // Check if this specific pawn position has moved
-        const currentSquare = `${fromFile}${fromRankNum}`;
-        const hasPawnMoved = pawnRotationMoves[currentSquare];
+        // Check if this pawn has moved from its original starting position
+        let hasPawnMoved = false;
+        const standardOriginalRank = piece.color === 'white' ? 2 : 7;
+        if (fromRankNum === standardOriginalRank) {
+          // Pawn is on standard starting rank - check if it moved
+          const standardOriginalSquare = `${fromFile}${standardOriginalRank}`;
+          hasPawnMoved = pawnRotationMoves[standardOriginalSquare];
+        } else if (gameRules.includes('pawn-wall')) {
+          // Pawn is on wall starting rank - check if it moved
+          const pawnWallStartRank = piece.color === 'white' ? 3 : 6;
+          if (fromRankNum === pawnWallStartRank) {
+            const wallOriginalSquare = `${fromFile}${pawnWallStartRank}`;
+            hasPawnMoved = pawnRotationMoves[wallOriginalSquare];
+          }
+        }
         
         // Horizontal moves (left and right)
         for (const dx of [-1, 1]) {
@@ -546,8 +569,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
             gameState.pawnRotationMoves = {};
           }
           
-          // Mark only the actual original position this pawn moved from
-          gameState.pawnRotationMoves[moveData.from] = true;
+          // Mark the original starting square of this pawn as having moved
+          const standardOriginalRank = piece.color === 'white' ? 2 : 7;
+          const standardOriginalSquare = `${fromFile}${standardOriginalRank}`;
+          
+          // If pawn-wall is enabled, also check if it moved from wall position
+          if (Array.isArray(game.rules) && game.rules.includes('pawn-wall')) {
+            const pawnWallStartRank = piece.color === 'white' ? 3 : 6;
+            const wallOriginalSquare = `${fromFile}${pawnWallStartRank}`;
+            
+            // Mark the position it actually moved from
+            if (fromRank === standardOriginalRank) {
+              gameState.pawnRotationMoves[standardOriginalSquare] = true;
+            } else if (fromRank === pawnWallStartRank) {
+              gameState.pawnRotationMoves[wallOriginalSquare] = true;
+            }
+          } else {
+            // Standard mode - mark original position
+            gameState.pawnRotationMoves[standardOriginalSquare] = true;
+          }
         }
         
         if (Math.abs(toRank - fromRank) === 2) {
