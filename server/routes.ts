@@ -447,7 +447,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const targetPiece = gameState.board[moveData.to];
       
       // Validate move is legal (doesn't leave king in check)
-      if (!isMoveLegal(gameState, moveData.from, moveData.to, game.currentTurn, game.rules)) {
+      console.log('Validating move with rules:', game.rules);
+      console.log('Move from', moveData.from, 'to', moveData.to, 'by', game.currentTurn);
+      
+      if (!isMoveLegal(gameState, moveData.from, moveData.to, game.currentTurn as 'white' | 'black', game.rules as any)) {
         return res.status(400).json({ message: "Illegal move: would leave king in check" });
       }
       
@@ -585,8 +588,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check for check, checkmate, and stalemate
-      const isCheck = isKingInCheck(gameState, nextTurn, game.rules);
-      let hasMovesAvailable = hasLegalMoves(gameState, nextTurn, game.rules);
+      const isCheck = isKingInCheck(gameState, nextTurn, game.rules as any);
+      let hasMovesAvailable = hasLegalMoves(gameState, nextTurn, game.rules as any);
       
       // Special check for double knight rule stalemate
       if (Array.isArray(game.rules) && game.rules.includes('double-knight') && gameState.doubleKnightMove) {
