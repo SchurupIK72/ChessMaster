@@ -334,62 +334,167 @@ export class ChessLogic {
   // Get moves without check validation to avoid recursion
   private getRawMovesForPiece(gameState: ChessGameState, fromSquare: string, piece: ChessPiece): string[] {
     const moves: string[] = [];
-
-    switch (piece.type) {
-      case 'pawn':
-        moves.push(...this.getPawnMoves(gameState, fromSquare, piece));
-        break;
-      case 'rook':
-        moves.push(...this.getRookMoves(gameState, fromSquare, piece));
-        break;
-      case 'bishop':
-        moves.push(...this.getBishopMoves(gameState, fromSquare, piece));
-        break;
-      case 'queen':
-        moves.push(...this.getQueenMoves(gameState, fromSquare, piece));
-        break;
-      case 'knight':
-        moves.push(...this.getKnightMoves(gameState, fromSquare, piece));
-        break;
-      case 'king':
-        // For king, only get basic moves without castling to avoid recursion
-        moves.push(...this.getBasicKingMoves(gameState, fromSquare, piece));
-        break;
-    }
-
-    return moves;
-  }
-
-  // Basic king moves without castling logic
-  private getBasicKingMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece): string[] {
-    const moves: string[] = [];
     const [file, rank] = fromSquare;
     const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
     const rankNum = parseInt(rank);
 
-    const directions = [
-      [-1, -1], [-1, 0], [-1, 1],
-      [0, -1],           [0, 1],
-      [1, -1],  [1, 0],  [1, 1]
-    ];
-
-    for (const [dx, dy] of directions) {
-      const newFileIndex = fileIndex + dx;
-      const newRankNum = rankNum + dy;
-
-      if (newFileIndex >= 0 && newFileIndex < 8 && newRankNum >= 1 && newRankNum <= 8) {
-        const newFile = String.fromCharCode(newFileIndex + 'a'.charCodeAt(0));
-        const newSquare = `${newFile}${newRankNum}`;
-        const targetPiece = gameState.board[newSquare];
-
-        if (!targetPiece || targetPiece.color !== piece.color) {
-          moves.push(newSquare);
+    switch (piece.type) {
+      case 'pawn':
+        // Direct pawn moves without calling getPawnMoves
+        const direction = piece.color === 'white' ? 1 : -1;
+        const startRank = piece.color === 'white' ? 2 : 7;
+        
+        // One square forward
+        const oneForward = `${file}${rankNum + direction}`;
+        if (rankNum + direction >= 1 && rankNum + direction <= 8 && !gameState.board[oneForward]) {
+          moves.push(oneForward);
+          
+          // Two squares forward from starting position
+          if (rankNum === startRank) {
+            const twoForward = `${file}${rankNum + 2 * direction}`;
+            if (!gameState.board[twoForward]) {
+              moves.push(twoForward);
+            }
+          }
         }
-      }
+        
+        // Diagonal captures
+        for (const captureFile of [String.fromCharCode(fileIndex - 1 + 'a'.charCodeAt(0)), String.fromCharCode(fileIndex + 1 + 'a'.charCodeAt(0))]) {
+          if (captureFile >= 'a' && captureFile <= 'h') {
+            const captureSquare = `${captureFile}${rankNum + direction}`;
+            const targetPiece = gameState.board[captureSquare];
+            if (targetPiece && targetPiece.color !== piece.color) {
+              moves.push(captureSquare);
+            }
+          }
+        }
+        break;
+        
+      case 'rook':
+        // Direct rook moves
+        const rookDirections = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+        for (const [dx, dy] of rookDirections) {
+          for (let i = 1; i < 8; i++) {
+            const newFile = fileIndex + dx * i;
+            const newRank = rankNum + dy * i;
+            
+            if (newFile < 0 || newFile >= 8 || newRank < 1 || newRank > 8) break;
+            
+            const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
+            const targetPiece = gameState.board[newSquare];
+            
+            if (!targetPiece) {
+              moves.push(newSquare);
+            } else {
+              if (targetPiece.color !== piece.color) {
+                moves.push(newSquare);
+              }
+              break;
+            }
+          }
+        }
+        break;
+        
+      case 'bishop':
+        // Direct bishop moves
+        const bishopDirections = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+        for (const [dx, dy] of bishopDirections) {
+          for (let i = 1; i < 8; i++) {
+            const newFile = fileIndex + dx * i;
+            const newRank = rankNum + dy * i;
+            
+            if (newFile < 0 || newFile >= 8 || newRank < 1 || newRank > 8) break;
+            
+            const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
+            const targetPiece = gameState.board[newSquare];
+            
+            if (!targetPiece) {
+              moves.push(newSquare);
+            } else {
+              if (targetPiece.color !== piece.color) {
+                moves.push(newSquare);
+              }
+              break;
+            }
+          }
+        }
+        break;
+        
+      case 'queen':
+        // Direct queen moves (combination of rook and bishop)
+        const queenDirections = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+        for (const [dx, dy] of queenDirections) {
+          for (let i = 1; i < 8; i++) {
+            const newFile = fileIndex + dx * i;
+            const newRank = rankNum + dy * i;
+            
+            if (newFile < 0 || newFile >= 8 || newRank < 1 || newRank > 8) break;
+            
+            const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
+            const targetPiece = gameState.board[newSquare];
+            
+            if (!targetPiece) {
+              moves.push(newSquare);
+            } else {
+              if (targetPiece.color !== piece.color) {
+                moves.push(newSquare);
+              }
+              break;
+            }
+          }
+        }
+        break;
+        
+      case 'knight':
+        // Direct knight moves
+        const knightMoves = [
+          [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+          [1, -2], [1, 2], [2, -1], [2, 1]
+        ];
+        
+        for (const [dx, dy] of knightMoves) {
+          const newFile = fileIndex + dx;
+          const newRank = rankNum + dy;
+          
+          if (newFile >= 0 && newFile < 8 && newRank >= 1 && newRank <= 8) {
+            const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
+            const targetPiece = gameState.board[newSquare];
+            
+            if (!targetPiece || targetPiece.color !== piece.color) {
+              moves.push(newSquare);
+            }
+          }
+        }
+        break;
+        
+      case 'king':
+        // Basic king moves without castling
+        const kingDirections = [
+          [-1, -1], [-1, 0], [-1, 1],
+          [0, -1],           [0, 1],
+          [1, -1],  [1, 0],  [1, 1]
+        ];
+        
+        for (const [dx, dy] of kingDirections) {
+          const newFile = fileIndex + dx;
+          const newRank = rankNum + dy;
+          
+          if (newFile >= 0 && newFile < 8 && newRank >= 1 && newRank <= 8) {
+            const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
+            const targetPiece = gameState.board[newSquare];
+            
+            if (!targetPiece || targetPiece.color !== piece.color) {
+              moves.push(newSquare);
+            }
+          }
+        }
+        break;
     }
 
     return moves;
   }
+
+
 
   private isKingInCheck(gameState: ChessGameState, color: 'white' | 'black'): boolean {
     // Find the king
