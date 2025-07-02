@@ -1,6 +1,5 @@
 import { ChessGameState, ChessPiece } from "@shared/schema";
 import { cn } from "@/lib/utils";
-import chessBoardImage from "@assets/4_1751448474492.jpg";
 
 interface ChessBoardProps {
   gameState: ChessGameState;
@@ -96,9 +95,8 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
       <div 
         className="aspect-square w-full p-2 rounded-lg relative overflow-hidden"
         style={{
-          backgroundImage: `url(${chessBoardImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
+          background: 'linear-gradient(45deg, #5a7c5a 25%, #7a9b7a 25%, #7a9b7a 50%, #5a7c5a 50%, #5a7c5a 75%, #7a9b7a 75%, #7a9b7a)',
+          backgroundSize: '80px 80px'
         }}
       >
         <div className="grid grid-cols-8 gap-0 w-full h-full">
