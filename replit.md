@@ -132,13 +132,6 @@ Changelog:
   * Added server-side validation for basic move validation
   * Improved error handling and move validation pipeline
   * Applied classic green chess board design with proper piece colors
-- July 02, 2025. Implemented complete friend invitation system for multiplayer games
-  * Added game type selection modal (single player vs multiplayer)
-  * Created shareable invite codes and links for joining games
-  * Built intuitive invite sharing system with copy/share functionality
-  * Added game status indicators for waiting/active multiplayer games
-  * Supports URL-based game joining through invite links
-  * Full Russian language interface for all multiplayer features
 ```
 
 ## User Preferences

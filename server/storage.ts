@@ -19,11 +19,6 @@ export interface IStorage {
   // Chess-specific methods
   updateGameTurn(id: number, turn: 'white' | 'black'): Promise<Game>;
   updateCapturedPieces(id: number, capturedPieces: { white: string[], black: string[] }): Promise<Game>;
-  
-  // Multiplayer methods
-  getGameByInviteCode(code: string): Promise<Game | undefined>;
-  joinGame(gameId: number, playerId: number): Promise<Game>;
-  generateInviteCode(): string;
 }
 
 export class MemStorage implements IStorage {
@@ -71,16 +66,13 @@ export class MemStorage implements IStorage {
       blackPlayerId: insertGame.blackPlayerId || null,
       gameState: initialGameState as any,
       currentTurn: "white",
-      status: insertGame.gameType === "multiplayer" ? "waiting" : "active",
+      status: "active",
       rules: rulesArray,
       moveHistory: [],
       capturedPieces: { white: [], black: [] },
       gameStartTime: new Date(),
       gameEndTime: null,
       winner: null,
-      inviteCode: insertGame.gameType === "multiplayer" ? this.generateInviteCode() : null,
-      gameType: insertGame.gameType || "single",
-      creatorId: insertGame.creatorId || null,
     };
     
     this.games.set(id, game);
@@ -243,48 +235,6 @@ export class MemStorage implements IStorage {
       doubleKnightMove: null,
       pawnRotationMoves: rules.includes('pawn-rotation') ? {} : undefined,
     };
-  }
-
-  // Multiplayer methods
-  async getGameByInviteCode(code: string): Promise<Game | undefined> {
-    return Array.from(this.games.values()).find(game => game.inviteCode === code);
-  }
-
-  async joinGame(gameId: number, playerId: number): Promise<Game> {
-    const game = this.games.get(gameId);
-    if (!game) throw new Error("Game not found");
-    
-    if (game.status !== "waiting") {
-      throw new Error("Game is not available for joining");
-    }
-
-    // Assign player to empty slot
-    let updatedGame: Game;
-    if (!game.whitePlayerId) {
-      updatedGame = { ...game, whitePlayerId: playerId };
-    } else if (!game.blackPlayerId) {
-      updatedGame = { ...game, blackPlayerId: playerId };
-    } else {
-      throw new Error("Game is already full");
-    }
-
-    // Start game when both players joined
-    if (updatedGame.whitePlayerId && updatedGame.blackPlayerId) {
-      updatedGame.status = "active";
-    }
-
-    this.games.set(gameId, updatedGame);
-    return updatedGame;
-  }
-
-  generateInviteCode(): string {
-    // Generate a random 6-character code
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 6; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
   }
 }
 
