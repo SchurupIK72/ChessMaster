@@ -22,6 +22,7 @@ export default function ChessGame() {
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [showPromotionModal, setShowPromotionModal] = useState(false);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
+  const [gameOverShown, setGameOverShown] = useState(false);
   const [promotionMove, setPromotionMove] = useState<{from: string, to: string, piece: any} | null>(null);
   const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState("00:00");
@@ -56,6 +57,7 @@ export default function ChessGame() {
     onSuccess: (newGame: Game) => {
       setGameId(newGame.id);
       setGameStartTime(new Date(newGame.gameStartTime!));
+      setGameOverShown(false); // Reset flag for new game
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
       toast({
         title: "Game Started",
@@ -131,7 +133,7 @@ export default function ChessGame() {
 
   // Game over detection effect
   useEffect(() => {
-    if (!game || !game.gameState) return;
+    if (!game || !game.gameState || gameOverShown) return;
     
     const gameState = game.gameState as ChessGameState;
     
@@ -139,6 +141,7 @@ export default function ChessGame() {
     if (gameState.isCheckmate) {
       const winner = gameState.currentTurn === 'white' ? 'black' : 'white';
       setShowGameOverModal(true);
+      setGameOverShown(true);
       updateStatusMutation.mutate({ status: 'completed', winner });
       return;
     }
@@ -146,6 +149,7 @@ export default function ChessGame() {
     // Check for stalemate
     if (gameState.isStalemate) {
       setShowGameOverModal(true);
+      setGameOverShown(true);
       updateStatusMutation.mutate({ status: 'draw' });
       return;
     }
@@ -249,6 +253,7 @@ export default function ChessGame() {
 
   const handleGameOverClose = () => {
     setShowGameOverModal(false);
+    setGameOverShown(false); // Allow modal to show again for future games
   };
 
   const handleNewGameFromModal = () => {
