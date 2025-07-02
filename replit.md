@@ -121,6 +121,11 @@ Changelog:
   * Proper check/checkmate detection with X-ray attacks
   * Server-side validation prevents illegal moves under X-ray attack
   * Interface fully localized in Russian
+- July 02, 2025. Completed PawnRotation + PawnWall combination mode
+  * PawnRotation mode allows unlimited double moves (forward and horizontal)
+  * PawnWall creates double rows of pawns on 2-3 ranks (white) and 6-7 ranks (black)
+  * Combined mode works correctly with all pawn movement capabilities
+  * Fixed double move restrictions to work properly in rotation mode
 ```
 
 ## User Preferences
