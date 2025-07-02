@@ -173,9 +173,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Reset en passant target (will be set again if needed)
       gameState.enPassantTarget = null;
       
+      // Check for castling before moving the piece
+      let isCastling = false;
+      if (piece && piece.type === 'king') {
+        const fromFile = moveData.from[0];
+        const toFile = moveData.to[0];
+        
+        // Check if this is a castling move (king moves 2 squares)
+        if (Math.abs(fromFile.charCodeAt(0) - toFile.charCodeAt(0)) === 2) {
+          isCastling = true;
+          
+          // Move the rook as well
+          if (toFile === 'g') {
+            // Kingside castling
+            const rank = moveData.to[1];
+            const rookFrom = `h${rank}`;
+            const rookTo = `f${rank}`;
+            gameState.board[rookTo] = gameState.board[rookFrom];
+            delete gameState.board[rookFrom];
+          } else if (toFile === 'c') {
+            // Queenside castling
+            const rank = moveData.to[1];
+            const rookFrom = `a${rank}`;
+            const rookTo = `d${rank}`;
+            gameState.board[rookTo] = gameState.board[rookFrom];
+            delete gameState.board[rookFrom];
+          }
+        }
+      }
+
       // Move the piece
       gameState.board[moveData.to] = piece;
       delete gameState.board[moveData.from];
+
+      // Update castling rights after moving pieces
+      if (piece && piece.type === 'king') {
+        if (piece.color === 'white') {
+          gameState.castlingRights.whiteKingside = false;
+          gameState.castlingRights.whiteQueenside = false;
+        } else {
+          gameState.castlingRights.blackKingside = false;
+          gameState.castlingRights.blackQueenside = false;
+        }
+      } else if (piece && piece.type === 'rook') {
+        // Check which rook moved and disable appropriate castling
+        if (moveData.from === 'a1') {
+          gameState.castlingRights.whiteQueenside = false;
+        } else if (moveData.from === 'h1') {
+          gameState.castlingRights.whiteKingside = false;
+        } else if (moveData.from === 'a8') {
+          gameState.castlingRights.blackQueenside = false;
+        } else if (moveData.from === 'h8') {
+          gameState.castlingRights.blackKingside = false;
+        }
+      }
       
       // Check for pawn double move (set en passant target)
       if (piece && piece.type === 'pawn') {

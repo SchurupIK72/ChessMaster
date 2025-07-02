@@ -212,7 +212,44 @@ export class ChessLogic {
       }
     }
 
-    // TODO: Add castling logic
+    // Add castling logic
+    if (!this.isKingInCheck(gameState, piece.color)) {
+      // Check kingside castling
+      if (piece.color === 'white' && gameState.castlingRights.whiteKingside) {
+        if (!gameState.board['f1'] && !gameState.board['g1'] && gameState.board['h1']?.type === 'rook') {
+          // Check if squares are not under attack
+          if (!this.isSquareUnderAttack(gameState, 'f1', piece.color) && 
+              !this.isSquareUnderAttack(gameState, 'g1', piece.color)) {
+            moves.push('g1');
+          }
+        }
+      } else if (piece.color === 'black' && gameState.castlingRights.blackKingside) {
+        if (!gameState.board['f8'] && !gameState.board['g8'] && gameState.board['h8']?.type === 'rook') {
+          if (!this.isSquareUnderAttack(gameState, 'f8', piece.color) && 
+              !this.isSquareUnderAttack(gameState, 'g8', piece.color)) {
+            moves.push('g8');
+          }
+        }
+      }
+
+      // Check queenside castling
+      if (piece.color === 'white' && gameState.castlingRights.whiteQueenside) {
+        if (!gameState.board['d1'] && !gameState.board['c1'] && !gameState.board['b1'] && gameState.board['a1']?.type === 'rook') {
+          if (!this.isSquareUnderAttack(gameState, 'd1', piece.color) && 
+              !this.isSquareUnderAttack(gameState, 'c1', piece.color)) {
+            moves.push('c1');
+          }
+        }
+      } else if (piece.color === 'black' && gameState.castlingRights.blackQueenside) {
+        if (!gameState.board['d8'] && !gameState.board['c8'] && !gameState.board['b8'] && gameState.board['a8']?.type === 'rook') {
+          if (!this.isSquareUnderAttack(gameState, 'd8', piece.color) && 
+              !this.isSquareUnderAttack(gameState, 'c8', piece.color)) {
+            moves.push('c8');
+          }
+        }
+      }
+    }
+
     return moves;
   }
 
@@ -275,6 +312,22 @@ export class ChessLogic {
     delete tempState.board[fromSquare];
 
     return this.isKingInCheck(tempState, color);
+  }
+
+  private isSquareUnderAttack(gameState: ChessGameState, square: string, kingColor: 'white' | 'black'): boolean {
+    const opponentColor = kingColor === 'white' ? 'black' : 'white';
+    
+    // Check if any opponent piece can attack this square
+    for (const [fromSquare, piece] of Object.entries(gameState.board)) {
+      if (piece && piece.color === opponentColor) {
+        const moves = this.getValidMovesForPiece(gameState, fromSquare, piece, false);
+        if (moves.includes(square)) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
   }
 
   private isKingInCheck(gameState: ChessGameState, color: 'white' | 'black'): boolean {
