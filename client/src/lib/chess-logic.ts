@@ -130,6 +130,10 @@ export class ChessLogic {
       const pawnRotationMoves = gameState.pawnRotationMoves || {};
       const hasMovedHorizontally = pawnRotationMoves[fromSquare];
       
+      // Check if pawn is still in starting position (hasn't moved at all)
+      const isInStartingPosition = (piece.color === 'white' && rankNum === 2) || 
+                                 (piece.color === 'black' && rankNum === 7);
+      
       // Horizontal moves (left and right)
       for (const fileOffset of [-1, 1]) {
         const newFileIndex = fileIndex + fileOffset;
@@ -140,8 +144,8 @@ export class ChessLogic {
           if (!gameState.board[horizontalSquare]) {
             moves.push(horizontalSquare);
             
-            // If pawn hasn't moved horizontally yet, allow 2-square horizontal move
-            if (!hasMovedHorizontally) {
+            // Allow 2-square horizontal move only if pawn hasn't moved at all
+            if (isInStartingPosition && !hasMovedHorizontally) {
               const newFileIndex2 = fileIndex + 2 * fileOffset;
               if (newFileIndex2 >= 0 && newFileIndex2 < 8) {
                 const newFile2 = String.fromCharCode(newFileIndex2 + 'a'.charCodeAt(0));

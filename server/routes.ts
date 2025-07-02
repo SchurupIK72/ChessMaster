@@ -157,6 +157,10 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
         const pawnRotationMoves = gameState.pawnRotationMoves || {};
         const hasMovedHorizontally = pawnRotationMoves[fromSquare];
         
+        // Check if pawn is still in starting position (hasn't moved at all)
+        const isInStartingPosition = (piece.color === 'white' && fromRankNum === 2) || 
+                                   (piece.color === 'black' && fromRankNum === 7);
+        
         // Horizontal moves (left and right)
         for (const dx of [-1, 1]) {
           const newFile = String.fromCharCode(fromFileIndex + dx + 'a'.charCodeAt(0));
@@ -167,8 +171,8 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
             if (!targetPiece) {
               moves.push(horizontalSquare);
               
-              // If pawn hasn't moved horizontally yet, allow 2-square horizontal move
-              if (!hasMovedHorizontally) {
+              // Allow 2-square horizontal move only if pawn hasn't moved at all
+              if (isInStartingPosition && !hasMovedHorizontally) {
                 const newFile2 = String.fromCharCode(fromFileIndex + 2 * dx + 'a'.charCodeAt(0));
                 if (newFile2 >= 'a' && newFile2 <= 'h') {
                   const horizontalSquare2 = `${newFile2}${fromRankNum}`;
