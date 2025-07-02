@@ -21,7 +21,7 @@ const pieceSymbols: Record<string, string> = {
   'black-rook': '♜',
   'black-bishop': '♝',
   'black-knight': '♞',
-  'black-pawn': '♟',
+  'black-pawn': '♟︎',
 };
 
 export default function ChessBoard({ gameState, selectedSquare, validMoves, onSquareClick, currentTurn }: ChessBoardProps) {
@@ -58,17 +58,17 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
         {piece && (
           <span 
             className={cn(
-              "select-none",
-              piece.color === 'white' ? "text-white" : "text-gray-900"
+              "select-none font-bold",
+              piece.color === 'white' ? "text-white" : "text-black"
             )} 
             style={{ 
               filter: piece.color === 'white' 
                 ? 'drop-shadow(2px 2px 4px rgba(0,0,0,0.9))' 
-                : 'drop-shadow(1px 1px 2px rgba(255,255,255,0.8))',
+                : 'drop-shadow(2px 2px 4px rgba(255,255,255,0.9))',
               fontSize: '2.5rem',
               textShadow: piece.color === 'white' 
-                ? '1px 1px 2px rgba(0,0,0,0.8)' 
-                : '1px 1px 2px rgba(255,255,255,0.5)'
+                ? '2px 2px 4px rgba(0,0,0,0.8)' 
+                : '2px 2px 4px rgba(255,255,255,0.8)'
             }}
           >
             {pieceSymbols[`${piece.color}-${piece.type}`]}
