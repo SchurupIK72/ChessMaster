@@ -78,13 +78,19 @@ function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, p
         let checkY = fromRankNum + stepY;
         let piecesEncountered = 0;
         
+        const piecesOnPath = [];
         while (checkX !== toFileIndex || checkY !== toRankNum) {
           const checkSquare = String.fromCharCode(checkX + 'a'.charCodeAt(0)) + checkY;
           if (gameState.board[checkSquare]) {
             piecesEncountered++;
+            piecesOnPath.push(checkSquare);
           }
           checkX += stepX;
           checkY += stepY;
+        }
+        
+        if (piece.type === 'bishop' && gameRules && gameRules.includes('xray-bishop')) {
+          console.log(`Path from ${fromSquare} to ${toSquare}: pieces on path: [${piecesOnPath.join(', ')}]`);
         }
         
         // Стандартный ход или рентген-ход через одну фигуру
