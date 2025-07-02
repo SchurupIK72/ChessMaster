@@ -1,0 +1,57 @@
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+framework-862a1af8891026db.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+framework-862a1af8891026db.js:1 Unrecognized feature: 'ambient-light-sensor'.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Unrecognized feature: 'battery'.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Unrecognized feature: 'execution-while-not-rendered'.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Unrecognized feature: 'layout-animations'.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Unrecognized feature: 'legacy-image-formats'.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Unrecognized feature: 'navigation-override'.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Unrecognized feature: 'oversized-images'.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Unrecognized feature: 'publickey-credentials'.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Unrecognized feature: 'speaker-selection'.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Unrecognized feature: 'unoptimized-images'.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Unrecognized feature: 'unsized-media'.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Unrecognized feature: 'pointer-lock'.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+_ @ framework-862a1af8891026db.js:1
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Abeacon%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Af1c472fa&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=752a0774-ea7f-40c9-908c-7fef06952d53:1 
+            
+            
+           Failed to load resource: net::ERR_CONNECTION_CLOSED
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html:32 Unrecognized feature: 'battery'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.

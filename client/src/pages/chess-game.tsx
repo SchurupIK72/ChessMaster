@@ -483,7 +483,8 @@ export default function ChessGame() {
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
               <Sword className="h-24 w-24 text-slate-400 mx-auto mb-6" />
               <h2 className="text-3xl font-bold text-slate-800 mb-4">Welcome to Sword Master</h2>
-              <p className="text-lg text-slate-600 mb-8">Start a new game to begin playing chess with special rules</p>
+              <p className="text-lg text-slate-600 mb-4">Start a new game to begin playing chess with special rules</p>
+              <p className="text-sm text-gray-500 mb-4">Debug: showGameTypeModal = {showGameTypeModal.toString()}</p>
               <div className="flex gap-4 justify-center">
                 <Button onClick={handleNewGame} size="lg" className="bg-blue-600 hover:bg-blue-700">
                   <Plus className="h-5 w-5 mr-2" />
@@ -616,6 +617,13 @@ export default function ChessGame() {
         onSinglePlayer={handleSinglePlayer}
         onMultiplayer={handleMultiplayer}
       />
+      
+      {/* Debug modal - always show */}
+      {showGameTypeModal && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white p-2 rounded z-[100]">
+          Modal should be visible: {showGameTypeModal.toString()}
+        </div>
+      )}
 
       {game && game.inviteCode && (
         <InviteCodeModal
