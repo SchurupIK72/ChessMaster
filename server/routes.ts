@@ -96,7 +96,7 @@ function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, p
   }
 }
 
-function hasLegalMoves(gameState: any, color: 'white' | 'black', gameRules?: string): boolean {
+function hasLegalMoves(gameState: any, color: 'white' | 'black', gameRules?: string[]): boolean {
   // Check each piece of the current player
   for (const [fromSquare, piece] of Object.entries(gameState.board)) {
     if (piece && (piece as any).color === color) {
@@ -114,7 +114,7 @@ function hasLegalMoves(gameState: any, color: 'white' | 'black', gameRules?: str
   return false;
 }
 
-function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRules?: string): string[] {
+function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRules?: string[]): string[] {
   const moves: string[] = [];
   const fromFile = fromSquare[0];
   const fromRank = fromSquare[1];
@@ -133,7 +133,7 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
         
         // Two squares forward from starting position (only if pawn hasn't moved)
         let canDoubleMoveForward = fromRankNum === startRank;
-        if (gameRules === 'pawn-rotation') {
+        if (gameRules && gameRules.includes('pawn-rotation')) {
           // In PawnRotation mode, check if pawn has moved at all
           const pawnRotationMoves = gameState.pawnRotationMoves || {};
           const originalSquare = `${fromFile}${startRank}`;
@@ -162,7 +162,7 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
       }
       
       // PawnRotation rule: horizontal moves
-      if (gameRules === 'pawn-rotation') {
+      if (gameRules && gameRules.includes('pawn-rotation')) {
         const pawnRotationMoves = gameState.pawnRotationMoves || {};
         
         // Generate pawn ID based on original starting position
@@ -320,7 +320,7 @@ function hasLegalKnightMoves(gameState: any, knightSquare: string, color: 'white
   }
   
   // Get all possible knight moves from this square
-  const knightMoves = getPossibleMoves(gameState, knightSquare, piece, 'double-knight');
+  const knightMoves = getPossibleMoves(gameState, knightSquare, piece, ['double-knight']);
   
   // Check if any of these moves is legal (doesn't leave king in check)
   for (const toSquare of knightMoves) {
@@ -414,7 +414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const targetPiece = gameState.board[moveData.to];
       
       // Special validation for double knight rule: cannot capture king
-      if (game.rules === 'double-knight' && gameState.doubleKnightMove && 
+      if (Array.isArray(game.rules) && game.rules.includes('double-knight') && gameState.doubleKnightMove && 
           targetPiece && targetPiece.type === 'king') {
         return res.status(400).json({ message: "Cannot capture king during double knight move" });
       }
@@ -494,7 +494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const toFile = moveData.to[0];
         
         // Track pawn moves for PawnRotation rule (any move, not just horizontal)
-        if (game.rules === 'pawn-rotation') {
+        if (Array.isArray(game.rules) && game.rules.includes('pawn-rotation')) {
           if (!gameState.pawnRotationMoves) {
             gameState.pawnRotationMoves = {};
           }
@@ -537,7 +537,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Apply special rules before changing turns
       let nextTurn: 'white' | 'black';
-      if (game.rules === 'double-knight') {
+      if (Array.isArray(game.rules) && game.rules.includes('double-knight')) {
         gameState = applyDoubleKnightRule(gameState, moveData.from, moveData.to);
         nextTurn = gameState.currentTurn;
       } else {
@@ -551,7 +551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let hasMovesAvailable = hasLegalMoves(gameState, nextTurn, game.rules);
       
       // Special check for double knight rule stalemate
-      if (game.rules === 'double-knight' && gameState.doubleKnightMove) {
+      if (Array.isArray(game.rules) && game.rules.includes('double-knight') && gameState.doubleKnightMove) {
         // In double knight mode, if player is waiting for second knight move
         // but all possible knight moves would put king in check, it's stalemate
         hasMovesAvailable = hasLegalKnightMoves(gameState, gameState.doubleKnightMove.knightSquare, nextTurn);

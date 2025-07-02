@@ -1,7 +1,7 @@
 import { ChessGameState, ChessPiece } from "@shared/schema";
 
 export class ChessLogic {
-  getValidMoves(gameState: ChessGameState, fromSquare: string, gameRules?: string): string[] {
+  getValidMoves(gameState: ChessGameState, fromSquare: string, gameRules?: string[]): string[] {
     const piece = gameState.board[fromSquare];
     if (!piece || piece.color !== gameState.currentTurn) {
       return [];
@@ -83,7 +83,7 @@ export class ChessLogic {
     };
   }
 
-  private getPawnMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece, gameRules?: string): string[] {
+  private getPawnMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece, gameRules?: string[]): string[] {
     const moves: string[] = [];
     const [file, rank] = fromSquare;
     const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
@@ -98,7 +98,7 @@ export class ChessLogic {
 
       // Two squares forward from starting position (only if pawn hasn't moved)
       let canDoubleMoveForward = rankNum === startRank;
-      if (gameRules === 'pawn-rotation') {
+      if (gameRules && gameRules.includes('pawn-rotation')) {
         // In PawnRotation mode, check if pawn has moved at all
         const pawnRotationMoves = gameState.pawnRotationMoves || {};
         const originalSquare = `${file}${startRank}`;
@@ -135,7 +135,7 @@ export class ChessLogic {
     }
 
     // PawnRotation rule: horizontal moves
-    if (gameRules === 'pawn-rotation') {
+    if (gameRules && gameRules.includes('pawn-rotation')) {
       const pawnRotationMoves = gameState.pawnRotationMoves || {};
       
       // Generate pawn ID based on original starting position

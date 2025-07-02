@@ -1,47 +1,50 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { GameRules } from "@shared/schema";
-import { Sword } from "lucide-react";
+import { GameRules, GameRulesArray } from "@shared/schema";
+import { Sword, Plus } from "lucide-react";
 
 interface RuleSelectionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onRuleSelect: (rules: GameRules) => void;
+  onRuleSelect: (rules: GameRulesArray) => void;
 }
 
-const gameRules = [
-  {
-    id: 'standard' as GameRules,
-    name: 'Standard',
-    description: 'Classic chess rules with traditional gameplay',
-    badges: ['Default', 'Classic'],
-    badgeColors: ['bg-green-100 text-green-800', 'bg-blue-100 text-blue-800'],
-  },
+const availableRules = [
   {
     id: 'double-knight' as GameRules,
-    name: 'Double Knight',
-    description: 'After moving a knight, you must make a second move with the same knight',
-    badges: ['Special', 'Tactical'],
+    name: 'Двойной Конь',
+    description: 'После хода конем нужно сделать второй ход тем же конем',
+    badges: ['Тактика', 'Особый'],
     badgeColors: ['bg-purple-100 text-purple-800', 'bg-orange-100 text-orange-800'],
   },
   {
     id: 'pawn-rotation' as GameRules,
-    name: 'Pawn Rotation',
-    description: 'Pawns can move horizontally. First horizontal move can be 2 squares',
-    badges: ['Unique', 'Strategic'],
+    name: 'Поворот Пешек',
+    description: 'Пешки могут ходить горизонтально. Первый горизонтальный ход может быть на 2 клетки',
+    badges: ['Уникальный', 'Стратегия'],
     badgeColors: ['bg-yellow-100 text-yellow-800', 'bg-red-100 text-red-800'],
   },
 ];
 
 export default function RuleSelectionModal({ open, onOpenChange, onRuleSelect }: RuleSelectionModalProps) {
-  const [selectedRule, setSelectedRule] = useState<GameRules>('standard');
+  const [selectedRules, setSelectedRules] = useState<GameRules[]>([]);
+
+  const handleRuleToggle = (ruleId: GameRules) => {
+    setSelectedRules(prev => 
+      prev.includes(ruleId) 
+        ? prev.filter(id => id !== ruleId)
+        : [...prev, ruleId]
+    );
+  };
 
   const handleSubmit = () => {
-    onRuleSelect(selectedRule);
+    // Если ничего не выбрано, используем стандартные правила
+    const finalRules = selectedRules.length === 0 ? ['standard'] : selectedRules;
+    onRuleSelect(finalRules as GameRulesArray);
   };
 
   return (
@@ -50,26 +53,46 @@ export default function RuleSelectionModal({ open, onOpenChange, onRuleSelect }:
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-slate-800 flex items-center">
             <Sword className="h-6 w-6 mr-3 text-blue-600" />
-            Select Game Rules
+            Выбор Правил Игры
           </DialogTitle>
-          <p className="text-slate-600 mt-2">Choose special rules for your chess game</p>
+          <p className="text-slate-600 mt-2">
+            Выберите особые правила для шахматной партии. Можно комбинировать несколько правил.
+          </p>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <RadioGroup
-            value={selectedRule}
-            onValueChange={(value) => setSelectedRule(value as GameRules)}
-            className="space-y-4"
-          >
-            {gameRules.map((rule) => (
+          <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+            <h3 className="text-lg font-semibold text-slate-800 mb-2">
+              Стандартные Шахматы
+            </h3>
+            <p className="text-slate-600 text-sm">
+              Если ничего не выбрано, будут использованы классические правила
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-slate-800 flex items-center">
+              <Plus className="h-5 w-5 mr-2 text-green-600" />
+              Дополнительные Правила
+            </h3>
+            
+            {availableRules.map((rule) => (
               <div
                 key={rule.id}
-                className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer"
-                onClick={() => setSelectedRule(rule.id)}
+                className={`border rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer ${
+                  selectedRules.includes(rule.id) 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-slate-200'
+                }`}
+                onClick={() => handleRuleToggle(rule.id)}
               >
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0 mt-1">
-                    <RadioGroupItem value={rule.id} id={rule.id} />
+                    <Checkbox 
+                      checked={selectedRules.includes(rule.id)}
+                      onCheckedChange={() => handleRuleToggle(rule.id)}
+                      id={rule.id}
+                    />
                   </div>
                   <div className="flex-1">
                     <Label htmlFor={rule.id} className="text-lg font-semibold text-slate-800 cursor-pointer">
@@ -91,7 +114,23 @@ export default function RuleSelectionModal({ open, onOpenChange, onRuleSelect }:
                 </div>
               </div>
             ))}
-          </RadioGroup>
+          </div>
+          
+          {selectedRules.length > 0 && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <h4 className="font-semibold text-green-800 mb-2">Выбранные правила:</h4>
+              <div className="flex flex-wrap gap-2">
+                {selectedRules.map((ruleId) => {
+                  const rule = availableRules.find(r => r.id === ruleId);
+                  return rule ? (
+                    <Badge key={ruleId} className="bg-green-100 text-green-800">
+                      {rule.name}
+                    </Badge>
+                  ) : null;
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between pt-4 border-t border-slate-200">
@@ -100,13 +139,13 @@ export default function RuleSelectionModal({ open, onOpenChange, onRuleSelect }:
             onClick={() => onOpenChange(false)}
             className="text-slate-600 hover:text-slate-800"
           >
-            Cancel
+            Отмена
           </Button>
           <Button
             onClick={handleSubmit}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
-            Start Game
+            Начать Игру
           </Button>
         </div>
       </DialogContent>

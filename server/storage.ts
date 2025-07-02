@@ -1,4 +1,4 @@
-import { users, games, moves, type User, type InsertUser, type Game, type InsertGame, type Move, type InsertMove, type ChessGameState, type GameRules } from "@shared/schema";
+import { users, games, moves, type User, type InsertUser, type Game, type InsertGame, type Move, type InsertMove, type ChessGameState, type GameRules, type GameRulesArray } from "@shared/schema";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -57,7 +57,8 @@ export class MemStorage implements IStorage {
 
   async createGame(insertGame: InsertGame): Promise<Game> {
     const id = this.currentGameId++;
-    const initialGameState: ChessGameState = this.getInitialGameState(insertGame.rules as GameRules);
+    const rulesArray = Array.isArray(insertGame.rules) ? insertGame.rules : (insertGame.rules ? [insertGame.rules] : ["standard"]);
+    const initialGameState: ChessGameState = this.getInitialGameState(rulesArray);
     
     const game: Game = {
       id,
@@ -66,7 +67,7 @@ export class MemStorage implements IStorage {
       gameState: initialGameState as any,
       currentTurn: "white",
       status: "active",
-      rules: insertGame.rules || "standard",
+      rules: rulesArray,
       moveHistory: [],
       capturedPieces: { white: [], black: [] },
       gameStartTime: new Date(),
@@ -148,7 +149,7 @@ export class MemStorage implements IStorage {
     return updatedGame;
   }
 
-  private getInitialGameState(rules: GameRules): ChessGameState {
+  private getInitialGameState(rules: GameRulesArray): ChessGameState {
     const standardBoard = {
       'a8': { type: 'rook' as const, color: 'black' as const },
       'b8': { type: 'knight' as const, color: 'black' as const },

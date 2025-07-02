@@ -11,13 +11,14 @@ interface GameStatusProps {
 }
 
 const ruleDescriptions: Record<string, { name: string; description: string; status: 'active' | 'inactive' }> = {
-  standard: { name: 'Standard Chess', description: 'Classic rules', status: 'active' },
-  'double-knight': { name: 'Double Knight', description: 'Must move knight twice in a row', status: 'active' },
-  'pawn-rotation': { name: 'Pawn Rotation', description: 'Pawns can move horizontally (first move can be 2 squares)', status: 'active' },
+  standard: { name: 'Стандартные шахматы', description: 'Классические правила', status: 'active' },
+  'double-knight': { name: 'Двойной конь', description: 'Нужно ходить конем дважды подряд', status: 'active' },
+  'pawn-rotation': { name: 'Поворот пешек', description: 'Пешки могут ходить горизонтально', status: 'active' },
 };
 
 export default function GameStatus({ game, elapsedTime, onChangeRules }: GameStatusProps) {
-  const currentRule = ruleDescriptions[game.rules];
+  const activeRules = Array.isArray(game.rules) ? game.rules : [game.rules];
+  const isStandardOnly = activeRules.length === 1 && activeRules[0] === 'standard';
   const gameState = game.gameState as any;
 
   // Count remaining pieces
@@ -45,18 +46,38 @@ export default function GameStatus({ game, elapsedTime, onChangeRules }: GameSta
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-green-800">{currentRule.name}</p>
-                <p className="text-sm text-green-600">{currentRule.description}</p>
+          {isStandardOnly ? (
+            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-green-800">{ruleDescriptions.standard.name}</p>
+                  <p className="text-sm text-green-600">{ruleDescriptions.standard.description}</p>
+                </div>
+                <div className="w-3 h-3 bg-green-600 rounded-full" />
               </div>
-              <div className="w-3 h-3 bg-green-600 rounded-full" />
             </div>
-          </div>
+          ) : (
+            <>
+              {activeRules.filter(rule => rule !== 'standard').map(ruleKey => {
+                const rule = ruleDescriptions[ruleKey];
+                return rule ? (
+                  <div key={ruleKey} className="p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-green-800">{rule.name}</p>
+                        <p className="text-sm text-green-600">{rule.description}</p>
+                      </div>
+                      <div className="w-3 h-3 bg-green-600 rounded-full" />
+                    </div>
+                  </div>
+                ) : null;
+              })}
+            </>
+          )}
           
+          {/* Show inactive rules */}
           {Object.entries(ruleDescriptions).map(([key, rule]) => {
-            if (key === game.rules) return null;
+            if (key === 'standard' || activeRules.includes(key as any)) return null;
             return (
               <div key={key} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <div className="flex items-center justify-between">

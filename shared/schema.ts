@@ -15,7 +15,7 @@ export const games = pgTable("games", {
   gameState: jsonb("game_state").notNull(),
   currentTurn: text("current_turn").notNull().default("white"),
   status: text("status").notNull().default("active"), // active, completed, draw, resigned
-  rules: text("rules").notNull().default("standard"),
+  rules: jsonb("rules").$type<GameRulesArray>().notNull().default(["standard"]),
   moveHistory: jsonb("move_history").notNull().default([]),
   capturedPieces: jsonb("captured_pieces").notNull().default({ white: [], black: [] }),
   gameStartTime: timestamp("game_start_time").defaultNow(),
@@ -105,3 +105,4 @@ export type ChessGameState = {
 };
 
 export type GameRules = 'standard' | 'double-knight' | 'pawn-rotation';
+export type GameRulesArray = GameRules[];

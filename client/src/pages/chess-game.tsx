@@ -11,7 +11,7 @@ import MoveHistory from "@/components/move-history";
 import CapturedPieces from "@/components/captured-pieces";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { ChessPiece, ChessGameState, GameRules, Game, Move } from "@shared/schema";
+import { ChessPiece, ChessGameState, GameRules, GameRulesArray, Game, Move } from "@shared/schema";
 import { ChessLogic } from "@/lib/chess-logic";
 import { Sword, Crown, Plus, Settings } from "lucide-react";
 
@@ -46,7 +46,7 @@ export default function ChessGame() {
 
   // Create new game mutation
   const createGameMutation = useMutation({
-    mutationFn: async (rules: GameRules) => {
+    mutationFn: async (rules: GameRulesArray) => {
       const response = await apiRequest("POST", "/api/games", {
         whitePlayerId: null,
         blackPlayerId: null,
@@ -226,7 +226,7 @@ export default function ChessGame() {
     setShowRuleModal(true);
   };
 
-  const handleRuleSelection = (rules: GameRules) => {
+  const handleRuleSelection = (rules: GameRulesArray) => {
     createGameMutation.mutate(rules);
     setShowRuleModal(false);
   };
