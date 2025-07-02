@@ -44,7 +44,17 @@ export class ChessLogic {
     }
 
     // Filter out moves that would put own king in check
-    return moves.filter(move => !this.wouldBeInCheck(gameState, fromSquare, move, piece.color));
+    let validMoves = moves.filter(move => !this.wouldBeInCheck(gameState, fromSquare, move, piece.color));
+    
+    // Special rule for double knight: cannot capture the king
+    if (gameState.doubleKnightMove) {
+      validMoves = validMoves.filter(move => {
+        const targetPiece = gameState.board[move];
+        return !(targetPiece && targetPiece.type === 'king');
+      });
+    }
+    
+    return validMoves;
   }
 
   // Check if the current player has any legal moves

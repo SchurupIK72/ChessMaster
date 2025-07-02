@@ -153,6 +153,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update the board state by making the move
       let gameState = game.gameState as any;
       const piece = gameState.board[moveData.from];
+      const targetPiece = gameState.board[moveData.to];
+      
+      // Special validation for double knight rule: cannot capture king
+      if (game.rules === 'double-knight' && gameState.doubleKnightMove && 
+          targetPiece && targetPiece.type === 'king') {
+        return res.status(400).json({ message: "Cannot capture king during double knight move" });
+      }
       
       // Check for en passant move (capturing) BEFORE resetting enPassantTarget
       const currentEnPassantTarget = gameState.enPassantTarget;
@@ -209,17 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Apply special rules before changing turns
       let nextTurn: 'white' | 'black';
       if (game.rules === 'double-knight') {
-        console.log('Before applyDoubleKnightRule:', {
-          from: moveData.from,
-          to: moveData.to,
-          currentTurn: gameState.currentTurn,
-          doubleKnightMove: gameState.doubleKnightMove
-        });
         gameState = applyDoubleKnightRule(gameState, moveData.from, moveData.to);
-        console.log('After applyDoubleKnightRule:', {
-          currentTurn: gameState.currentTurn,
-          doubleKnightMove: gameState.doubleKnightMove
-        });
         nextTurn = gameState.currentTurn;
       } else {
         // Standard rules - toggle turn normally
