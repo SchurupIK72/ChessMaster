@@ -1,5 +1,6 @@
 import { ChessGameState, ChessPiece } from "@shared/schema";
 import { cn } from "@/lib/utils";
+import chessBoardImage from "@assets/4_1751448474492.jpg";
 
 interface ChessBoardProps {
   gameState: ChessGameState;
@@ -44,27 +45,35 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
       <div
         key={square}
         className={cn(
-          "aspect-square flex items-center justify-center text-4xl cursor-pointer transition-colors relative",
-          isLight ? "bg-amber-100" : "bg-amber-800",
-          isSelected && "ring-4 ring-blue-400 ring-opacity-75",
-          isValidMove && "bg-green-200 dark:bg-green-800",
-          !piece && isValidMove && "hover:bg-green-300 dark:hover:bg-green-700",
-          piece && !isSelected && "hover:bg-blue-200 dark:hover:bg-blue-800"
+          "aspect-square flex items-center justify-center text-4xl cursor-pointer transition-all relative",
+          // Прозрачный фон для проступания текстуры
+          "bg-transparent hover:bg-black hover:bg-opacity-20",
+          isSelected && "bg-blue-400 bg-opacity-60 ring-2 ring-blue-600",
+          isValidMove && "bg-green-400 bg-opacity-50",
+          !piece && isValidMove && "hover:bg-green-500 hover:bg-opacity-60",
+          piece && !isSelected && "hover:bg-blue-300 hover:bg-opacity-40"
         )}
         onClick={() => onSquareClick(square)}
       >
         {piece && (
-          <span className="select-none">
+          <span 
+            className="select-none text-white" 
+            style={{ 
+              filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.9))',
+              fontSize: '2.5rem',
+              textShadow: '1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(255,255,255,0.3)'
+            }}
+          >
             {pieceSymbols[`${piece.color}-${piece.type}`]}
           </span>
         )}
         {isValidMove && !piece && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-3 h-3 bg-green-600 rounded-full opacity-60" />
+            <div className="w-5 h-5 bg-yellow-400 rounded-full opacity-80 shadow-lg border-2 border-yellow-600" />
           </div>
         )}
         {isValidMove && piece && (
-          <div className="absolute inset-0 border-4 border-green-600 opacity-60 pointer-events-none" />
+          <div className="absolute inset-0 border-4 border-yellow-400 opacity-80 pointer-events-none rounded-lg shadow-lg" />
         )}
       </div>
     );
@@ -84,7 +93,14 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
       </div>
 
       {/* Chess Board */}
-      <div className="aspect-square w-full bg-slate-800 p-2 rounded-lg">
+      <div 
+        className="aspect-square w-full p-2 rounded-lg relative overflow-hidden"
+        style={{
+          backgroundImage: `url(${chessBoardImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      >
         <div className="grid grid-cols-8 gap-0 w-full h-full">
           {ranks.map(rank =>
             files.map(file => renderSquare(file, rank))
