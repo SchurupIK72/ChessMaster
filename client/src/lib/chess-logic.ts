@@ -320,7 +320,8 @@ export class ChessLogic {
     // Check if any opponent piece can attack this square
     for (const [fromSquare, piece] of Object.entries(gameState.board)) {
       if (piece && piece.color === opponentColor) {
-        const moves = this.getValidMovesForPiece(gameState, fromSquare, piece, false);
+        // Get raw moves without check validation to avoid recursion
+        const moves = this.getRawMovesForPiece(gameState, fromSquare, piece);
         if (moves.includes(square)) {
           return true;
         }
@@ -328,6 +329,66 @@ export class ChessLogic {
     }
     
     return false;
+  }
+
+  // Get moves without check validation to avoid recursion
+  private getRawMovesForPiece(gameState: ChessGameState, fromSquare: string, piece: ChessPiece): string[] {
+    const moves: string[] = [];
+
+    switch (piece.type) {
+      case 'pawn':
+        moves.push(...this.getPawnMoves(gameState, fromSquare, piece));
+        break;
+      case 'rook':
+        moves.push(...this.getRookMoves(gameState, fromSquare, piece));
+        break;
+      case 'bishop':
+        moves.push(...this.getBishopMoves(gameState, fromSquare, piece));
+        break;
+      case 'queen':
+        moves.push(...this.getQueenMoves(gameState, fromSquare, piece));
+        break;
+      case 'knight':
+        moves.push(...this.getKnightMoves(gameState, fromSquare, piece));
+        break;
+      case 'king':
+        // For king, only get basic moves without castling to avoid recursion
+        moves.push(...this.getBasicKingMoves(gameState, fromSquare, piece));
+        break;
+    }
+
+    return moves;
+  }
+
+  // Basic king moves without castling logic
+  private getBasicKingMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece): string[] {
+    const moves: string[] = [];
+    const [file, rank] = fromSquare;
+    const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
+    const rankNum = parseInt(rank);
+
+    const directions = [
+      [-1, -1], [-1, 0], [-1, 1],
+      [0, -1],           [0, 1],
+      [1, -1],  [1, 0],  [1, 1]
+    ];
+
+    for (const [dx, dy] of directions) {
+      const newFileIndex = fileIndex + dx;
+      const newRankNum = rankNum + dy;
+
+      if (newFileIndex >= 0 && newFileIndex < 8 && newRankNum >= 1 && newRankNum <= 8) {
+        const newFile = String.fromCharCode(newFileIndex + 'a'.charCodeAt(0));
+        const newSquare = `${newFile}${newRankNum}`;
+        const targetPiece = gameState.board[newSquare];
+
+        if (!targetPiece || targetPiece.color !== piece.color) {
+          moves.push(newSquare);
+        }
+      }
+    }
+
+    return moves;
   }
 
   private isKingInCheck(gameState: ChessGameState, color: 'white' | 'black'): boolean {
