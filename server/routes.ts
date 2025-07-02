@@ -131,8 +131,17 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
       if (fromRankNum + direction >= 1 && fromRankNum + direction <= 8 && !gameState.board[oneForward]) {
         moves.push(oneForward);
         
-        // Two squares forward from starting position
-        if (fromRankNum === startRank) {
+        // Two squares forward from starting position (only if pawn hasn't moved)
+        let canDoubleMoveForward = fromRankNum === startRank;
+        if (gameRules === 'pawn-rotation') {
+          // In PawnRotation mode, check if pawn has moved at all
+          const pawnRotationMoves = gameState.pawnRotationMoves || {};
+          const originalSquare = `${fromFile}${startRank}`;
+          const hasPawnMoved = pawnRotationMoves[originalSquare];
+          canDoubleMoveForward = canDoubleMoveForward && !hasPawnMoved;
+        }
+        
+        if (canDoubleMoveForward) {
           const twoForward = `${fromFile}${fromRankNum + 2 * direction}`;
           if (!gameState.board[twoForward]) {
             moves.push(twoForward);

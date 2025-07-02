@@ -96,8 +96,17 @@ export class ChessLogic {
     if (this.isValidSquare(oneForward) && !gameState.board[oneForward]) {
       moves.push(oneForward);
 
-      // Two squares forward from starting position
-      if (rankNum === startRank) {
+      // Two squares forward from starting position (only if pawn hasn't moved)
+      let canDoubleMoveForward = rankNum === startRank;
+      if (gameRules === 'pawn-rotation') {
+        // In PawnRotation mode, check if pawn has moved at all
+        const pawnRotationMoves = gameState.pawnRotationMoves || {};
+        const originalSquare = `${file}${startRank}`;
+        const hasPawnMoved = pawnRotationMoves[originalSquare];
+        canDoubleMoveForward = canDoubleMoveForward && !hasPawnMoved;
+      }
+      
+      if (canDoubleMoveForward) {
         const twoForward = `${file}${rankNum + 2 * direction}`;
         if (this.isValidSquare(twoForward) && !gameState.board[twoForward]) {
           moves.push(twoForward);
