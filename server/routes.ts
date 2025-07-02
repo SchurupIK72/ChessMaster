@@ -447,9 +447,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const targetPiece = gameState.board[moveData.to];
       
       // Validate move is legal (doesn't leave king in check)
-      console.log('Validating move with rules:', game.rules);
-      console.log('Move from', moveData.from, 'to', moveData.to, 'by', game.currentTurn);
-      
       if (!isMoveLegal(gameState, moveData.from, moveData.to, game.currentTurn as 'white' | 'black', game.rules as any)) {
         return res.status(400).json({ message: "Illegal move: would leave king in check" });
       }

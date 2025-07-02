@@ -116,6 +116,11 @@ This is a full-stack chess application built with React frontend and Express bac
 ```
 Changelog:
 - July 01, 2025. Initial setup
+- July 02, 2025. Successfully implemented X-ray Bishop rule with full validation
+  * Bishops can move through one piece and continue beyond it
+  * Proper check/checkmate detection with X-ray attacks
+  * Server-side validation prevents illegal moves under X-ray attack
+  * Interface fully localized in Russian
 ```
 
 ## User Preferences
