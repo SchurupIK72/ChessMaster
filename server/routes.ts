@@ -31,7 +31,6 @@ function isKingInCheck(gameState: any, color: 'white' | 'black'): boolean {
 }
 
 function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, piece: any): boolean {
-  // Basic attack pattern check - simplified for demonstration
   const fromFile = fromSquare[0];
   const fromRank = fromSquare[1];
   const toFile = toSquare[0];
@@ -48,16 +47,50 @@ function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, p
     case 'pawn':
       const direction = piece.color === 'white' ? 1 : -1;
       return dy === direction && Math.abs(dx) === 1;
+    
     case 'rook':
-      return (dx === 0 || dy === 0);
+      if (dx === 0 || dy === 0) {
+        // Check if path is clear
+        const stepX = dx === 0 ? 0 : dx / Math.abs(dx);
+        const stepY = dy === 0 ? 0 : dy / Math.abs(dy);
+        let checkX = fromFileIndex + stepX;
+        let checkY = fromRankNum + stepY;
+        
+        while (checkX !== toFileIndex || checkY !== toRankNum) {
+          const checkSquare = String.fromCharCode(checkX + 'a'.charCodeAt(0)) + checkY;
+          if (gameState.board[checkSquare]) return false;
+          checkX += stepX;
+          checkY += stepY;
+        }
+        return true;
+      }
+      return false;
+    
     case 'bishop':
-      return Math.abs(dx) === Math.abs(dy);
+      if (Math.abs(dx) === Math.abs(dy)) {
+        // Check diagonal path is clear
+        const stepX = dx / Math.abs(dx);
+        const stepY = dy / Math.abs(dy);
+        let checkX = fromFileIndex + stepX;
+        let checkY = fromRankNum + stepY;
+        
+        while (checkX !== toFileIndex || checkY !== toRankNum) {
+          const checkSquare = String.fromCharCode(checkX + 'a'.charCodeAt(0)) + checkY;
+          if (gameState.board[checkSquare]) return false;
+          checkX += stepX;
+          checkY += stepY;
+        }
+        return true;
+      }
+      return false;
+    
     case 'queen':
-      return (dx === 0 || dy === 0 || Math.abs(dx) === Math.abs(dy));
-    case 'king':
-      return Math.abs(dx) <= 1 && Math.abs(dy) <= 1;
+      return (dx === 0 || dy === 0 || Math.abs(dx) === Math.abs(dy)) && 
+             canAttackSquare(gameState, fromSquare, toSquare, { ...piece, type: dx === 0 || dy === 0 ? 'rook' : 'bishop' });
+    
     case 'knight':
       return (Math.abs(dx) === 2 && Math.abs(dy) === 1) || (Math.abs(dx) === 1 && Math.abs(dy) === 2);
+    
     default:
       return false;
   }
