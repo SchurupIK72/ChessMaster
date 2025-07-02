@@ -283,16 +283,19 @@ export default function ChessGame() {
   };
 
   const handleNewGame = () => {
+    console.log("handleNewGame called");
     setShowGameTypeModal(true);
   };
 
   const handleSinglePlayer = () => {
+    console.log("handleSinglePlayer called");
     setCurrentGameType("single");
     setShowGameTypeModal(false);
     setShowRuleModal(true);
   };
 
   const handleMultiplayer = () => {
+    console.log("handleMultiplayer called");
     setCurrentGameType("multiplayer");
     setShowGameTypeModal(false);
     setShowRuleModal(true);
@@ -315,6 +318,18 @@ export default function ChessGame() {
       handleJoinGame(inviteCode);
     }
   }, [inviteCode]);
+
+  // Debug modals state
+  useEffect(() => {
+    console.log("Modal states:", {
+      showGameTypeModal,
+      showRuleModal,
+      showJoinModal,
+      showInviteModal,
+      showPromotionModal,
+      showGameOverModal
+    });
+  }, [showGameTypeModal, showRuleModal, showJoinModal, showInviteModal, showPromotionModal, showGameOverModal]);
 
   const handleResign = () => {
     if (!game) return;
@@ -474,7 +489,10 @@ export default function ChessGame() {
                   <Plus className="h-5 w-5 mr-2" />
                   Start New Game
                 </Button>
-                <Button onClick={() => setShowJoinModal(true)} size="lg" variant="outline">
+                <Button onClick={() => {
+                  console.log("Join Game button clicked");
+                  setShowJoinModal(true);
+                }} size="lg" variant="outline">
                   <UserPlus className="h-5 w-5 mr-2" />
                   Join Game
                 </Button>
