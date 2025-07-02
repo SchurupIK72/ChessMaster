@@ -106,10 +106,20 @@ export class ChessLogic {
       }
       
       if (gameRules && gameRules.includes('pawn-rotation')) {
-        // In PawnRotation mode, check if pawn has moved at all
+        // In PawnRotation mode, check if pawn has moved at all from any original position
         const pawnRotationMoves = gameState.pawnRotationMoves || {};
-        const originalSquare = `${file}${startRank}`;
-        const hasPawnMoved = pawnRotationMoves[originalSquare];
+        
+        // Check original positions - standard rank and pawn-wall rank
+        const standardOriginalSquare = `${file}${startRank}`;
+        let hasPawnMoved = pawnRotationMoves[standardOriginalSquare];
+        
+        // If pawn-wall is also enabled, check the wall rank as well
+        if (gameRules.includes('pawn-wall')) {
+          const pawnWallStartRank = piece.color === 'white' ? 3 : 6;
+          const wallOriginalSquare = `${file}${pawnWallStartRank}`;
+          hasPawnMoved = hasPawnMoved || pawnRotationMoves[wallOriginalSquare];
+        }
+        
         canDoubleMoveForward = canDoubleMoveForward && !hasPawnMoved;
       }
       
@@ -145,10 +155,17 @@ export class ChessLogic {
     if (gameRules && gameRules.includes('pawn-rotation')) {
       const pawnRotationMoves = gameState.pawnRotationMoves || {};
       
-      // Generate pawn ID based on original starting position
-      const originalRank = piece.color === 'white' ? 2 : 7;
-      const originalSquare = `${file}${originalRank}`;
-      const hasPawnMoved = pawnRotationMoves[originalSquare];
+      // Check if pawn has moved from any original position
+      const standardOriginalRank = piece.color === 'white' ? 2 : 7;
+      const standardOriginalSquare = `${file}${standardOriginalRank}`;
+      let hasPawnMoved = pawnRotationMoves[standardOriginalSquare];
+      
+      // If pawn-wall is enabled, also check wall positions
+      if (gameRules.includes('pawn-wall')) {
+        const pawnWallStartRank = piece.color === 'white' ? 3 : 6;
+        const wallOriginalSquare = `${file}${pawnWallStartRank}`;
+        hasPawnMoved = hasPawnMoved || pawnRotationMoves[wallOriginalSquare];
+      }
       
       // Horizontal moves (left and right)
       for (const fileOffset of [-1, 1]) {

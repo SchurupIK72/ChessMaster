@@ -233,7 +233,7 @@ export class MemStorage implements IStorage {
       isCheckmate: false,
       isStalemate: false,
       doubleKnightMove: null,
-      pawnRotationMoves: rules === 'pawn-rotation' ? {} : undefined,
+      pawnRotationMoves: rules.includes('pawn-rotation') ? {} : undefined,
     };
   }
 }

@@ -152,10 +152,18 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
         }
         
         if (gameRules && gameRules.includes('pawn-rotation')) {
-          // In PawnRotation mode, check if pawn has moved at all
+          // In PawnRotation mode, check if pawn has moved from any original position
           const pawnRotationMoves = gameState.pawnRotationMoves || {};
-          const originalSquare = `${fromFile}${startRank}`;
-          const hasPawnMoved = pawnRotationMoves[originalSquare];
+          const standardOriginalSquare = `${fromFile}${startRank}`;
+          let hasPawnMoved = pawnRotationMoves[standardOriginalSquare];
+          
+          // If pawn-wall is also enabled, check the wall rank as well
+          if (gameRules.includes('pawn-wall')) {
+            const pawnWallStartRank = piece.color === 'white' ? 3 : 6;
+            const wallOriginalSquare = `${fromFile}${pawnWallStartRank}`;
+            hasPawnMoved = hasPawnMoved || pawnRotationMoves[wallOriginalSquare];
+          }
+          
           canDoubleMoveForward = canDoubleMoveForward && !hasPawnMoved;
         }
         
@@ -183,10 +191,17 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
       if (gameRules && gameRules.includes('pawn-rotation')) {
         const pawnRotationMoves = gameState.pawnRotationMoves || {};
         
-        // Generate pawn ID based on original starting position
-        const originalRank = piece.color === 'white' ? 2 : 7;
-        const originalSquare = `${fromFile}${originalRank}`;
-        const hasPawnMoved = pawnRotationMoves[originalSquare];
+        // Check if pawn has moved from any original position
+        const standardOriginalRank = piece.color === 'white' ? 2 : 7;
+        const standardOriginalSquare = `${fromFile}${standardOriginalRank}`;
+        let hasPawnMoved = pawnRotationMoves[standardOriginalSquare];
+        
+        // If pawn-wall is enabled, also check wall positions
+        if (gameRules.includes('pawn-wall')) {
+          const pawnWallStartRank = piece.color === 'white' ? 3 : 6;
+          const wallOriginalSquare = `${fromFile}${pawnWallStartRank}`;
+          hasPawnMoved = hasPawnMoved || pawnRotationMoves[wallOriginalSquare];
+        }
         
         // Horizontal moves (left and right)
         for (const dx of [-1, 1]) {
@@ -543,10 +558,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!gameState.pawnRotationMoves) {
             gameState.pawnRotationMoves = {};
           }
-          // Mark this pawn as having moved using its original starting position
-          const originalRank = piece.color === 'white' ? 2 : 7;
-          const originalSquare = `${fromFile}${originalRank}`;
-          gameState.pawnRotationMoves[originalSquare] = true;
+          
+          // Mark this pawn as having moved from all possible original positions
+          const standardOriginalRank = piece.color === 'white' ? 2 : 7;
+          const standardOriginalSquare = `${fromFile}${standardOriginalRank}`;
+          gameState.pawnRotationMoves[standardOriginalSquare] = true;
+          
+          // If pawn-wall is also enabled, track wall positions too
+          if (Array.isArray(game.rules) && game.rules.includes('pawn-wall')) {
+            const pawnWallStartRank = piece.color === 'white' ? 3 : 6;
+            const wallOriginalSquare = `${fromFile}${pawnWallStartRank}`;
+            gameState.pawnRotationMoves[wallOriginalSquare] = true;
+          }
         }
         
         if (Math.abs(toRank - fromRank) === 2) {
