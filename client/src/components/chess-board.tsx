@@ -45,22 +45,30 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
         key={square}
         className={cn(
           "aspect-square flex items-center justify-center text-4xl cursor-pointer transition-all relative",
-          // Прозрачный фон для проступания текстуры
-          "bg-transparent hover:bg-black hover:bg-opacity-20",
+          // Классическая шахматная раскраска
+          isLight ? "bg-green-100" : "bg-green-700",
+          "hover:bg-opacity-80",
           isSelected && "bg-blue-400 bg-opacity-60 ring-2 ring-blue-600",
-          isValidMove && "bg-green-400 bg-opacity-50",
-          !piece && isValidMove && "hover:bg-green-500 hover:bg-opacity-60",
-          piece && !isSelected && "hover:bg-blue-300 hover:bg-opacity-40"
+          isValidMove && "bg-yellow-300 bg-opacity-70",
+          !piece && isValidMove && "hover:bg-yellow-400 hover:bg-opacity-80",
+          piece && !isSelected && isLight ? "hover:bg-green-200" : "hover:bg-green-600"
         )}
         onClick={() => onSquareClick(square)}
       >
         {piece && (
           <span 
-            className="select-none text-white" 
+            className={cn(
+              "select-none",
+              piece.color === 'white' ? "text-white" : "text-gray-900"
+            )} 
             style={{ 
-              filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.9))',
+              filter: piece.color === 'white' 
+                ? 'drop-shadow(2px 2px 4px rgba(0,0,0,0.9))' 
+                : 'drop-shadow(1px 1px 2px rgba(255,255,255,0.8))',
               fontSize: '2.5rem',
-              textShadow: '1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(255,255,255,0.3)'
+              textShadow: piece.color === 'white' 
+                ? '1px 1px 2px rgba(0,0,0,0.8)' 
+                : '1px 1px 2px rgba(255,255,255,0.5)'
             }}
           >
             {pieceSymbols[`${piece.color}-${piece.type}`]}
@@ -92,13 +100,7 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
       </div>
 
       {/* Chess Board */}
-      <div 
-        className="aspect-square w-full p-2 rounded-lg relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(45deg, #5a7c5a 25%, #7a9b7a 25%, #7a9b7a 50%, #5a7c5a 50%, #5a7c5a 75%, #7a9b7a 75%, #7a9b7a)',
-          backgroundSize: '80px 80px'
-        }}
-      >
+      <div className="aspect-square w-full p-2 rounded-lg relative overflow-hidden bg-slate-800">
         <div className="grid grid-cols-8 gap-0 w-full h-full">
           {ranks.map(rank =>
             files.map(file => renderSquare(file, rank))
