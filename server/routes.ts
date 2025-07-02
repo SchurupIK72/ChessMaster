@@ -31,9 +31,6 @@ function isKingInCheck(gameState: any, color: 'white' | 'black', gameRules?: str
 }
 
 function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, piece: any, gameRules?: string[]): boolean {
-  if (piece.type === 'bishop' && gameRules && gameRules.includes('xray-bishop')) {
-    console.log(`Checking bishop xray attack from ${fromSquare} to ${toSquare}`);
-  }
   const fromFile = fromSquare[0];
   const fromRank = fromSquare[1];
   const toFile = toSquare[0];
@@ -78,48 +75,21 @@ function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, p
         let checkY = fromRankNum + stepY;
         let piecesEncountered = 0;
         
-        const piecesOnPath = [];
         while (checkX !== toFileIndex || checkY !== toRankNum) {
           const checkSquare = String.fromCharCode(checkX + 'a'.charCodeAt(0)) + checkY;
           if (gameState.board[checkSquare]) {
             piecesEncountered++;
-            piecesOnPath.push(checkSquare);
           }
           checkX += stepX;
           checkY += stepY;
         }
         
-        if (piece.type === 'bishop' && gameRules && gameRules.includes('xray-bishop')) {
-          console.log(`Path from ${fromSquare} to ${toSquare}: pieces on path: [${piecesOnPath.join(', ')}]`);
-        }
-        
         // Стандартный ход или рентген-ход через одну фигуру
         if (piecesEncountered === 0) {
-          if (piece.type === 'bishop' && gameRules && gameRules.includes('xray-bishop')) {
-            console.log(`Bishop standard attack: ${fromSquare} to ${toSquare} - pieces encountered: ${piecesEncountered}`);
-          }
           return true; // Стандартный ход
-        } else if (piecesEncountered === 1 && gameRules && gameRules.includes('xray-bishop')) {
-          // Рентген-ход доступен только при включенном правиле xray-bishop и только через 1 фигуру
-          // НО не может атаковать короля напрямую
-          const targetPiece = gameState.board[toSquare];
-          if (targetPiece && targetPiece.type === 'king') {
-            if (piece.type === 'bishop') {
-              console.log(`Bishop xray blocked: cannot attack king directly at ${toSquare}`);
-            }
-            return false;
-          }
-          
-          if (piece.type === 'bishop') {
-            console.log(`Bishop xray attack: ${fromSquare} to ${toSquare} - pieces encountered: ${piecesEncountered}, xray allowed`);
-          }
-          return true;
-        } else if (piecesEncountered >= 2) {
-          // Если больше одной фигуры - рентген не работает
-          if (piece.type === 'bishop' && gameRules && gameRules.includes('xray-bishop')) {
-            console.log(`Bishop blocked: ${fromSquare} to ${toSquare} - pieces encountered: ${piecesEncountered}, too many pieces`);
-          }
-          return false;
+        } else if (piecesEncountered === 1) {
+          // Рентген-ход доступен только при включенном правиле xray-bishop
+          return !!(gameRules && gameRules.includes('xray-bishop'));
         }
         return false;
       }
@@ -476,13 +446,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const piece = gameState.board[moveData.from];
       const targetPiece = gameState.board[moveData.to];
       
-      // Временно отключаем серверную валидацию для тестирования рентген-правила
+      // Validate move is legal (doesn't leave king in check)
       console.log('Validating move with rules:', game.rules);
       console.log('Move from', moveData.from, 'to', moveData.to, 'by', game.currentTurn);
       
-      // if (!isMoveLegal(gameState, moveData.from, moveData.to, game.currentTurn as 'white' | 'black', game.rules as any)) {
-      //   return res.status(400).json({ message: "Illegal move: would leave king in check" });
-      // }
+      if (!isMoveLegal(gameState, moveData.from, moveData.to, game.currentTurn as 'white' | 'black', game.rules as any)) {
+        return res.status(400).json({ message: "Illegal move: would leave king in check" });
+      }
       
       // Special validation for double knight rule: cannot capture king
       if (Array.isArray(game.rules) && game.rules.includes('double-knight') && gameState.doubleKnightMove && 
