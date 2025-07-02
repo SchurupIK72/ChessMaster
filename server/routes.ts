@@ -448,6 +448,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const piece = gameState.board[moveData.from];
       const targetPiece = gameState.board[moveData.to];
       
+      // Basic validation: cannot capture own pieces
+      if (piece && targetPiece && piece.color === targetPiece.color) {
+        return res.status(400).json({ message: "Cannot capture your own pieces" });
+      }
+      
+      // Validate piece exists and belongs to current player
+      if (!piece || piece.color !== game.currentTurn) {
+        return res.status(400).json({ message: "Invalid piece or wrong turn" });
+      }
+      
       // Validate move is legal (doesn't leave king in check)
       if (!isMoveLegal(gameState, moveData.from, moveData.to, game.currentTurn as 'white' | 'black', game.rules as any)) {
         return res.status(400).json({ message: "Illegal move: would leave king in check" });

@@ -127,6 +127,11 @@ Changelog:
   * Combined mode works correctly with all pawn movement capabilities
   * Fixed double move restrictions to work properly in rotation mode
   * Updated descriptions to accurately reflect unlimited movement abilities
+- July 02, 2025. Fixed critical bug preventing pieces from capturing themselves
+  * Added client-side validation to prevent capturing own pieces
+  * Added server-side validation for basic move validation
+  * Improved error handling and move validation pipeline
+  * Applied classic green chess board design with proper piece colors
 ```
 
 ## User Preferences

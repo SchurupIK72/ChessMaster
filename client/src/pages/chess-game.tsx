@@ -177,6 +177,16 @@ export default function ChessGame() {
       // Trying to make a move
       if (validMoves.includes(square)) {
         const fromPiece = gameState.board[selectedSquare];
+        const toPiece = gameState.board[square];
+        
+        // Additional safety check: prevent capturing own pieces
+        if (toPiece && fromPiece && toPiece.color === fromPiece.color) {
+          console.error("Attempted to capture own piece!", { fromPiece, toPiece, from: selectedSquare, to: square });
+          setSelectedSquare(null);
+          setValidMoves([]);
+          return;
+        }
+        
         if (fromPiece) {
           // Check if this is a pawn promotion
           if (fromPiece.type === 'pawn') {
