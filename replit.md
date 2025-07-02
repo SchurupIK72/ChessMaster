@@ -126,6 +126,7 @@ Changelog:
   * PawnWall creates double rows of pawns on 2-3 ranks (white) and 6-7 ranks (black)
   * Combined mode works correctly with all pawn movement capabilities
   * Fixed double move restrictions to work properly in rotation mode
+  * Updated descriptions to accurately reflect unlimited movement abilities
 ```
 
 ## User Preferences

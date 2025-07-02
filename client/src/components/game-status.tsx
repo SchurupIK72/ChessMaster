@@ -13,7 +13,7 @@ interface GameStatusProps {
 const ruleDescriptions: Record<string, { name: string; description: string; status: 'active' | 'inactive' }> = {
   standard: { name: 'Стандартные шахматы', description: 'Классические правила', status: 'active' },
   'double-knight': { name: 'Двойной конь', description: 'Нужно ходить конем дважды подряд', status: 'active' },
-  'pawn-rotation': { name: 'Поворот пешек', description: 'Пешки могут ходить горизонтально', status: 'active' },
+  'pawn-rotation': { name: 'Поворот пешек', description: 'Пешки могут ходить горизонтально и делать неограниченные двойные ходы', status: 'active' },
   'xray-bishop': { name: 'Рентген слон', description: 'Слон проходит сквозь фигуры', status: 'active' },
 };
 
