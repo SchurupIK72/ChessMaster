@@ -75,7 +75,7 @@ function hasLegalMoves(gameState: any, color: 'white' | 'black'): boolean {
 }
 
 function applyDoubleKnightRule(gameState: any, fromSquare: string, toSquare: string): any {
-  const piece = gameState.board[fromSquare];
+  const piece = gameState.board[toSquare]; // Piece is now at the destination square
   const newGameState = { ...gameState };
 
   // If we're in the middle of a double knight move
@@ -87,13 +87,16 @@ function applyDoubleKnightRule(gameState: any, fromSquare: string, toSquare: str
       // Complete the double move - clear the flag and switch turns
       newGameState.doubleKnightMove = null;
       newGameState.currentTurn = gameState.currentTurn === 'white' ? 'black' : 'white';
+    } else {
+      // Invalid move - not the required knight
+      // Keep the current state unchanged
     }
   } else {
     // First move with a knight
     if (piece?.type === 'knight') {
       // Set up for required second move
       newGameState.doubleKnightMove = {
-        knightSquare: toSquare,
+        knightSquare: toSquare, // Store where the knight moved to
         color: piece.color
       };
       // Don't switch turns yet - same player must move again with this knight
@@ -206,7 +209,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Apply special rules before changing turns
       let nextTurn: 'white' | 'black';
       if (game.rules === 'double-knight') {
+        console.log('Before applyDoubleKnightRule:', {
+          from: moveData.from,
+          to: moveData.to,
+          currentTurn: gameState.currentTurn,
+          doubleKnightMove: gameState.doubleKnightMove
+        });
         gameState = applyDoubleKnightRule(gameState, moveData.from, moveData.to);
+        console.log('After applyDoubleKnightRule:', {
+          currentTurn: gameState.currentTurn,
+          doubleKnightMove: gameState.doubleKnightMove
+        });
         nextTurn = gameState.currentTurn;
       } else {
         // Standard rules - toggle turn normally
