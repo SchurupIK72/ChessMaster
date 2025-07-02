@@ -104,5 +104,5 @@ export type ChessGameState = {
   };
 };
 
-export type GameRules = 'standard' | 'double-knight' | 'pawn-rotation' | 'xray-bishop';
+export type GameRules = 'standard' | 'double-knight' | 'pawn-rotation' | 'xray-bishop' | 'pawn-wall';
 export type GameRulesArray = GameRules[];

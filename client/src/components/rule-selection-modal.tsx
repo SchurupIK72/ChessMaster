@@ -35,6 +35,13 @@ const availableRules = [
     badges: ['Проницание', 'Мощный'],
     badgeColors: ['bg-cyan-100 text-cyan-800', 'bg-indigo-100 text-indigo-800'],
   },
+  {
+    id: 'pawn-wall' as GameRules,
+    name: 'Стена Пешек',
+    description: 'У каждого игрока 2 ряда пешек (2-3 ряды для белых, 6-7 ряды для черных)',
+    badges: ['Оборона', 'Массовость'],
+    badgeColors: ['bg-gray-100 text-gray-800', 'bg-blue-100 text-blue-800'],
+  },
 ];
 
 export default function RuleSelectionModal({ open, onOpenChange, onRuleSelect }: RuleSelectionModalProps) {

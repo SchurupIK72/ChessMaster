@@ -51,8 +51,8 @@ export class ChessRules {
 
 
   static getInitialPosition(rules: GameRulesArray): { [square: string]: any } {
-    // Standard chess starting position
-    return {
+    // Base chess starting position
+    const position: { [square: string]: any } = {
       'a8': { type: 'rook', color: 'black' },
       'b8': { type: 'knight', color: 'black' },
       'c8': { type: 'bishop', color: 'black' },
@@ -86,5 +86,30 @@ export class ChessRules {
       'g1': { type: 'knight', color: 'white' },
       'h1': { type: 'rook', color: 'white' },
     };
+
+    // Add pawn wall modification
+    if (rules.includes('pawn-wall')) {
+      // Add second row of pawns for white (3rd rank)
+      position['a3'] = { type: 'pawn', color: 'white' };
+      position['b3'] = { type: 'pawn', color: 'white' };
+      position['c3'] = { type: 'pawn', color: 'white' };
+      position['d3'] = { type: 'pawn', color: 'white' };
+      position['e3'] = { type: 'pawn', color: 'white' };
+      position['f3'] = { type: 'pawn', color: 'white' };
+      position['g3'] = { type: 'pawn', color: 'white' };
+      position['h3'] = { type: 'pawn', color: 'white' };
+
+      // Add second row of pawns for black (6th rank)
+      position['a6'] = { type: 'pawn', color: 'black' };
+      position['b6'] = { type: 'pawn', color: 'black' };
+      position['c6'] = { type: 'pawn', color: 'black' };
+      position['d6'] = { type: 'pawn', color: 'black' };
+      position['e6'] = { type: 'pawn', color: 'black' };
+      position['f6'] = { type: 'pawn', color: 'black' };
+      position['g6'] = { type: 'pawn', color: 'black' };
+      position['h6'] = { type: 'pawn', color: 'black' };
+    }
+
+    return position;
   }
 }

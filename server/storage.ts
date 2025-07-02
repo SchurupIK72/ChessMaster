@@ -185,6 +185,29 @@ export class MemStorage implements IStorage {
       'h1': { type: 'rook' as const, color: 'white' as const },
     };
 
+    // Add pawn wall modification
+    if (rules.includes('pawn-wall')) {
+      // Add second row of pawns for white (3rd rank)
+      (standardBoard as any)['a3'] = { type: 'pawn' as const, color: 'white' as const };
+      (standardBoard as any)['b3'] = { type: 'pawn' as const, color: 'white' as const };
+      (standardBoard as any)['c3'] = { type: 'pawn' as const, color: 'white' as const };
+      (standardBoard as any)['d3'] = { type: 'pawn' as const, color: 'white' as const };
+      (standardBoard as any)['e3'] = { type: 'pawn' as const, color: 'white' as const };
+      (standardBoard as any)['f3'] = { type: 'pawn' as const, color: 'white' as const };
+      (standardBoard as any)['g3'] = { type: 'pawn' as const, color: 'white' as const };
+      (standardBoard as any)['h3'] = { type: 'pawn' as const, color: 'white' as const };
+
+      // Add second row of pawns for black (6th rank)
+      (standardBoard as any)['a6'] = { type: 'pawn' as const, color: 'black' as const };
+      (standardBoard as any)['b6'] = { type: 'pawn' as const, color: 'black' as const };
+      (standardBoard as any)['c6'] = { type: 'pawn' as const, color: 'black' as const };
+      (standardBoard as any)['d6'] = { type: 'pawn' as const, color: 'black' as const };
+      (standardBoard as any)['e6'] = { type: 'pawn' as const, color: 'black' as const };
+      (standardBoard as any)['f6'] = { type: 'pawn' as const, color: 'black' as const };
+      (standardBoard as any)['g6'] = { type: 'pawn' as const, color: 'black' as const };
+      (standardBoard as any)['h6'] = { type: 'pawn' as const, color: 'black' as const };
+    }
+
     // Fill empty squares
     const board: { [square: string]: any } = {};
     for (let rank = 1; rank <= 8; rank++) {
