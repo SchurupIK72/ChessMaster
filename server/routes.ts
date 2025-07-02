@@ -97,14 +97,176 @@ function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, p
 }
 
 function hasLegalMoves(gameState: any, color: 'white' | 'black'): boolean {
-  // Simplified check - in a real implementation, this would be more thorough
-  for (const [square, piece] of Object.entries(gameState.board)) {
+  // Check each piece of the current player
+  for (const [fromSquare, piece] of Object.entries(gameState.board)) {
     if (piece && (piece as any).color === color) {
-      // For simplicity, assume there are always legal moves unless it's obvious checkmate
-      return true;
+      // Get possible moves for this piece
+      const possibleMoves = getPossibleMoves(gameState, fromSquare, piece as any);
+      
+      // Check if any move is legal (doesn't leave king in check)
+      for (const toSquare of possibleMoves) {
+        if (isMoveLegal(gameState, fromSquare, toSquare, color)) {
+          return true;
+        }
+      }
     }
   }
   return false;
+}
+
+function getPossibleMoves(gameState: any, fromSquare: string, piece: any): string[] {
+  const moves: string[] = [];
+  const fromFile = fromSquare[0];
+  const fromRank = fromSquare[1];
+  const fromFileIndex = fromFile.charCodeAt(0) - 'a'.charCodeAt(0);
+  const fromRankNum = parseInt(fromRank);
+
+  switch (piece.type) {
+    case 'pawn':
+      const direction = piece.color === 'white' ? 1 : -1;
+      const startRank = piece.color === 'white' ? 2 : 7;
+      
+      // One square forward
+      const oneForward = `${fromFile}${fromRankNum + direction}`;
+      if (fromRankNum + direction >= 1 && fromRankNum + direction <= 8 && !gameState.board[oneForward]) {
+        moves.push(oneForward);
+        
+        // Two squares forward from starting position
+        if (fromRankNum === startRank) {
+          const twoForward = `${fromFile}${fromRankNum + 2 * direction}`;
+          if (!gameState.board[twoForward]) {
+            moves.push(twoForward);
+          }
+        }
+      }
+      
+      // Diagonal captures
+      for (const dx of [-1, 1]) {
+        const captureFile = String.fromCharCode(fromFileIndex + dx + 'a'.charCodeAt(0));
+        if (captureFile >= 'a' && captureFile <= 'h') {
+          const captureSquare = `${captureFile}${fromRankNum + direction}`;
+          const targetPiece = gameState.board[captureSquare];
+          if (targetPiece && targetPiece.color !== piece.color) {
+            moves.push(captureSquare);
+          }
+        }
+      }
+      break;
+      
+    case 'rook':
+      for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+        for (let i = 1; i < 8; i++) {
+          const newFile = fromFileIndex + dx * i;
+          const newRank = fromRankNum + dy * i;
+          
+          if (newFile < 0 || newFile >= 8 || newRank < 1 || newRank > 8) break;
+          
+          const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
+          const targetPiece = gameState.board[newSquare];
+          
+          if (!targetPiece) {
+            moves.push(newSquare);
+          } else {
+            if (targetPiece.color !== piece.color) {
+              moves.push(newSquare);
+            }
+            break;
+          }
+        }
+      }
+      break;
+      
+    case 'bishop':
+      for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        for (let i = 1; i < 8; i++) {
+          const newFile = fromFileIndex + dx * i;
+          const newRank = fromRankNum + dy * i;
+          
+          if (newFile < 0 || newFile >= 8 || newRank < 1 || newRank > 8) break;
+          
+          const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
+          const targetPiece = gameState.board[newSquare];
+          
+          if (!targetPiece) {
+            moves.push(newSquare);
+          } else {
+            if (targetPiece.color !== piece.color) {
+              moves.push(newSquare);
+            }
+            break;
+          }
+        }
+      }
+      break;
+      
+    case 'queen':
+      for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        for (let i = 1; i < 8; i++) {
+          const newFile = fromFileIndex + dx * i;
+          const newRank = fromRankNum + dy * i;
+          
+          if (newFile < 0 || newFile >= 8 || newRank < 1 || newRank > 8) break;
+          
+          const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
+          const targetPiece = gameState.board[newSquare];
+          
+          if (!targetPiece) {
+            moves.push(newSquare);
+          } else {
+            if (targetPiece.color !== piece.color) {
+              moves.push(newSquare);
+            }
+            break;
+          }
+        }
+      }
+      break;
+      
+    case 'knight':
+      for (const [dx, dy] of [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]]) {
+        const newFile = fromFileIndex + dx;
+        const newRank = fromRankNum + dy;
+        
+        if (newFile >= 0 && newFile < 8 && newRank >= 1 && newRank <= 8) {
+          const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
+          const targetPiece = gameState.board[newSquare];
+          
+          if (!targetPiece || targetPiece.color !== piece.color) {
+            moves.push(newSquare);
+          }
+        }
+      }
+      break;
+      
+    case 'king':
+      for (const [dx, dy] of [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]) {
+        const newFile = fromFileIndex + dx;
+        const newRank = fromRankNum + dy;
+        
+        if (newFile >= 0 && newFile < 8 && newRank >= 1 && newRank <= 8) {
+          const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
+          const targetPiece = gameState.board[newSquare];
+          
+          if (!targetPiece || targetPiece.color !== piece.color) {
+            moves.push(newSquare);
+          }
+        }
+      }
+      break;
+  }
+  
+  return moves;
+}
+
+function isMoveLegal(gameState: any, fromSquare: string, toSquare: string, color: 'white' | 'black'): boolean {
+  // Create a temporary game state with the move made
+  const tempState = JSON.parse(JSON.stringify(gameState));
+  const piece = tempState.board[fromSquare];
+  tempState.board[toSquare] = piece;
+  delete tempState.board[fromSquare];
+  
+  // Check if this move leaves the king in check
+  return !isKingInCheck(tempState, color);
 }
 
 function applyDoubleKnightRule(gameState: any, fromSquare: string, toSquare: string): any {
