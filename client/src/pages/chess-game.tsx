@@ -9,24 +9,35 @@ import GameOverModal from "@/components/game-over-modal";
 import GameStatus from "@/components/game-status";
 import MoveHistory from "@/components/move-history";
 import CapturedPieces from "@/components/captured-pieces";
+import GameTypeModal from "@/components/game-type-modal";
+import InviteCodeModal from "@/components/invite-code-modal";
+import JoinGameModal from "@/components/join-game-modal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ChessPiece, ChessGameState, GameRules, GameRulesArray, Game, Move } from "@shared/schema";
 import { ChessLogic } from "@/lib/chess-logic";
-import { Sword, Crown, Plus, Settings } from "lucide-react";
+import { Sword, Crown, Plus, Settings, Users, UserPlus } from "lucide-react";
 
 export default function ChessGame() {
   const [gameId, setGameId] = useState<number | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [validMoves, setValidMoves] = useState<string[]>([]);
+  const [showGameTypeModal, setShowGameTypeModal] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [showPromotionModal, setShowPromotionModal] = useState(false);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const [gameOverShown, setGameOverShown] = useState(false);
   const [promotionMove, setPromotionMove] = useState<{from: string, to: string, piece: any} | null>(null);
   const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState("00:00");
+  const [currentGameType, setCurrentGameType] = useState<"single" | "multiplayer">("single");
+  const [pendingRules, setPendingRules] = useState<GameRulesArray | null>(null);
   const { toast } = useToast();
+  
+  // Check for invite code in URL
+  const inviteCode = new URLSearchParams(window.location.search).get("invite");
 
   const chessLogic = new ChessLogic();
 
@@ -46,11 +57,13 @@ export default function ChessGame() {
 
   // Create new game mutation
   const createGameMutation = useMutation({
-    mutationFn: async (rules: GameRulesArray) => {
+    mutationFn: async ({ rules, gameType }: { rules: GameRulesArray; gameType: "single" | "multiplayer" }) => {
       const response = await apiRequest("POST", "/api/games", {
-        whitePlayerId: null,
-        blackPlayerId: null,
+        whitePlayerId: gameType === "single" ? 1 : null, // temp player ID for single
+        blackPlayerId: gameType === "single" ? 1 : null, // temp player ID for single
         rules,
+        gameType,
+        creatorId: 1, // temp creator ID
       });
       return response.json();
     },
@@ -59,10 +72,19 @@ export default function ChessGame() {
       setGameStartTime(new Date(newGame.gameStartTime!));
       setGameOverShown(false); // Reset flag for new game
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
-      toast({
-        title: "Game Started",
-        description: "New chess game created successfully!",
-      });
+      
+      if (newGame.gameType === "multiplayer" && newGame.inviteCode) {
+        setShowInviteModal(true);
+        toast({
+          title: "Игра создана!",
+          description: "Поделитесь кодом приглашения с другом",
+        });
+      } else {
+        toast({
+          title: "Игра начата",
+          description: "Новая шахматная партия создана успешно!",
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -100,6 +122,34 @@ export default function ChessGame() {
       toast({
         title: "Invalid Move",
         description: error.message || "That move is not allowed",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Join game mutation
+  const joinGameMutation = useMutation({
+    mutationFn: async (inviteCode: string) => {
+      const response = await apiRequest("POST", "/api/games/join", {
+        inviteCode,
+        playerId: 1, // temp player ID
+      });
+      return response.json();
+    },
+    onSuccess: (joinedGame: Game) => {
+      setGameId(joinedGame.id);
+      setGameStartTime(new Date(joinedGame.gameStartTime!));
+      setGameOverShown(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/games"] });
+      toast({
+        title: "Присоединились к игре!",
+        description: "Ожидайте второго игрока для начала партии",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка присоединения",
+        description: error.message || "Не удалось присоединиться к игре",
         variant: "destructive",
       });
     },
@@ -233,13 +283,38 @@ export default function ChessGame() {
   };
 
   const handleNewGame = () => {
+    setShowGameTypeModal(true);
+  };
+
+  const handleSinglePlayer = () => {
+    setCurrentGameType("single");
+    setShowGameTypeModal(false);
+    setShowRuleModal(true);
+  };
+
+  const handleMultiplayer = () => {
+    setCurrentGameType("multiplayer");
+    setShowGameTypeModal(false);
     setShowRuleModal(true);
   };
 
   const handleRuleSelection = (rules: GameRulesArray) => {
-    createGameMutation.mutate(rules);
+    setPendingRules(rules);
+    createGameMutation.mutate({ rules, gameType: currentGameType });
     setShowRuleModal(false);
   };
+
+  const handleJoinGame = (code: string) => {
+    joinGameMutation.mutate(code);
+    setShowJoinModal(false);
+  };
+
+  // Effect to handle invite code in URL
+  useEffect(() => {
+    if (inviteCode && !gameId) {
+      handleJoinGame(inviteCode);
+    }
+  }, [inviteCode]);
 
   const handleResign = () => {
     if (!game) return;
@@ -394,10 +469,16 @@ export default function ChessGame() {
               <Sword className="h-24 w-24 text-slate-400 mx-auto mb-6" />
               <h2 className="text-3xl font-bold text-slate-800 mb-4">Welcome to Sword Master</h2>
               <p className="text-lg text-slate-600 mb-8">Start a new game to begin playing chess with special rules</p>
-              <Button onClick={handleNewGame} size="lg" className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-5 w-5 mr-2" />
-                Start New Game
-              </Button>
+              <div className="flex gap-4 justify-center">
+                <Button onClick={handleNewGame} size="lg" className="bg-blue-600 hover:bg-blue-700">
+                  <Plus className="h-5 w-5 mr-2" />
+                  Start New Game
+                </Button>
+                <Button onClick={() => setShowJoinModal(true)} size="lg" variant="outline">
+                  <UserPlus className="h-5 w-5 mr-2" />
+                  Join Game
+                </Button>
+              </div>
             </div>
           </div>
         </main>
@@ -510,6 +591,29 @@ export default function ChessGame() {
           />
         );
       })()}
+
+      <GameTypeModal
+        open={showGameTypeModal}
+        onOpenChange={setShowGameTypeModal}
+        onSinglePlayer={handleSinglePlayer}
+        onMultiplayer={handleMultiplayer}
+      />
+
+      {game && game.inviteCode && (
+        <InviteCodeModal
+          open={showInviteModal}
+          onOpenChange={setShowInviteModal}
+          inviteCode={game.inviteCode}
+          gameId={game.id}
+        />
+      )}
+
+      <JoinGameModal
+        open={showJoinModal}
+        onOpenChange={setShowJoinModal}
+        onJoinGame={handleJoinGame}
+        isLoading={joinGameMutation.isPending}
+      />
     </div>
   );
 }

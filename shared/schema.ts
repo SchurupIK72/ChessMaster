@@ -14,13 +14,16 @@ export const games = pgTable("games", {
   blackPlayerId: integer("black_player_id"),
   gameState: jsonb("game_state").notNull(),
   currentTurn: text("current_turn").notNull().default("white"),
-  status: text("status").notNull().default("active"), // active, completed, draw, resigned
+  status: text("status").notNull().default("waiting"), // waiting, active, completed, draw, resigned
   rules: jsonb("rules").$type<GameRulesArray>().notNull().default(["standard"]),
   moveHistory: jsonb("move_history").notNull().default([]),
   capturedPieces: jsonb("captured_pieces").notNull().default({ white: [], black: [] }),
   gameStartTime: timestamp("game_start_time").defaultNow(),
   gameEndTime: timestamp("game_end_time"),
   winner: text("winner"), // white, black, draw
+  inviteCode: text("invite_code").unique(), // unique code for sharing
+  gameType: text("game_type").notNull().default("single"), // single, multiplayer
+  creatorId: integer("creator_id"), // who created the game
 });
 
 export const moves = pgTable("moves", {
@@ -46,6 +49,8 @@ export const insertGameSchema = createInsertSchema(games).pick({
   whitePlayerId: true,
   blackPlayerId: true,
   rules: true,
+  gameType: true,
+  creatorId: true,
 });
 
 export const insertMoveSchema = createInsertSchema(moves).pick({

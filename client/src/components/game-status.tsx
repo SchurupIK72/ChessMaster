@@ -38,6 +38,33 @@ export default function GameStatus({ game, elapsedTime, onChangeRules }: GameSta
 
   return (
     <div className="space-y-6">
+      {/* Multiplayer Status */}
+      {game.gameType === "multiplayer" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
+              <Info className="h-5 w-5 mr-2 text-blue-600" />
+              Статус игры
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {game.status === "waiting" ? (
+              <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <p className="font-medium text-yellow-800">Ожидание второго игрока</p>
+                <p className="text-sm text-yellow-600">
+                  {game.inviteCode && `Код приглашения: ${game.inviteCode}`}
+                </p>
+              </div>
+            ) : (
+              <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                <p className="font-medium text-green-800">Игра началась!</p>
+                <p className="text-sm text-green-600">Оба игрока присоединились</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Active Rules */}
       <Card>
         <CardHeader>

@@ -682,6 +682,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Join game by invite code
+  app.post("/api/games/join", async (req, res) => {
+    try {
+      const { inviteCode, playerId } = req.body;
+      
+      if (!inviteCode || !playerId) {
+        return res.status(400).json({ message: "Invite code and player ID are required" });
+      }
+
+      const game = await storage.getGameByInviteCode(inviteCode);
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+
+      const updatedGame = await storage.joinGame(game.id, playerId);
+      res.json(updatedGame);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Get game by invite code
+  app.get("/api/games/invite/:code", async (req, res) => {
+    try {
+      const inviteCode = req.params.code;
+      const game = await storage.getGameByInviteCode(inviteCode);
+      
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      res.json(game);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
