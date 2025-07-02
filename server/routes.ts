@@ -428,6 +428,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get game by share ID
+  app.get("/api/games/share/:shareId", async (req, res) => {
+    try {
+      const shareId = req.params.shareId;
+      const game = await storage.getGameByShareId(shareId);
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      res.json(game);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Join game by share ID
+  app.post("/api/games/join/:shareId", async (req, res) => {
+    try {
+      const shareId = req.params.shareId;
+      const playerId = 1; // For now, use default player ID since we don't have auth
+      const game = await storage.joinGame(shareId, playerId);
+      res.json(game);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   // Update game state (make a move)
   app.post("/api/games/:id/moves", async (req, res) => {
     try {

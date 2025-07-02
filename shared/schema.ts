@@ -10,11 +10,12 @@ export const users = pgTable("users", {
 
 export const games = pgTable("games", {
   id: serial("id").primaryKey(),
+  shareId: text("share_id").unique(), // Unique identifier for sharing games
   whitePlayerId: integer("white_player_id"),
   blackPlayerId: integer("black_player_id"),
   gameState: jsonb("game_state").notNull(),
   currentTurn: text("current_turn").notNull().default("white"),
-  status: text("status").notNull().default("active"), // active, completed, draw, resigned
+  status: text("status").notNull().default("waiting"), // waiting, active, completed, draw, resigned
   rules: jsonb("rules").$type<GameRulesArray>().notNull().default(["standard"]),
   moveHistory: jsonb("move_history").notNull().default([]),
   capturedPieces: jsonb("captured_pieces").notNull().default({ white: [], black: [] }),

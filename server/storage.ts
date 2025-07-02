@@ -8,8 +8,10 @@ export interface IStorage {
   // Game methods
   createGame(game: InsertGame): Promise<Game>;
   getGame(id: number): Promise<Game | undefined>;
+  getGameByShareId(shareId: string): Promise<Game | undefined>;
   updateGameState(id: number, gameState: ChessGameState): Promise<Game>;
   updateGameStatus(id: number, status: string, winner?: string): Promise<Game>;
+  joinGame(shareId: string, playerId: number): Promise<Game>;
   getGamesByPlayer(playerId: number): Promise<Game[]>;
   
   // Move methods
@@ -57,16 +59,18 @@ export class MemStorage implements IStorage {
 
   async createGame(insertGame: InsertGame): Promise<Game> {
     const id = this.currentGameId++;
+    const shareId = Math.random().toString(36).substring(2, 8).toUpperCase(); // Generate 6-character shareId
     const rulesArray = Array.isArray(insertGame.rules) ? insertGame.rules : (insertGame.rules ? [insertGame.rules] : ["standard"]);
     const initialGameState: ChessGameState = this.getInitialGameState(rulesArray);
     
     const game: Game = {
       id,
+      shareId,
       whitePlayerId: insertGame.whitePlayerId || null,
       blackPlayerId: insertGame.blackPlayerId || null,
       gameState: initialGameState as any,
       currentTurn: "white",
-      status: "active",
+      status: "waiting", // Start as waiting for second player
       rules: rulesArray,
       moveHistory: [],
       capturedPieces: { white: [], black: [] },
@@ -81,6 +85,33 @@ export class MemStorage implements IStorage {
 
   async getGame(id: number): Promise<Game | undefined> {
     return this.games.get(id);
+  }
+
+  async getGameByShareId(shareId: string): Promise<Game | undefined> {
+    for (const game of this.games.values()) {
+      if (game.shareId === shareId) {
+        return game;
+      }
+    }
+    return undefined;
+  }
+
+  async joinGame(shareId: string, playerId: number): Promise<Game> {
+    const game = await this.getGameByShareId(shareId);
+    if (!game) throw new Error("Game not found");
+    
+    // Assign player to available slot
+    let updatedGame: Game;
+    if (!game.whitePlayerId) {
+      updatedGame = { ...game, whitePlayerId: playerId };
+    } else if (!game.blackPlayerId) {
+      updatedGame = { ...game, blackPlayerId: playerId, status: "active" }; // Game starts when both players join
+    } else {
+      throw new Error("Game is full");
+    }
+    
+    this.games.set(game.id, updatedGame);
+    return updatedGame;
   }
 
   async updateGameState(id: number, gameState: ChessGameState): Promise<Game> {

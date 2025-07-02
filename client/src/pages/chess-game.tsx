@@ -6,6 +6,9 @@ import ChessBoard from "@/components/chess-board";
 import RuleSelectionModal from "@/components/rule-selection-modal";
 import PawnPromotionModal from "@/components/pawn-promotion-modal";
 import GameOverModal from "@/components/game-over-modal";
+import GameTypeModal from "@/components/game-type-modal";
+import InviteModal from "@/components/invite-modal";
+import JoinGameModal from "@/components/join-game-modal";
 import GameStatus from "@/components/game-status";
 import MoveHistory from "@/components/move-history";
 import CapturedPieces from "@/components/captured-pieces";
@@ -13,13 +16,16 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ChessPiece, ChessGameState, GameRules, GameRulesArray, Game, Move } from "@shared/schema";
 import { ChessLogic } from "@/lib/chess-logic";
-import { Sword, Crown, Plus, Settings } from "lucide-react";
+import { Sword, Crown, Plus, Settings, Users, Share2 } from "lucide-react";
 
 export default function ChessGame() {
   const [gameId, setGameId] = useState<number | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [validMoves, setValidMoves] = useState<string[]>([]);
+  const [showGameTypeModal, setShowGameTypeModal] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [showPromotionModal, setShowPromotionModal] = useState(false);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
   const [gameOverShown, setGameOverShown] = useState(false);
@@ -59,15 +65,44 @@ export default function ChessGame() {
       setGameStartTime(new Date(newGame.gameStartTime!));
       setGameOverShown(false); // Reset flag for new game
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
+      if (newGame.shareId) {
+        setShowInviteModal(true);
+      }
       toast({
-        title: "Game Started",
-        description: "New chess game created successfully!",
+        title: "Игра создана",
+        description: "Поделитесь ссылкой с другом для начала игры!",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to create game",
+        title: "Ошибка",
+        description: error.message || "Не удалось создать игру",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Join game mutation
+  const joinGameMutation = useMutation({
+    mutationFn: async (shareId: string) => {
+      const response = await apiRequest("POST", `/api/games/join/${shareId}`, {});
+      return response.json();
+    },
+    onSuccess: (joinedGame: Game) => {
+      setGameId(joinedGame.id);
+      setGameStartTime(new Date(joinedGame.gameStartTime!));
+      setGameOverShown(false);
+      setShowJoinModal(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/games"] });
+      toast({
+        title: "Присоединились к игре",
+        description: "Игра начинается!",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось присоединиться к игре",
         variant: "destructive",
       });
     },
@@ -233,12 +268,49 @@ export default function ChessGame() {
   };
 
   const handleNewGame = () => {
+    console.log("handleNewGame called");
+    console.log("Modal states:", {
+      showGameTypeModal,
+      showRuleModal,
+      showJoinModal,
+      showInviteModal,
+      showPromotionModal,
+      showGameOverModal
+    });
+    setShowGameTypeModal(true);
+  };
+
+  const handleCreateNewGame = () => {
+    setShowGameTypeModal(false);
     setShowRuleModal(true);
+  };
+
+  const handleJoinGameClick = () => {
+    console.log("Join Game button clicked");
+    console.log("Modal states:", {
+      showGameTypeModal,
+      showRuleModal,
+      showJoinModal,
+      showInviteModal,
+      showPromotionModal,
+      showGameOverModal
+    });
+    setShowJoinModal(true);
   };
 
   const handleRuleSelection = (rules: GameRulesArray) => {
     createGameMutation.mutate(rules);
     setShowRuleModal(false);
+  };
+
+  const handleJoinGame = (shareId: string) => {
+    joinGameMutation.mutate(shareId);
+  };
+
+  const handleShareGame = () => {
+    if (game?.shareId) {
+      setShowInviteModal(true);
+    }
   };
 
   const handleResign = () => {
@@ -378,7 +450,7 @@ export default function ChessGame() {
               <div className="flex items-center space-x-4">
                 <Button onClick={handleNewGame} className="bg-blue-600 hover:bg-blue-700">
                   <Plus className="h-4 w-4 mr-2" />
-                  New Game
+                  Новая игра
                 </Button>
                 <Button variant="ghost" size="icon">
                   <Settings className="h-5 w-5" />
@@ -392,20 +464,40 @@ export default function ChessGame() {
           <div className="text-center">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
               <Sword className="h-24 w-24 text-slate-400 mx-auto mb-6" />
-              <h2 className="text-3xl font-bold text-slate-800 mb-4">Welcome to Sword Master</h2>
-              <p className="text-lg text-slate-600 mb-8">Start a new game to begin playing chess with special rules</p>
-              <Button onClick={handleNewGame} size="lg" className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-5 w-5 mr-2" />
-                Start New Game
-              </Button>
+              <h2 className="text-3xl font-bold text-slate-800 mb-4">Добро пожаловать в Шахматы Мастер</h2>
+              <p className="text-lg text-slate-600 mb-8">Начните новую игру или присоединитесь к игре друга</p>
+              <div className="flex gap-4 justify-center">
+                <Button onClick={handleNewGame} size="lg" className="bg-blue-600 hover:bg-blue-700">
+                  <Plus className="h-5 w-5 mr-2" />
+                  Начать игру
+                </Button>
+                <Button onClick={handleJoinGameClick} size="lg" variant="outline">
+                  <Users className="h-5 w-5 mr-2" />
+                  Присоединиться
+                </Button>
+              </div>
             </div>
           </div>
         </main>
+
+        <GameTypeModal
+          open={showGameTypeModal}
+          onOpenChange={setShowGameTypeModal}
+          onCreateGame={handleCreateNewGame}
+          onJoinGame={handleJoinGameClick}
+        />
 
         <RuleSelectionModal
           open={showRuleModal}
           onOpenChange={setShowRuleModal}
           onRuleSelect={handleRuleSelection}
+        />
+
+        <JoinGameModal
+          open={showJoinModal}
+          onOpenChange={setShowJoinModal}
+          onJoinGame={handleJoinGame}
+          isLoading={joinGameMutation.isPending}
         />
       </div>
     );
@@ -426,9 +518,19 @@ export default function ChessGame() {
               <span className="text-sm text-slate-500 hidden sm:block">Special Rules Edition</span>
             </div>
             <div className="flex items-center space-x-4">
+              {game?.shareId && (
+                <Button 
+                  onClick={handleShareGame} 
+                  variant="outline"
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                >
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Поделиться
+                </Button>
+              )}
               <Button onClick={handleNewGame} className="bg-blue-600 hover:bg-blue-700">
                 <Plus className="h-4 w-4 mr-2" />
-                New Game
+                Новая игра
               </Button>
               <Button variant="ghost" size="icon">
                 <Settings className="h-5 w-5" />
@@ -510,6 +612,29 @@ export default function ChessGame() {
           />
         );
       })()}
+
+      <GameTypeModal
+        open={showGameTypeModal}
+        onOpenChange={setShowGameTypeModal}
+        onCreateGame={handleCreateNewGame}
+        onJoinGame={handleJoinGameClick}
+      />
+
+      <JoinGameModal
+        open={showJoinModal}
+        onOpenChange={setShowJoinModal}
+        onJoinGame={handleJoinGame}
+        isLoading={joinGameMutation.isPending}
+      />
+
+      {game?.shareId && (
+        <InviteModal
+          open={showInviteModal}
+          onOpenChange={setShowInviteModal}
+          shareId={game.shareId}
+          gameUrl={`${window.location.origin}/?join=${game.shareId}`}
+        />
+      )}
     </div>
   );
 }
