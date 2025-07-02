@@ -155,11 +155,11 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
       // PawnRotation rule: horizontal moves
       if (gameRules === 'pawn-rotation') {
         const pawnRotationMoves = gameState.pawnRotationMoves || {};
-        const hasMovedHorizontally = pawnRotationMoves[fromSquare];
         
-        // Check if pawn is still in starting position (hasn't moved at all)
-        const isInStartingPosition = (piece.color === 'white' && fromRankNum === 2) || 
-                                   (piece.color === 'black' && fromRankNum === 7);
+        // Generate pawn ID based on original starting position
+        const originalRank = piece.color === 'white' ? 2 : 7;
+        const originalSquare = `${fromFile}${originalRank}`;
+        const hasPawnMoved = pawnRotationMoves[originalSquare];
         
         // Horizontal moves (left and right)
         for (const dx of [-1, 1]) {
@@ -172,7 +172,7 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
               moves.push(horizontalSquare);
               
               // Allow 2-square horizontal move only if pawn hasn't moved at all
-              if (isInStartingPosition && !hasMovedHorizontally) {
+              if (!hasPawnMoved) {
                 const newFile2 = String.fromCharCode(fromFileIndex + 2 * dx + 'a'.charCodeAt(0));
                 if (newFile2 >= 'a' && newFile2 <= 'h') {
                   const horizontalSquare2 = `${newFile2}${fromRankNum}`;
@@ -484,13 +484,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fromFile = moveData.from[0];
         const toFile = moveData.to[0];
         
-        // Track horizontal pawn moves for PawnRotation rule
-        if (game.rules === 'pawn-rotation' && fromRank === toRank && fromFile !== toFile) {
-          // This is a horizontal pawn move
+        // Track pawn moves for PawnRotation rule (any move, not just horizontal)
+        if (game.rules === 'pawn-rotation') {
           if (!gameState.pawnRotationMoves) {
             gameState.pawnRotationMoves = {};
           }
-          gameState.pawnRotationMoves[moveData.to] = true;
+          // Mark this pawn as having moved using its original starting position
+          const originalRank = piece.color === 'white' ? 2 : 7;
+          const originalSquare = `${fromFile}${originalRank}`;
+          gameState.pawnRotationMoves[originalSquare] = true;
         }
         
         if (Math.abs(toRank - fromRank) === 2) {

@@ -98,9 +98,9 @@ export type ChessGameState = {
     knightSquare: string;
     color: 'white' | 'black';
   } | null;
-  // For pawn rotation rule - track which pawns have moved horizontally
+  // For pawn rotation rule - track which pawns have moved
   pawnRotationMoves?: {
-    [square: string]: boolean; // true if pawn has made its first horizontal move
+    [pawnId: string]: boolean; // true if pawn has made any move (identified by original position)
   };
 };
 
