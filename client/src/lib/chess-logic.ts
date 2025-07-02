@@ -72,7 +72,7 @@ export class ChessLogic {
 
   // Update game state to detect checkmate and stalemate
   updateGameStatus(gameState: ChessGameState, gameRules?: string[]): ChessGameState {
-    const currentPlayerInCheck = this.isKingInCheck(gameState, gameState.currentTurn);
+    const currentPlayerInCheck = this.isKingInCheck(gameState, gameState.currentTurn, gameRules);
     const hasLegalMoves = this.hasLegalMoves(gameState, gameState.currentTurn, gameRules);
 
     return {
@@ -263,7 +263,7 @@ export class ChessLogic {
     }
 
     // Add castling logic
-    if (!this.isKingInCheck(gameState, piece.color)) {
+    if (!this.isKingInCheck(gameState, piece.color, gameRules)) {
       // Check kingside castling
       if (piece.color === 'white' && gameState.castlingRights.whiteKingside) {
         if (!gameState.board['f1'] && !gameState.board['g1'] && gameState.board['h1']?.type === 'rook') {
@@ -401,7 +401,8 @@ export class ChessLogic {
     gameState: ChessGameState,
     fromSquare: string,
     toSquare: string,
-    color: 'white' | 'black'
+    color: 'white' | 'black',
+    gameRules?: string[]
   ): boolean {
     // Create a temporary game state with the move made
     const tempState = { ...gameState };
@@ -411,7 +412,7 @@ export class ChessLogic {
     tempState.board[toSquare] = piece;
     delete tempState.board[fromSquare];
 
-    return this.isKingInCheck(tempState, color);
+    return this.isKingInCheck(tempState, color, gameRules);
   }
 
   private isSquareUnderAttack(gameState: ChessGameState, square: string, kingColor: 'white' | 'black', gameRules?: string[]): boolean {
@@ -583,7 +584,7 @@ export class ChessLogic {
 
 
 
-  private isKingInCheck(gameState: ChessGameState, color: 'white' | 'black'): boolean {
+  private isKingInCheck(gameState: ChessGameState, color: 'white' | 'black', gameRules?: string[]): boolean {
     // Find the king
     let kingSquare: string | null = null;
     for (const [square, piece] of Object.entries(gameState.board)) {
@@ -599,7 +600,7 @@ export class ChessLogic {
     const opponentColor = color === 'white' ? 'black' : 'white';
     for (const [square, piece] of Object.entries(gameState.board)) {
       if (piece && piece.color === opponentColor) {
-        const moves = this.getRawMovesForPiece(gameState, square, piece); // Use raw moves to avoid recursion
+        const moves = this.getRawMovesForPiece(gameState, square, piece, gameRules); // Use raw moves with game rules
         if (moves.includes(kingSquare)) {
           return true;
         }
@@ -640,7 +641,7 @@ export class ChessLogic {
     }
 
     if (checkForCheck) {
-      moves = moves.filter(move => !this.wouldBeInCheck(gameState, fromSquare, move, piece.color));
+      moves = moves.filter(move => !this.wouldBeInCheck(gameState, fromSquare, move, piece.color, gameRules));
     }
 
     return moves;
