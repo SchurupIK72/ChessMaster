@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { insertGameSchema, insertMoveSchema } from "@shared/schema";
 
 // Simple chess logic for server-side checkmate detection
-function isKingInCheck(gameState: any, color: 'white' | 'black'): boolean {
+function isKingInCheck(gameState: any, color: 'white' | 'black', gameRules?: string[]): boolean {
   // Find the king
   let kingSquare: string | null = null;
   for (const [square, piece] of Object.entries(gameState.board)) {
@@ -20,8 +20,8 @@ function isKingInCheck(gameState: any, color: 'white' | 'black'): boolean {
   const opponentColor = color === 'white' ? 'black' : 'white';
   for (const [square, piece] of Object.entries(gameState.board)) {
     if (piece && (piece as any).color === opponentColor) {
-      // Simple attack pattern check (basic implementation)
-      if (canAttackSquare(gameState, square, kingSquare, piece as any)) {
+      // Check attack pattern with game rules consideration
+      if (canAttackSquare(gameState, square, kingSquare, piece as any, gameRules)) {
         return true;
       }
     }
@@ -30,7 +30,7 @@ function isKingInCheck(gameState: any, color: 'white' | 'black'): boolean {
   return false;
 }
 
-function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, piece: any): boolean {
+function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, piece: any, gameRules?: string[]): boolean {
   const fromFile = fromSquare[0];
   const fromRank = fromSquare[1];
   const toFile = toSquare[0];
@@ -84,13 +84,12 @@ function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, p
           checkY += stepY;
         }
         
-        // Стандартный ход или рентген-ход через одну фигуру (только если включено правило xray-bishop)
+        // Стандартный ход или рентген-ход через одну фигуру
         if (piecesEncountered === 0) {
           return true; // Стандартный ход
         } else if (piecesEncountered === 1) {
-          // Рентген-ход доступен только при включенном правиле
-          // Здесь можно добавить проверку gameRules, но пока разрешаем всегда
-          return true;
+          // Рентген-ход доступен только при включенном правиле xray-bishop
+          return !!(gameRules && gameRules.includes('xray-bishop'));
         }
         return false;
       }
@@ -117,7 +116,7 @@ function hasLegalMoves(gameState: any, color: 'white' | 'black', gameRules?: str
       
       // Check if any move is legal (doesn't leave king in check)
       for (const toSquare of possibleMoves) {
-        if (isMoveLegal(gameState, fromSquare, toSquare, color)) {
+        if (isMoveLegal(gameState, fromSquare, toSquare, color, gameRules)) {
           return true;
         }
       }
@@ -234,6 +233,9 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
       
     case 'bishop':
       for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        let piecesEncountered = 0;
+        let passedThroughPiece = false;
+        
         for (let i = 1; i < 8; i++) {
           const newFile = fromFileIndex + dx * i;
           const newRank = fromRankNum + dy * i;
@@ -246,10 +248,29 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
           if (!targetPiece) {
             moves.push(newSquare);
           } else {
-            if (targetPiece.color !== piece.color) {
-              moves.push(newSquare);
+            piecesEncountered++;
+            
+            if (piecesEncountered === 1) {
+              // Первая фигура - можем захватить если вражеская
+              if (targetPiece.color !== piece.color) {
+                moves.push(newSquare);
+              }
+              // При рентген-правиле продолжаем движение
+              if (gameRules && gameRules.includes('xray-bishop')) {
+                passedThroughPiece = true;
+                continue;
+              } else {
+                break;
+              }
+            } else if (piecesEncountered === 2 && passedThroughPiece) {
+              // Вторая фигура при рентгене - можем захватить если вражеская
+              if (targetPiece.color !== piece.color) {
+                moves.push(newSquare);
+              }
+              break;
+            } else {
+              break;
             }
-            break;
           }
         }
       }
@@ -314,7 +335,7 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
   return moves;
 }
 
-function isMoveLegal(gameState: any, fromSquare: string, toSquare: string, color: 'white' | 'black'): boolean {
+function isMoveLegal(gameState: any, fromSquare: string, toSquare: string, color: 'white' | 'black', gameRules?: string[]): boolean {
   // Create a temporary game state with the move made
   const tempState = JSON.parse(JSON.stringify(gameState));
   const piece = tempState.board[fromSquare];
@@ -322,7 +343,7 @@ function isMoveLegal(gameState: any, fromSquare: string, toSquare: string, color
   delete tempState.board[fromSquare];
   
   // Check if this move leaves the king in check
-  return !isKingInCheck(tempState, color);
+  return !isKingInCheck(tempState, color, gameRules);
 }
 
 function hasLegalKnightMoves(gameState: any, knightSquare: string, color: 'white' | 'black'): boolean {
@@ -336,7 +357,7 @@ function hasLegalKnightMoves(gameState: any, knightSquare: string, color: 'white
   
   // Check if any of these moves is legal (doesn't leave king in check)
   for (const toSquare of knightMoves) {
-    if (isMoveLegal(gameState, knightSquare, toSquare, color)) {
+    if (isMoveLegal(gameState, knightSquare, toSquare, color, ['double-knight'])) {
       return true;
     }
   }
@@ -424,6 +445,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let gameState = game.gameState as any;
       const piece = gameState.board[moveData.from];
       const targetPiece = gameState.board[moveData.to];
+      
+      // Validate move is legal (doesn't leave king in check)
+      if (!isMoveLegal(gameState, moveData.from, moveData.to, game.currentTurn, game.rules)) {
+        return res.status(400).json({ message: "Illegal move: would leave king in check" });
+      }
       
       // Special validation for double knight rule: cannot capture king
       if (Array.isArray(game.rules) && game.rules.includes('double-knight') && gameState.doubleKnightMove && 
@@ -559,7 +585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check for check, checkmate, and stalemate
-      const isCheck = isKingInCheck(gameState, nextTurn);
+      const isCheck = isKingInCheck(gameState, nextTurn, game.rules);
       let hasMovesAvailable = hasLegalMoves(gameState, nextTurn, game.rules);
       
       // Special check for double knight rule stalemate
