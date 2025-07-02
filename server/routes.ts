@@ -269,6 +269,25 @@ function isMoveLegal(gameState: any, fromSquare: string, toSquare: string, color
   return !isKingInCheck(tempState, color);
 }
 
+function hasLegalKnightMoves(gameState: any, knightSquare: string, color: 'white' | 'black'): boolean {
+  const piece = gameState.board[knightSquare];
+  if (!piece || piece.type !== 'knight' || piece.color !== color) {
+    return false;
+  }
+  
+  // Get all possible knight moves from this square
+  const knightMoves = getPossibleMoves(gameState, knightSquare, piece);
+  
+  // Check if any of these moves is legal (doesn't leave king in check)
+  for (const toSquare of knightMoves) {
+    if (isMoveLegal(gameState, knightSquare, toSquare, color)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
 function applyDoubleKnightRule(gameState: any, fromSquare: string, toSquare: string): any {
   const piece = gameState.board[toSquare]; // Piece is now at the destination square
   const newGameState = { ...gameState };
@@ -472,7 +491,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check for check, checkmate, and stalemate
       const isCheck = isKingInCheck(gameState, nextTurn);
-      const hasMovesAvailable = hasLegalMoves(gameState, nextTurn);
+      let hasMovesAvailable = hasLegalMoves(gameState, nextTurn);
+      
+      // Special check for double knight rule stalemate
+      if (game.rules === 'double-knight' && gameState.doubleKnightMove) {
+        // In double knight mode, if player is waiting for second knight move
+        // but all possible knight moves would put king in check, it's stalemate
+        hasMovesAvailable = hasLegalKnightMoves(gameState, gameState.doubleKnightMove.knightSquare, nextTurn);
+      }
       
       gameState.isCheck = isCheck;
       gameState.isCheckmate = isCheck && !hasMovesAvailable;
