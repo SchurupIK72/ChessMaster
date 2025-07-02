@@ -212,7 +212,7 @@ export default function ChessGame() {
       // Selecting a piece
       if (piece && piece.color === gameState.currentTurn) {
         setSelectedSquare(square);
-        const moves = chessLogic.getValidMoves(gameState, square);
+        const moves = chessLogic.getValidMoves(gameState, square, game?.rules);
         setValidMoves(moves);
       } else {
         // Clear selection if clicking on wrong color or empty square

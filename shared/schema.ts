@@ -98,6 +98,10 @@ export type ChessGameState = {
     knightSquare: string;
     color: 'white' | 'black';
   } | null;
+  // For pawn rotation rule - track which pawns have moved horizontally
+  pawnRotationMoves?: {
+    [square: string]: boolean; // true if pawn has made its first horizontal move
+  };
 };
 
-export type GameRules = 'standard' | 'double-knight';
+export type GameRules = 'standard' | 'double-knight' | 'pawn-rotation';

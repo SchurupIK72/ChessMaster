@@ -28,6 +28,13 @@ const gameRules = [
     badges: ['Special', 'Tactical'],
     badgeColors: ['bg-purple-100 text-purple-800', 'bg-orange-100 text-orange-800'],
   },
+  {
+    id: 'pawn-rotation' as GameRules,
+    name: 'Pawn Rotation',
+    description: 'Pawns can move horizontally. First horizontal move can be 2 squares',
+    badges: ['Unique', 'Strategic'],
+    badgeColors: ['bg-yellow-100 text-yellow-800', 'bg-red-100 text-red-800'],
+  },
 ];
 
 export default function RuleSelectionModal({ open, onOpenChange, onRuleSelect }: RuleSelectionModalProps) {

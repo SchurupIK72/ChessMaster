@@ -1,7 +1,7 @@
 import { ChessGameState, ChessPiece } from "@shared/schema";
 
 export class ChessLogic {
-  getValidMoves(gameState: ChessGameState, fromSquare: string): string[] {
+  getValidMoves(gameState: ChessGameState, fromSquare: string, gameRules?: string): string[] {
     const piece = gameState.board[fromSquare];
     if (!piece || piece.color !== gameState.currentTurn) {
       return [];
@@ -24,7 +24,7 @@ export class ChessLogic {
 
     switch (piece.type) {
       case 'pawn':
-        moves.push(...this.getPawnMoves(gameState, fromSquare, piece));
+        moves.push(...this.getPawnMoves(gameState, fromSquare, piece, gameRules));
         break;
       case 'rook':
         moves.push(...this.getRookMoves(gameState, fromSquare, piece));
@@ -83,7 +83,7 @@ export class ChessLogic {
     };
   }
 
-  private getPawnMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece): string[] {
+  private getPawnMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece, gameRules?: string): string[] {
     const moves: string[] = [];
     const [file, rank] = fromSquare;
     const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
@@ -91,7 +91,7 @@ export class ChessLogic {
     const direction = piece.color === 'white' ? 1 : -1;
     const startRank = piece.color === 'white' ? 2 : 7;
 
-    // Forward move
+    // Standard forward move
     const oneForward = `${file}${rankNum + direction}`;
     if (this.isValidSquare(oneForward) && !gameState.board[oneForward]) {
       moves.push(oneForward);
@@ -105,7 +105,7 @@ export class ChessLogic {
       }
     }
 
-    // Captures
+    // Standard diagonal captures
     for (const fileOffset of [-1, 1]) {
       const newFileIndex = fileIndex + fileOffset;
       if (newFileIndex >= 0 && newFileIndex < 8) {
@@ -120,6 +120,37 @@ export class ChessLogic {
           // En passant
           if (captureSquare === gameState.enPassantTarget) {
             moves.push(captureSquare);
+          }
+        }
+      }
+    }
+
+    // PawnRotation rule: horizontal moves
+    if (gameRules === 'pawn-rotation') {
+      const pawnRotationMoves = gameState.pawnRotationMoves || {};
+      const hasMovedHorizontally = pawnRotationMoves[fromSquare];
+      
+      // Horizontal moves (left and right)
+      for (const fileOffset of [-1, 1]) {
+        const newFileIndex = fileIndex + fileOffset;
+        if (newFileIndex >= 0 && newFileIndex < 8) {
+          const newFile = String.fromCharCode(newFileIndex + 'a'.charCodeAt(0));
+          const horizontalSquare = `${newFile}${rankNum}`;
+          
+          if (!gameState.board[horizontalSquare]) {
+            moves.push(horizontalSquare);
+            
+            // If pawn hasn't moved horizontally yet, allow 2-square horizontal move
+            if (!hasMovedHorizontally) {
+              const newFileIndex2 = fileIndex + 2 * fileOffset;
+              if (newFileIndex2 >= 0 && newFileIndex2 < 8) {
+                const newFile2 = String.fromCharCode(newFileIndex2 + 'a'.charCodeAt(0));
+                const horizontalSquare2 = `${newFile2}${rankNum}`;
+                if (!gameState.board[horizontalSquare2]) {
+                  moves.push(horizontalSquare2);
+                }
+              }
+            }
           }
         }
       }

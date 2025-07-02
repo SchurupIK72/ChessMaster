@@ -96,12 +96,12 @@ function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, p
   }
 }
 
-function hasLegalMoves(gameState: any, color: 'white' | 'black'): boolean {
+function hasLegalMoves(gameState: any, color: 'white' | 'black', gameRules?: string): boolean {
   // Check each piece of the current player
   for (const [fromSquare, piece] of Object.entries(gameState.board)) {
     if (piece && (piece as any).color === color) {
       // Get possible moves for this piece
-      const possibleMoves = getPossibleMoves(gameState, fromSquare, piece as any);
+      const possibleMoves = getPossibleMoves(gameState, fromSquare, piece as any, gameRules);
       
       // Check if any move is legal (doesn't leave king in check)
       for (const toSquare of possibleMoves) {
@@ -114,7 +114,7 @@ function hasLegalMoves(gameState: any, color: 'white' | 'black'): boolean {
   return false;
 }
 
-function getPossibleMoves(gameState: any, fromSquare: string, piece: any): string[] {
+function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRules?: string): string[] {
   const moves: string[] = [];
   const fromFile = fromSquare[0];
   const fromRank = fromSquare[1];
@@ -148,6 +148,37 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any): strin
           const targetPiece = gameState.board[captureSquare];
           if (targetPiece && targetPiece.color !== piece.color) {
             moves.push(captureSquare);
+          }
+        }
+      }
+      
+      // PawnRotation rule: horizontal moves
+      if (gameRules === 'pawn-rotation') {
+        const pawnRotationMoves = gameState.pawnRotationMoves || {};
+        const hasMovedHorizontally = pawnRotationMoves[fromSquare];
+        
+        // Horizontal moves (left and right)
+        for (const dx of [-1, 1]) {
+          const newFile = String.fromCharCode(fromFileIndex + dx + 'a'.charCodeAt(0));
+          if (newFile >= 'a' && newFile <= 'h') {
+            const horizontalSquare = `${newFile}${fromRankNum}`;
+            const targetPiece = gameState.board[horizontalSquare];
+            
+            if (!targetPiece) {
+              moves.push(horizontalSquare);
+              
+              // If pawn hasn't moved horizontally yet, allow 2-square horizontal move
+              if (!hasMovedHorizontally) {
+                const newFile2 = String.fromCharCode(fromFileIndex + 2 * dx + 'a'.charCodeAt(0));
+                if (newFile2 >= 'a' && newFile2 <= 'h') {
+                  const horizontalSquare2 = `${newFile2}${fromRankNum}`;
+                  const targetPiece2 = gameState.board[horizontalSquare2];
+                  if (!targetPiece2) {
+                    moves.push(horizontalSquare2);
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -276,7 +307,7 @@ function hasLegalKnightMoves(gameState: any, knightSquare: string, color: 'white
   }
   
   // Get all possible knight moves from this square
-  const knightMoves = getPossibleMoves(gameState, knightSquare, piece);
+  const knightMoves = getPossibleMoves(gameState, knightSquare, piece, 'double-knight');
   
   // Check if any of these moves is legal (doesn't leave king in check)
   for (const toSquare of knightMoves) {
@@ -442,10 +473,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Check for pawn double move (set en passant target)
+      // Check for pawn moves (set en passant target and track horizontal moves)
       if (piece && piece.type === 'pawn') {
         const fromRank = parseInt(moveData.from[1]);
         const toRank = parseInt(moveData.to[1]);
+        const fromFile = moveData.from[0];
+        const toFile = moveData.to[0];
+        
+        // Track horizontal pawn moves for PawnRotation rule
+        if (game.rules === 'pawn-rotation' && fromRank === toRank && fromFile !== toFile) {
+          // This is a horizontal pawn move
+          if (!gameState.pawnRotationMoves) {
+            gameState.pawnRotationMoves = {};
+          }
+          gameState.pawnRotationMoves[moveData.to] = true;
+        }
         
         if (Math.abs(toRank - fromRank) === 2) {
           // Pawn moved two squares, set en passant target
@@ -491,7 +533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check for check, checkmate, and stalemate
       const isCheck = isKingInCheck(gameState, nextTurn);
-      let hasMovesAvailable = hasLegalMoves(gameState, nextTurn);
+      let hasMovesAvailable = hasLegalMoves(gameState, nextTurn, game.rules);
       
       // Special check for double knight rule stalemate
       if (game.rules === 'double-knight' && gameState.doubleKnightMove) {

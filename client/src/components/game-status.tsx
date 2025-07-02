@@ -13,6 +13,7 @@ interface GameStatusProps {
 const ruleDescriptions: Record<string, { name: string; description: string; status: 'active' | 'inactive' }> = {
   standard: { name: 'Standard Chess', description: 'Classic rules', status: 'active' },
   'double-knight': { name: 'Double Knight', description: 'Must move knight twice in a row', status: 'active' },
+  'pawn-rotation': { name: 'Pawn Rotation', description: 'Pawns can move horizontally (first move can be 2 squares)', status: 'active' },
 };
 
 export default function GameStatus({ game, elapsedTime, onChangeRules }: GameStatusProps) {
