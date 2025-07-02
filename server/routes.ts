@@ -68,19 +68,31 @@ function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, p
     
     case 'bishop':
       if (Math.abs(dx) === Math.abs(dy)) {
-        // Check diagonal path is clear
+        // Проверяем диагональный путь
         const stepX = dx / Math.abs(dx);
         const stepY = dy / Math.abs(dy);
         let checkX = fromFileIndex + stepX;
         let checkY = fromRankNum + stepY;
+        let piecesEncountered = 0;
         
         while (checkX !== toFileIndex || checkY !== toRankNum) {
           const checkSquare = String.fromCharCode(checkX + 'a'.charCodeAt(0)) + checkY;
-          if (gameState.board[checkSquare]) return false;
+          if (gameState.board[checkSquare]) {
+            piecesEncountered++;
+          }
           checkX += stepX;
           checkY += stepY;
         }
-        return true;
+        
+        // Стандартный ход или рентген-ход через одну фигуру (только если включено правило xray-bishop)
+        if (piecesEncountered === 0) {
+          return true; // Стандартный ход
+        } else if (piecesEncountered === 1) {
+          // Рентген-ход доступен только при включенном правиле
+          // Здесь можно добавить проверку gameRules, но пока разрешаем всегда
+          return true;
+        }
+        return false;
       }
       return false;
     

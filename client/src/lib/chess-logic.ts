@@ -33,10 +33,10 @@ export class ChessLogic {
         moves.push(...this.getKnightMoves(gameState, fromSquare, piece));
         break;
       case 'bishop':
-        moves.push(...this.getBishopMoves(gameState, fromSquare, piece));
+        moves.push(...this.getBishopMoves(gameState, fromSquare, piece, gameRules));
         break;
       case 'queen':
-        moves.push(...this.getQueenMoves(gameState, fromSquare, piece));
+        moves.push(...this.getQueenMoves(gameState, fromSquare, piece, gameRules));
         break;
       case 'king':
         moves.push(...this.getKingMoves(gameState, fromSquare, piece));
@@ -58,10 +58,10 @@ export class ChessLogic {
   }
 
   // Check if the current player has any legal moves
-  hasLegalMoves(gameState: ChessGameState, color: 'white' | 'black'): boolean {
+  hasLegalMoves(gameState: ChessGameState, color: 'white' | 'black', gameRules?: string[]): boolean {
     for (const [square, piece] of Object.entries(gameState.board)) {
       if (piece && piece.color === color) {
-        const moves = this.getValidMovesForPiece(gameState, square, piece, true);
+        const moves = this.getValidMovesForPiece(gameState, square, piece, gameRules);
         if (moves.length > 0) {
           return true;
         }
@@ -71,9 +71,9 @@ export class ChessLogic {
   }
 
   // Update game state to detect checkmate and stalemate
-  updateGameStatus(gameState: ChessGameState): ChessGameState {
+  updateGameStatus(gameState: ChessGameState, gameRules?: string[]): ChessGameState {
     const currentPlayerInCheck = this.isKingInCheck(gameState, gameState.currentTurn);
-    const hasLegalMoves = this.hasLegalMoves(gameState, gameState.currentTurn);
+    const hasLegalMoves = this.hasLegalMoves(gameState, gameState.currentTurn, gameRules);
 
     return {
       ...gameState,
@@ -183,21 +183,27 @@ export class ChessLogic {
     return moves;
   }
 
-  private getBishopMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece): string[] {
+  private getBishopMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece, gameRules?: string[]): string[] {
     const moves: string[] = [];
     const directions = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
 
     for (const [dx, dy] of directions) {
-      moves.push(...this.getMovesInDirection(gameState, fromSquare, piece, dx, dy));
+      if (gameRules && gameRules.includes('xray-bishop')) {
+        // Рентген-режим: слон может проходить сквозь одну фигуру
+        moves.push(...this.getXrayMovesInDirection(gameState, fromSquare, piece, dx, dy));
+      } else {
+        // Стандартное движение слона
+        moves.push(...this.getMovesInDirection(gameState, fromSquare, piece, dx, dy));
+      }
     }
 
     return moves;
   }
 
-  private getQueenMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece): string[] {
+  private getQueenMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece, gameRules?: string[]): string[] {
     return [
       ...this.getRookMoves(gameState, fromSquare, piece),
-      ...this.getBishopMoves(gameState, fromSquare, piece)
+      ...this.getBishopMoves(gameState, fromSquare, piece, gameRules)
     ];
   }
 
@@ -328,6 +334,56 @@ export class ChessLogic {
           moves.push(newSquare);
         }
         break; // Can't move past any piece
+      }
+    }
+
+    return moves;
+  }
+
+  private getXrayMovesInDirection(
+    gameState: ChessGameState,
+    fromSquare: string,
+    piece: ChessPiece,
+    dx: number,
+    dy: number
+  ): string[] {
+    const moves: string[] = [];
+    const [file, rank] = fromSquare;
+    let fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
+    let rankNum = parseInt(rank);
+    let passedThroughPiece = false;
+
+    while (true) {
+      fileIndex += dx;
+      rankNum += dy;
+
+      if (fileIndex < 0 || fileIndex >= 8 || rankNum < 1 || rankNum > 8) {
+        break;
+      }
+
+      const newFile = String.fromCharCode(fileIndex + 'a'.charCodeAt(0));
+      const newSquare = `${newFile}${rankNum}`;
+      const targetPiece = gameState.board[newSquare];
+
+      if (targetPiece) {
+        if (!passedThroughPiece) {
+          // Первая встреченная фигура - проходим сквозь неё
+          passedThroughPiece = true;
+          
+          // Если это вражеская фигура, можем захватить её
+          if (targetPiece.color !== piece.color) {
+            moves.push(newSquare);
+          }
+        } else {
+          // Вторая фигура - останавливаемся, но можем захватить если вражеская
+          if (targetPiece.color !== piece.color) {
+            moves.push(newSquare);
+          }
+          break;
+        }
+      } else {
+        // Пустая клетка - можем ходить туда
+        moves.push(newSquare);
       }
     }
 
@@ -570,13 +626,14 @@ export class ChessLogic {
     gameState: ChessGameState,
     fromSquare: string,
     piece: ChessPiece,
+    gameRules?: string[],
     checkForCheck: boolean = true
   ): string[] {
     let moves: string[] = [];
 
     switch (piece.type) {
       case 'pawn':
-        moves = this.getPawnMoves(gameState, fromSquare, piece);
+        moves = this.getPawnMoves(gameState, fromSquare, piece, gameRules);
         break;
       case 'rook':
         moves = this.getRookMoves(gameState, fromSquare, piece);
@@ -585,10 +642,10 @@ export class ChessLogic {
         moves = this.getKnightMoves(gameState, fromSquare, piece);
         break;
       case 'bishop':
-        moves = this.getBishopMoves(gameState, fromSquare, piece);
+        moves = this.getBishopMoves(gameState, fromSquare, piece, gameRules);
         break;
       case 'queen':
-        moves = this.getQueenMoves(gameState, fromSquare, piece);
+        moves = this.getQueenMoves(gameState, fromSquare, piece, gameRules);
         break;
       case 'king':
         moves = this.getKingMoves(gameState, fromSquare, piece);

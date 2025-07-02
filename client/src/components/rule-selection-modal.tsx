@@ -28,6 +28,13 @@ const availableRules = [
     badges: ['Уникальный', 'Стратегия'],
     badgeColors: ['bg-yellow-100 text-yellow-800', 'bg-red-100 text-red-800'],
   },
+  {
+    id: 'xray-bishop' as GameRules,
+    name: 'Рентген Слон',
+    description: 'Слон может проходить сквозь одну фигуру и ходить на клетки за ней',
+    badges: ['Проницание', 'Мощный'],
+    badgeColors: ['bg-cyan-100 text-cyan-800', 'bg-indigo-100 text-indigo-800'],
+  },
 ];
 
 export default function RuleSelectionModal({ open, onOpenChange, onRuleSelect }: RuleSelectionModalProps) {

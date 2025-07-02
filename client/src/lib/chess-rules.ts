@@ -1,12 +1,19 @@
-import { ChessGameState, GameRules } from "@shared/schema";
+import { ChessGameState, GameRules, GameRulesArray } from "@shared/schema";
 
 export class ChessRules {
-  static applySpecialRules(gameState: ChessGameState, rules: GameRules, fromSquare: string, toSquare: string): ChessGameState {
-    if (rules === 'double-knight') {
-      return this.applyDoubleKnightRule(gameState, fromSquare, toSquare);
+  static applySpecialRules(gameState: ChessGameState, rules: GameRulesArray, fromSquare: string, toSquare: string): ChessGameState {
+    let newGameState = gameState;
+    
+    // Apply each rule sequentially
+    for (const rule of rules) {
+      if (rule === 'double-knight') {
+        newGameState = this.applyDoubleKnightRule(newGameState, fromSquare, toSquare);
+      }
+      // xray-bishop rule doesn't need special handling in applySpecialRules
+      // as it's handled in the move validation logic
     }
-    // Standard chess rules - no special rules to apply
-    return gameState;
+    
+    return newGameState;
   }
 
   private static applyDoubleKnightRule(gameState: ChessGameState, fromSquare: string, toSquare: string): ChessGameState {
@@ -43,7 +50,7 @@ export class ChessRules {
 
 
 
-  static getInitialPosition(rules: GameRules): { [square: string]: any } {
+  static getInitialPosition(rules: GameRulesArray): { [square: string]: any } {
     // Standard chess starting position
     return {
       'a8': { type: 'rook', color: 'black' },

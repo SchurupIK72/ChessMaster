@@ -14,6 +14,7 @@ const ruleDescriptions: Record<string, { name: string; description: string; stat
   standard: { name: 'Стандартные шахматы', description: 'Классические правила', status: 'active' },
   'double-knight': { name: 'Двойной конь', description: 'Нужно ходить конем дважды подряд', status: 'active' },
   'pawn-rotation': { name: 'Поворот пешек', description: 'Пешки могут ходить горизонтально', status: 'active' },
+  'xray-bishop': { name: 'Рентген слон', description: 'Слон проходит сквозь фигуры', status: 'active' },
 };
 
 export default function GameStatus({ game, elapsedTime, onChangeRules }: GameStatusProps) {
