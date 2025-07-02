@@ -144,6 +144,13 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
         
         // Two squares forward from starting position (only if pawn hasn't moved)
         let canDoubleMoveForward = fromRankNum === startRank;
+        
+        // In pawn-wall mode, pawns on 3rd rank (white) and 6th rank (black) can also double move
+        if (gameRules && gameRules.includes('pawn-wall')) {
+          const pawnWallStartRank = piece.color === 'white' ? 3 : 6;
+          canDoubleMoveForward = canDoubleMoveForward || fromRankNum === pawnWallStartRank;
+        }
+        
         if (gameRules && gameRules.includes('pawn-rotation')) {
           // In PawnRotation mode, check if pawn has moved at all
           const pawnRotationMoves = gameState.pawnRotationMoves || {};
@@ -544,7 +551,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (Math.abs(toRank - fromRank) === 2) {
           // Pawn moved two squares, set en passant target
-          const enPassantRank = piece.color === 'white' ? '3' : '6';
+          let enPassantRank;
+          if (piece.color === 'white') {
+            enPassantRank = fromRank === 2 ? '3' : '4'; // From 2nd rank -> 3, from 3rd rank -> 4
+          } else {
+            enPassantRank = fromRank === 7 ? '6' : '5'; // From 7th rank -> 6, from 6th rank -> 5
+          }
           gameState.enPassantTarget = moveData.to[0] + enPassantRank;
         }
         

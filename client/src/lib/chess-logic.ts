@@ -98,6 +98,13 @@ export class ChessLogic {
 
       // Two squares forward from starting position (only if pawn hasn't moved)
       let canDoubleMoveForward = rankNum === startRank;
+      
+      // In pawn-wall mode, pawns on 3rd rank (white) and 6th rank (black) can also double move
+      if (gameRules && gameRules.includes('pawn-wall')) {
+        const pawnWallStartRank = piece.color === 'white' ? 3 : 6;
+        canDoubleMoveForward = canDoubleMoveForward || rankNum === pawnWallStartRank;
+      }
+      
       if (gameRules && gameRules.includes('pawn-rotation')) {
         // In PawnRotation mode, check if pawn has moved at all
         const pawnRotationMoves = gameState.pawnRotationMoves || {};
