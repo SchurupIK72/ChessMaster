@@ -611,8 +611,13 @@ export default function ChessGame() {
         );
       })()}
 
+      {/* Force render GameTypeModal for testing */}
+      <div className="fixed top-4 left-4 bg-blue-500 text-white p-2 rounded z-[300]">
+        Test: GameTypeModal component
+      </div>
+      
       <GameTypeModal
-        open={showGameTypeModal}
+        open={true}
         onOpenChange={setShowGameTypeModal}
         onSinglePlayer={handleSinglePlayer}
         onMultiplayer={handleMultiplayer}

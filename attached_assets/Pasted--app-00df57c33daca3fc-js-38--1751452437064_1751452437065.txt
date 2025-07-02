@@ -1,0 +1,370 @@
+_app-00df57c33daca3fc.js:38 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+_app-00df57c33daca3fc.js:38 [LaunchDarkly] LaunchDarkly client initialized
+ChessMaster:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+framework-862a1af8891026db.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-862a1af8891026db.js:1
+framework-862a1af8891026db.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+framework-862a1af8891026db.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-862a1af8891026db.js:1
+(anonymous) @ framework-862a1af8891026db.js:1
+uD @ framework-862a1af8891026db.js:1
+uI @ framework-862a1af8891026db.js:1
+uM @ framework-862a1af8891026db.js:1
+uS @ framework-862a1af8891026db.js:1
+C @ framework-862a1af8891026db.js:1
+z @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+framework-862a1af8891026db.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-862a1af8891026db.js:1
+(anonymous) @ framework-862a1af8891026db.js:1
+uD @ framework-862a1af8891026db.js:1
+uI @ framework-862a1af8891026db.js:1
+uM @ framework-862a1af8891026db.js:1
+uS @ framework-862a1af8891026db.js:1
+C @ framework-862a1af8891026db.js:1
+z @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+framework-862a1af8891026db.js:1 Unrecognized feature: 'ambient-light-sensor'.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+framework-862a1af8891026db.js:1 Unrecognized feature: 'battery'.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Unrecognized feature: 'battery'.
+workspace_iframe.html:32 Unrecognized feature: 'battery'.
+workspace_iframe.html:32 Unrecognized feature: 'battery'.
+workspace_iframe.html:32 Unrecognized feature: 'battery'.
+workspace_iframe.html:32 Unrecognized feature: 'battery'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+framework-862a1af8891026db.js:1 Unrecognized feature: 'execution-while-not-rendered'.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+framework-862a1af8891026db.js:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+framework-862a1af8891026db.js:1 Unrecognized feature: 'layout-animations'.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+framework-862a1af8891026db.js:1 Unrecognized feature: 'legacy-image-formats'.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+framework-862a1af8891026db.js:1 Unrecognized feature: 'navigation-override'.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+framework-862a1af8891026db.js:1 Unrecognized feature: 'oversized-images'.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+framework-862a1af8891026db.js:1 Unrecognized feature: 'publickey-credentials'.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.
+9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arh7%3A:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+framework-862a1af8891026db.js:1 Unrecognized feature: 'speaker-selection'.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.
+9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arh7%3A:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+framework-862a1af8891026db.js:1 Unrecognized feature: 'unoptimized-images'.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.
+9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arh7%3A:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+framework-862a1af8891026db.js:1 Unrecognized feature: 'unsized-media'.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.
+9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arh7%3A:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.
+framework-862a1af8891026db.js:1 Unrecognized feature: 'pointer-lock'.
+_ @ framework-862a1af8891026db.js:1
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+framework-862a1af8891026db.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.
+9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arh7%3A:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+framework-862a1af8891026db.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+_ @ framework-862a1af8891026db.js:1
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arh7%3A:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Abeacon%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Af1c472fa&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=752a0774-ea7f-40c9-908c-7fef06952d53:1 
+            
+            
+           Failed to load resource: net::ERR_CONNECTION_CLOSED
+eruda.js:2 Modal states: Object
+eruda.js:2 handleNewGame called
+eruda.js:2 Modal states: Object
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 Join Game button clicked
+eruda.js:2 Modal states: Object
+eruda.js:2 Join Game button clicked
+eruda.js:2 Join Game button clicked
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 Modal states: {showGameTypeModal: true, showRuleModal: false, showJoinModal: true, showInviteModal: false, showPromotionModal: false, …}
+eruda.js:2 Modal states: {showGameTypeModal: true, showRuleModal: false, showJoinModal: true, showInviteModal: false, showPromotionModal: false, …}
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 Modal states: {showGameTypeModal: false, showRuleModal: false, showJoinModal: false, showInviteModal: false, showPromotionModal: false, …}
+eruda.js:2 handleNewGame called
+eruda.js:2 Modal states: {showGameTypeModal: true, showRuleModal: false, showJoinModal: false, showInviteModal: false, showPromotionModal: false, …}
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+eruda.js:2 handleNewGame called
+Warning: Don’t paste code into the DevTools Console that you don’t understand or haven’t reviewed yourself. This could allow attackers to steal your identity or take control of your computer. Please type ‘allow pasting’ below and press Enter to allow pasting.
+eruda.js:2 [vite] server connection lost. Polling for restart...
+9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2 Modal states: {showGameTypeModal: false, showRuleModal: false, showJoinModal: false, showInviteModal: false, showPromotionModal: false, …}
+9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2 [vite] server connection lost. Polling for restart...
+9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:602 
+            
+            
+           GET https://9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/src/components/game-type-modal.tsx?t=1751452160321 net::ERR_ABORTED 502 (Bad Gateway)
+importUpdatedModule @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:602
+fetchUpdate @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:211
+queueUpdate @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:186
+(anonymous) @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:642
+handleMessage @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:640
+(anonymous) @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:550
+9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2 [hmr] Failed to reload /src/components/game-type-modal.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+Mt.forEach.n.<computed> @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2
+warnFailedUpdate @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:176
+fetchUpdate @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:213
+await in fetchUpdate
+queueUpdate @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:186
+(anonymous) @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:642
+handleMessage @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:640
+(anonymous) @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:550
+9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:602 
+            
+            
+           GET https://9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/src/index.css?t=1751452160321&v=UQj_CeC_vPCSDc-eBbnXd net::ERR_ABORTED 502 (Bad Gateway)
+importUpdatedModule @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:602
+fetchUpdate @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:211
+queueUpdate @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:186
+(anonymous) @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:642
+handleMessage @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:640
+(anonymous) @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:550
+9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2 [hmr] Failed to reload /src/index.css?v=UQj_CeC_vPCSDc-eBbnXd. This could be due to syntax errors or importing non-existent modules. (see errors above)
+Mt.forEach.n.<computed> @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2
+warnFailedUpdate @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:176
+fetchUpdate @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:213
+await in fetchUpdate
+queueUpdate @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:186
+(anonymous) @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:642
+handleMessage @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:640
+(anonymous) @ 9eeba236-a93b-4895-a5ce-a1f7e285215d-00-3a3nonxcp0oks.worf.replit.dev/@vite/client:550
+Console.js:61 Modal states: {showGameTypeModal: false, showRuleModal: false, showJoinModal: false, showInviteModal: false, showPromotionModal: false, …}
+Console.js:61 handleNewGame called
+Console.js:61 Modal states: {showGameTypeModal: true, showRuleModal: false, showJoinModal: false, showInviteModal: false, showPromotionModal: false, …}
+Console.js:61 handleNewGame called
+Console.js:61 handleNewGame called
+Console.js:61 handleNewGame called
+Console.js:61 handleNewGame called
+Console.js:61 handleNewGame called
+Console.js:61 handleNewGame called
+Console.js:61 handleNewGame called
+Console.js:61 Modal states: {showGameTypeModal: false, showRuleModal: false, showJoinModal: false, showInviteModal: false, showPromotionModal: false, …}
+Console.js:61 handleNewGame called
+Console.js:61 Modal states: {showGameTypeModal: true, showRuleModal: false, showJoinModal: false, showInviteModal: false, showPromotionModal: false, …}
+Console.js:61 handleNewGame called
+Console.js:61 handleNewGame called
+Console.js:61 handleNewGame called
+Console.js:61 handleNewGame called
+Console.js:61 handleNewGame called
+Console.js:61 handleNewGame called
+Console.js:61 Join Game button clicked
+Console.js:61 Modal states: {showGameTypeModal: true, showRuleModal: false, showJoinModal: true, showInviteModal: false, showPromotionModal: false, …}
+Console.js:61 Join Game button clicked
+Console.js:61 Join Game button clicked
+Console.js:61 handleNewGame called
+Console.js:61 handleNewGame called
+Console.js:61 handleNewGame called
