@@ -44,7 +44,15 @@ export class ChessLogic {
     }
 
     // Filter out moves that would put own king in check
-    let validMoves = moves.filter(move => !this.wouldBeInCheck(gameState, fromSquare, move, piece.color, gameRules));
+    console.log(`Filtering ${moves.length} moves for ${piece.type} at ${fromSquare}`);
+    let validMoves = moves.filter(move => {
+      const wouldBeCheck = this.wouldBeInCheck(gameState, fromSquare, move, piece.color, gameRules);
+      if (wouldBeCheck) {
+        console.log(`Move ${fromSquare}-${move} would leave king in check`);
+      }
+      return !wouldBeCheck;
+    });
+    console.log(`After check filtering: ${validMoves.length} moves remain for ${piece.type}`);
     
     // Special rule for double knight: cannot capture the king
     if (gameState.doubleKnightMove) {
