@@ -448,6 +448,8 @@ export class ChessLogic {
           if (fileDiff > 1 || rankDiff > 1) {
             console.log(`Blink move detected from ${fromSquare} to ${toSquare}, allowing without check validation`);
             return false; // Blink moves are always allowed
+          } else {
+            console.log(`Regular king move from ${fromSquare} to ${toSquare}, checking for check`);
           }
         }
       }
