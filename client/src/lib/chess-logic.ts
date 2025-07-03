@@ -607,6 +607,7 @@ export class ChessLogic {
         break;
         
       case 'king':
+        console.log(`getKingMoves called with gameRules:`, gameRules);
         // Basic king moves without castling
         const kingDirections = [
           [-1, -1], [-1, 0], [-1, 1],
