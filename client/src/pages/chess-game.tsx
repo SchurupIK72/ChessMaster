@@ -32,22 +32,27 @@ export default function ChessGame() {
   const [promotionMove, setPromotionMove] = useState<{from: string, to: string, piece: any} | null>(null);
   const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState("00:00");
+  const [lastMoveCount, setLastMoveCount] = useState(0);
   const { toast } = useToast();
 
   const chessLogic = new ChessLogic();
 
-  // Query for current game
+  // Query for current game with automatic refresh
   const { data: game, isLoading: gameLoading } = useQuery<Game>({
     queryKey: ["/api/games", gameId],
     queryFn: () => fetch(`/api/games/${gameId}`).then(res => res.json()),
     enabled: !!gameId,
+    refetchInterval: 3000, // Refresh every 3 seconds
+    refetchIntervalInBackground: true, // Continue refreshing when window is not focused
   });
 
-  // Query for game moves
+  // Query for game moves with automatic refresh
   const { data: moves = [] } = useQuery<Move[]>({
     queryKey: ["/api/games", gameId, "moves"],
     queryFn: () => fetch(`/api/games/${gameId}/moves`).then(res => res.json()),
     enabled: !!gameId,
+    refetchInterval: 3000, // Refresh every 3 seconds
+    refetchIntervalInBackground: true, // Continue refreshing when window is not focused
   });
 
   // Create new game mutation
@@ -119,6 +124,28 @@ export default function ChessGame() {
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
+
+  // Monitor for new moves and show notifications
+  useEffect(() => {
+    if (moves.length > 0) {
+      // If this is not the first time we're checking moves
+      if (lastMoveCount > 0 && moves.length > lastMoveCount) {
+        const newMove = moves[moves.length - 1];
+        const isMyMove = (game?.whitePlayerId === 1 && newMove.player === 'white') || 
+                        (game?.blackPlayerId === 1 && newMove.player === 'black');
+        
+        // Only show notification if it's NOT my move (opponent's move)
+        if (!isMyMove) {
+          toast({
+            title: "Ход противника",
+            description: `${newMove.from} → ${newMove.to}`,
+            duration: 3000,
+          });
+        }
+      }
+      setLastMoveCount(moves.length);
+    }
+  }, [moves, lastMoveCount, game, toast]);
 
   // Make move mutation
   const makeMoveMutation = useMutation({
