@@ -215,7 +215,8 @@ export class ChessLogic {
   private getQueenMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece, gameRules?: string[]): string[] {
     return [
       ...this.getRookMoves(gameState, fromSquare, piece),
-      ...this.getBishopMoves(gameState, fromSquare, piece, gameRules)
+      // Ферзь НЕ получает рентген эффект слона - только обычные диагональные ходы
+      ...this.getBishopMoves(gameState, fromSquare, piece, undefined)
     ];
   }
 
@@ -586,22 +587,12 @@ export class ChessLogic {
         break;
         
       case 'queen':
-        // Queen moves (combination of rook and bishop) - учитываем правило рентген-слона для диагональных ходов
-        const queenRookDirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
-        const queenBishopDirs = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+        // Queen moves (combination of rook and bishop) - НЕ получает рентген эффект
+        const queenDirs = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]];
         
-        // Ладья-подобные ходы (всегда стандартные)
-        for (const [dx, dy] of queenRookDirs) {
+        // Все ходы ферзя (горизонтальные, вертикальные и диагональные) - стандартные
+        for (const [dx, dy] of queenDirs) {
           moves.push(...this.getMovesInDirection(gameState, fromSquare, piece, dx, dy));
-        }
-        
-        // Слон-подобные ходы (учитываем рентген)
-        for (const [dx, dy] of queenBishopDirs) {
-          if (gameRules && gameRules.includes('xray-bishop')) {
-            moves.push(...this.getXrayMovesInDirection(gameState, fromSquare, piece, dx, dy));
-          } else {
-            moves.push(...this.getMovesInDirection(gameState, fromSquare, piece, dx, dy));
-          }
         }
         break;
         

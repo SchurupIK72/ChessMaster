@@ -179,6 +179,11 @@ Changelog:
   * All game modes now properly tracked on server: double-knight, pawn-rotation, xray-bishop, pawn-wall, blink
   * Unified rule application through applyAllSpecialRules function
   * Added comprehensive documentation for future rule additions
+- July 03, 2025. Fixed X-ray Bishop rule affecting Queen incorrectly
+  * X-ray Bishop effect now applies only to bishops, not queens
+  * Queens maintain standard movement without X-ray penetration
+  * Fixed both client-side and server-side logic for proper rule isolation
+  * Added PostgreSQL database for multiple concurrent games support
 ```
 
 ## User Preferences
