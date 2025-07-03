@@ -391,6 +391,102 @@ function hasLegalKnightMoves(gameState: any, knightSquare: string, color: 'white
   return false;
 }
 
+// Centralized function to apply all special rules
+function applyAllSpecialRules(gameState: any, rules: string[], fromSquare: string, toSquare: string, piece: any): any {
+  let newGameState = { ...gameState };
+
+  if (!Array.isArray(rules)) return newGameState;
+
+  // Apply each rule sequentially
+  for (const rule of rules) {
+    switch (rule) {
+      case 'double-knight':
+        newGameState = applyDoubleKnightRule(newGameState, fromSquare, toSquare);
+        break;
+      case 'blink':
+        newGameState = applyBlinkRule(newGameState, fromSquare, toSquare, piece);
+        break;
+      case 'pawn-rotation':
+        newGameState = applyPawnRotationRule(newGameState, fromSquare, toSquare, piece);
+        break;
+      case 'xray-bishop':
+        newGameState = applyXrayBishopRule(newGameState, fromSquare, toSquare, piece);
+        break;
+      case 'pawn-wall':
+        newGameState = applyPawnWallRule(newGameState, fromSquare, toSquare, piece);
+        break;
+      case 'standard':
+        // Standard rules don't need special handling
+        break;
+      default:
+        console.warn(`Unknown rule: ${rule}`);
+        break;
+    }
+  }
+
+  return newGameState;
+}
+
+function applyBlinkRule(gameState: any, fromSquare: string, toSquare: string, piece: any): any {
+  if (!piece || piece.type !== 'king') return gameState;
+
+  const newGameState = { ...gameState };
+  
+  const fromCol = fromSquare.charCodeAt(0) - 'a'.charCodeAt(0);
+  const fromRow = parseInt(fromSquare[1]) - 1;
+  const toCol = toSquare.charCodeAt(0) - 'a'.charCodeAt(0);
+  const toRow = parseInt(toSquare[1]) - 1;
+  
+  const colDiff = Math.abs(toCol - fromCol);
+  const rowDiff = Math.abs(toRow - fromRow);
+  
+  // Check if this is a blink move (beyond normal king range)
+  if (colDiff > 1 || rowDiff > 1) {
+    // Initialize blink tracking if not present
+    if (!newGameState.blinkUsed) {
+      newGameState.blinkUsed = { white: false, black: false };
+    }
+    // Mark blink as used for this color
+    newGameState.blinkUsed[piece.color] = true;
+  }
+
+  return newGameState;
+}
+
+function applyPawnRotationRule(gameState: any, fromSquare: string, toSquare: string, piece: any): any {
+  if (!piece || piece.type !== 'pawn') return gameState;
+
+  const newGameState = { ...gameState };
+  
+  // Initialize pawn rotation tracking if not present
+  if (!newGameState.pawnRotationMoves) {
+    newGameState.pawnRotationMoves = {};
+  }
+  
+  // Track that this pawn has moved
+  const fromFile = fromSquare[0];
+  const fromRank = parseInt(fromSquare[1]);
+  const standardOriginalRank = piece.color === 'white' ? 2 : 7;
+  const standardOriginalSquare = `${fromFile}${standardOriginalRank}`;
+  
+  // Mark the position it moved from
+  newGameState.pawnRotationMoves[standardOriginalSquare] = true;
+
+  return newGameState;
+}
+
+function applyXrayBishopRule(gameState: any, fromSquare: string, toSquare: string, piece: any): any {
+  // X-ray bishop rule doesn't need special state tracking
+  // The logic is handled in move validation
+  return gameState;
+}
+
+function applyPawnWallRule(gameState: any, fromSquare: string, toSquare: string, piece: any): any {
+  // Pawn wall rule affects initial setup, not individual moves
+  // No special state tracking needed during gameplay
+  return gameState;
+}
+
 function applyDoubleKnightRule(gameState: any, fromSquare: string, toSquare: string): any {
   const piece = gameState.board[toSquare]; // Piece is now at the destination square
   const newGameState = { ...gameState };
@@ -657,36 +753,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameState.fullmoveNumber++; // Increment after black's move
       }
       
-      // Apply special rules before changing turns
+      // Apply all special rules in a centralized manner
+      gameState = applyAllSpecialRules(gameState, game.rules as any, moveData.from, moveData.to, piece);
+      
+      // Determine next turn (some rules like double-knight may override turn logic)
       let nextTurn: 'white' | 'black';
       if (Array.isArray(game.rules) && game.rules.includes('double-knight')) {
-        gameState = applyDoubleKnightRule(gameState, moveData.from, moveData.to);
+        // Double knight rule manages its own turn logic
         nextTurn = gameState.currentTurn;
       } else {
         // Standard rules - toggle turn normally
         nextTurn = game.currentTurn === 'white' ? 'black' : 'white';
         gameState.currentTurn = nextTurn;
-      }
-      
-      // Apply blink rule if applicable
-      if (Array.isArray(game.rules) && game.rules.includes('blink') && piece?.type === 'king') {
-        const fromCol = moveData.from.charCodeAt(0) - 'a'.charCodeAt(0);
-        const fromRow = parseInt(moveData.from[1]) - 1;
-        const toCol = moveData.to.charCodeAt(0) - 'a'.charCodeAt(0);
-        const toRow = parseInt(moveData.to[1]) - 1;
-        
-        const colDiff = Math.abs(toCol - fromCol);
-        const rowDiff = Math.abs(toRow - fromRow);
-        
-        // Check if this is a blink move (beyond normal king range)
-        if (colDiff > 1 || rowDiff > 1) {
-          // Initialize blink tracking if not present
-          if (!gameState.blinkUsed) {
-            gameState.blinkUsed = { white: false, black: false };
-          }
-          // Mark blink as used for this color
-          gameState.blinkUsed[piece.color] = true;
-        }
       }
       
       // Check for check, checkmate, and stalemate

@@ -111,6 +111,47 @@ This is a full-stack chess application built with React frontend and Express bac
 - Drizzle migrations applied via `npm run db:push`
 - Session storage configured for user management
 
+## Adding New Game Modes
+
+### Server-Side Implementation Guide
+
+When adding new game modes, follow this centralized approach:
+
+1. **Update Shared Schema** (`shared/schema.ts`):
+   - Add new rule to `GameRules` type
+   - Add any required state tracking to `ChessGameState`
+
+2. **Server Logic** (`server/routes.ts`):
+   - Add validation logic to `getPossibleMoves()` function
+   - Add state tracking logic to `applyAllSpecialRules()` function
+   - Create dedicated `apply[RuleName]Rule()` function
+   - Add rule case to switch statement in `applyAllSpecialRules()`
+
+3. **Client Logic** (`client/src/lib/chess-logic.ts`):
+   - Add validation logic to piece movement functions
+   - Update `chess-rules.ts` with rule-specific logic
+
+4. **UI Components** (`client/src/components/rule-selection-modal.tsx`):
+   - Add rule description and badges
+
+5. **Storage** (`server/storage.ts`):
+   - Initialize rule state in `getInitialGameState()`
+
+### Example Implementation Pattern:
+
+```typescript
+// In server/routes.ts
+function applyNewRuleRule(gameState: any, fromSquare: string, toSquare: string, piece: any): any {
+  // Rule-specific state tracking logic
+  return gameState;
+}
+
+// Add to applyAllSpecialRules switch statement:
+case 'new-rule':
+  newGameState = applyNewRuleRule(newGameState, fromSquare, toSquare, piece);
+  break;
+```
+
 ## Changelog
 
 ```
@@ -132,6 +173,12 @@ Changelog:
   * Added server-side validation for basic move validation
   * Improved error handling and move validation pipeline
   * Applied classic green chess board design with proper piece colors
+- July 03, 2025. Implemented Blink mode and centralized rule system
+  * Added Blink mode: King can teleport once per game to any legal square
+  * Created centralized server-side rule processing system
+  * All game modes now properly tracked on server: double-knight, pawn-rotation, xray-bishop, pawn-wall, blink
+  * Unified rule application through applyAllSpecialRules function
+  * Added comprehensive documentation for future rule additions
 ```
 
 ## User Preferences
