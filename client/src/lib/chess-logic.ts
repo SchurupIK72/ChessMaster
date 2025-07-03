@@ -717,6 +717,7 @@ export class ChessLogic {
         moves = this.getQueenMoves(gameState, fromSquare, piece, gameRules);
         break;
       case 'king':
+        console.log(`King case called with gameRules:`, gameRules);
         moves = this.getKingMoves(gameState, fromSquare, piece, gameRules);
         break;
     }
