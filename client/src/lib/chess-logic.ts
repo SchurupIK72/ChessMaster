@@ -641,8 +641,11 @@ export class ChessLogic {
                 const square = `${String.fromCharCode(file + 'a'.charCodeAt(0))}${rank}`;
                 const targetPiece = gameState.board[square];
                 
-                // King can blink to any empty square
-                if (!targetPiece) {
+                // Skip current position
+                if (square === fromSquare) continue;
+                
+                // King can blink to any empty square or capture enemy pieces
+                if (!targetPiece || targetPiece.color !== piece.color) {
                   moves.push(square);
                 }
               }
