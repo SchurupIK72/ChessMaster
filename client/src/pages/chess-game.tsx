@@ -336,6 +336,7 @@ export default function ChessGame() {
       if (piece && piece.color === gameState.currentTurn && piece.color === playerColor) {
         setSelectedSquare(square);
         const moves = chessLogic.getValidMoves(gameState, square, game?.rules);
+        console.log(`UI: Found ${moves.length} valid moves for ${piece.type} at ${square}:`, moves);
         setValidMoves(moves);
       } else {
         // Clear selection if clicking on wrong color or empty square
