@@ -19,6 +19,15 @@ function Router() {
 
   const checkSession = async () => {
     try {
+      // First check for guest user in localStorage
+      const guestUser = localStorage.getItem('guestUser');
+      if (guestUser) {
+        setUser(JSON.parse(guestUser));
+        setIsLoading(false);
+        return;
+      }
+
+      // Then check for authenticated session
       const response = await fetch("/api/auth/session");
       if (response.ok) {
         const data = await response.json();

@@ -133,11 +133,19 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
         throw new Error("Ошибка создания гостевой сессии");
       }
       
-      toast({
-        title: "Успех",
-        description: "Гостевая сессия создана",
-      });
-      onSuccess();
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: "Успех",
+          description: `Гостевая сессия создана для ${data.user.username}`,
+        });
+        // Store guest user data in localStorage temporarily
+        localStorage.setItem('guestUser', JSON.stringify(data.user));
+        onSuccess();
+      } else {
+        throw new Error(data.message || "Ошибка создания гостевой сессии");
+      }
     } catch (error: any) {
       toast({
         title: "Ошибка",
