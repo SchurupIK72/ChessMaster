@@ -718,7 +718,60 @@ export class ChessLogic {
         break;
       case 'king':
         console.log(`King case called with gameRules:`, gameRules);
-        moves = this.getKingMoves(gameState, fromSquare, piece, gameRules);
+        
+        // Basic king moves without castling
+        const kingDirections = [
+          [-1, -1], [-1, 0], [-1, 1],
+          [0, -1],           [0, 1],
+          [1, -1],  [1, 0],  [1, 1]
+        ];
+        
+        const [file, rank] = fromSquare;
+        const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
+        const rankNum = parseInt(rank);
+        
+        for (const [dx, dy] of kingDirections) {
+          const newFile = fileIndex + dx;
+          const newRank = rankNum + dy;
+          
+          if (newFile >= 0 && newFile < 8 && newRank >= 1 && newRank <= 8) {
+            const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
+            const targetPiece = gameState.board[newSquare];
+            
+            if (!targetPiece || targetPiece.color !== piece.color) {
+              moves.push(newSquare);
+            }
+          }
+        }
+        
+        // Blink ability: king can teleport to any empty square once per game
+        if (gameRules?.includes('blink')) {
+          console.log("Blink mode detected for king!", { piece, gameRules, blinkUsed: (gameState as any).blinkUsed });
+          const blinkUsed = (gameState as any).blinkUsed?.[piece.color];
+          if (!blinkUsed) {
+            console.log("Blink available! Adding all empty squares as targets");
+            // Add all empty squares as potential blink targets
+            for (let fileIdx = 0; fileIdx < 8; fileIdx++) {
+              for (let rankIdx = 1; rankIdx <= 8; rankIdx++) {
+                const square = `${String.fromCharCode(fileIdx + 'a'.charCodeAt(0))}${rankIdx}`;
+                const targetPiece = gameState.board[square];
+                
+                // Skip current position
+                if (square === fromSquare) continue;
+                
+                // King can blink to any empty square or capture enemy pieces
+                if (!targetPiece || targetPiece.color !== piece.color) {
+                  moves.push(square);
+                }
+              }
+            }
+            console.log("Total moves with blink:", moves.length);
+          } else {
+            console.log("Blink already used for this color");
+          }
+        } else {
+          console.log("Blink mode not detected", { gameRules });
+        }
         break;
     }
 
