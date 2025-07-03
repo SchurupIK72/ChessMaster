@@ -752,6 +752,10 @@ export class ChessLogic {
         const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
         const rankNum = parseInt(rank);
         
+        // Check if Blink is enabled and not used yet
+        const blinkAvailable = gameRules?.includes('blink') && 
+          !(gameState as any).blinkUsed?.[piece.color];
+        
         for (const [dx, dy] of kingDirections) {
           const newFile = fileIndex + dx;
           const newRank = rankNum + dy;
@@ -760,8 +764,16 @@ export class ChessLogic {
             const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
             const targetPiece = gameState.board[newSquare];
             
-            if (!targetPiece || targetPiece.color !== piece.color) {
-              moves.push(newSquare);
+            // In Blink mode, king can only move to empty squares (no capturing)
+            if (blinkAvailable) {
+              if (!targetPiece) {
+                moves.push(newSquare);
+              }
+            } else {
+              // Normal mode: can capture enemy pieces
+              if (!targetPiece || targetPiece.color !== piece.color) {
+                moves.push(newSquare);
+              }
             }
           }
         }
