@@ -429,6 +429,30 @@ export class ChessLogic {
     color: 'white' | 'black',
     gameRules?: string[]
   ): boolean {
+    // Check if this is a blink move (king moving to a non-adjacent square)
+    if (gameRules?.includes('blink')) {
+      const piece = gameState.board[fromSquare];
+      if (piece && piece.type === 'king') {
+        const blinkUsed = (gameState as any).blinkUsed?.[piece.color];
+        if (!blinkUsed) {
+          // Check if this is a blink move (non-adjacent square)
+          const fromFile = fromSquare.charCodeAt(0) - 'a'.charCodeAt(0);
+          const fromRank = parseInt(fromSquare[1]) - 1;
+          const toFile = toSquare.charCodeAt(0) - 'a'.charCodeAt(0);
+          const toRank = parseInt(toSquare[1]) - 1;
+          
+          const fileDiff = Math.abs(toFile - fromFile);
+          const rankDiff = Math.abs(toRank - fromRank);
+          
+          // If this is a blink move (not adjacent), don't check for check
+          if (fileDiff > 1 || rankDiff > 1) {
+            console.log(`Blink move detected from ${fromSquare} to ${toSquare}, allowing without check validation`);
+            return false; // Blink moves are always allowed
+          }
+        }
+      }
+    }
+    
     // Create a temporary game state with the move made
     const tempState = { ...gameState };
     tempState.board = { ...gameState.board };
