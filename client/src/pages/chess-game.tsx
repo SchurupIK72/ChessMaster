@@ -108,6 +108,18 @@ export default function ChessGame() {
     },
   });
 
+  // Check for invitation link on page load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const shareId = urlParams.get('join');
+    if (shareId) {
+      // Automatically join the game
+      joinGameMutation.mutate(shareId);
+      // Clear the URL parameter
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
   // Make move mutation
   const makeMoveMutation = useMutation({
     mutationFn: async ({ from, to, piece, captured }: { from: string; to: string; piece: string; captured?: string }) => {
