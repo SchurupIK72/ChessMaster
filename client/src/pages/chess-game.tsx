@@ -78,13 +78,13 @@ export default function ChessGame() {
   const createGameMutation = useMutation({
     mutationFn: async (rules: GameRulesArray) => {
       const response = await apiRequest("POST", "/api/games", {
-        whitePlayerId: null,
-        blackPlayerId: null,
         rules,
       });
       return response.json();
     },
     onSuccess: (newGame: Game) => {
+      // Store player ID for creator (will be white)
+      localStorage.setItem('playerId', newGame.whitePlayerId?.toString() || '1');
       setGameId(newGame.id);
       setGameStartTime(new Date(newGame.gameStartTime!));
       setGameOverShown(false); // Reset flag for new game
@@ -94,7 +94,7 @@ export default function ChessGame() {
       }
       toast({
         title: "Игра создана",
-        description: "Поделитесь ссылкой с другом для начала игры!",
+        description: "Вы играете белыми фигурами! Поделитесь ссылкой с другом.",
       });
     },
     onError: (error: any) => {
@@ -113,6 +113,8 @@ export default function ChessGame() {
       return response.json();
     },
     onSuccess: (joinedGame: Game) => {
+      // Store player ID for joining player (will be black)
+      localStorage.setItem('playerId', joinedGame.blackPlayerId?.toString() || '2');
       setGameId(joinedGame.id);
       setGameStartTime(new Date(joinedGame.gameStartTime!));
       setGameOverShown(false);
@@ -120,7 +122,7 @@ export default function ChessGame() {
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
       toast({
         title: "Присоединились к игре",
-        description: "Игра начинается!",
+        description: "Вы играете черными фигурами!",
       });
     },
     onError: (error: any) => {

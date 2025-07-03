@@ -446,7 +446,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/games/join/:shareId", async (req, res) => {
     try {
       const shareId = req.params.shareId;
-      const playerId = 1; // For now, use default player ID since we don't have auth
+      // Generate new player ID for joining player (will be black)
+      const playerId = Math.floor(Math.random() * 1000) + 2; // Ensure different from creator
       const game = await storage.joinGame(shareId, playerId);
       res.json(game);
     } catch (error: any) {

@@ -63,11 +63,14 @@ export class MemStorage implements IStorage {
     const rulesArray = Array.isArray(insertGame.rules) ? insertGame.rules : (insertGame.rules ? [insertGame.rules] : ["standard"]);
     const initialGameState: ChessGameState = this.getInitialGameState(rulesArray);
     
+    // For simplicity, creator is always white (player 1)
+    const playerId = 1;
+    
     const game: Game = {
       id,
       shareId,
-      whitePlayerId: insertGame.whitePlayerId || null,
-      blackPlayerId: insertGame.blackPlayerId || null,
+      whitePlayerId: playerId, // Creator is always white
+      blackPlayerId: null, // Will be set when someone joins
       gameState: initialGameState as any,
       currentTurn: "white",
       status: "waiting", // Start as waiting for second player
@@ -100,12 +103,16 @@ export class MemStorage implements IStorage {
     const game = await this.getGameByShareId(shareId);
     if (!game) throw new Error("Game not found");
     
-    // Assign player to available slot
+    // Joining player always becomes black, creator is white
     let updatedGame: Game;
-    if (!game.whitePlayerId) {
-      updatedGame = { ...game, whitePlayerId: playerId };
-    } else if (!game.blackPlayerId) {
+    if (!game.blackPlayerId && game.whitePlayerId !== playerId) {
       updatedGame = { ...game, blackPlayerId: playerId, status: "active" }; // Game starts when both players join
+    } else if (game.blackPlayerId === playerId) {
+      // Player is already in the game as black
+      updatedGame = game;
+    } else if (game.whitePlayerId === playerId) {
+      // Player is already in the game as white
+      updatedGame = game;
     } else {
       throw new Error("Game is full");
     }
