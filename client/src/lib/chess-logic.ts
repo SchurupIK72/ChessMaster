@@ -689,7 +689,9 @@ export class ChessLogic {
     const opponentColor = color === 'white' ? 'black' : 'white';
     for (const [square, piece] of Object.entries(gameState.board)) {
       if (piece && piece.color === opponentColor) {
-        const moves = this.getRawMovesForPiece(gameState, square, piece, gameRules); // Use raw moves with game rules
+        // For check detection, don't include Blink moves (they cannot attack)
+        const attackGameRules = gameRules?.filter(rule => rule !== 'blink');
+        const moves = this.getRawMovesForPiece(gameState, square, piece, attackGameRules);
         if (moves.includes(kingSquare)) {
           return true;
         }
