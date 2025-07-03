@@ -39,7 +39,8 @@ export class ChessLogic {
         moves.push(...this.getQueenMoves(gameState, fromSquare, piece, gameRules));
         break;
       case 'king':
-        moves.push(...this.getKingMoves(gameState, fromSquare, piece, gameRules));
+        // King moves are handled in getValidMovesForPiece function
+        moves.push(...this.getValidMovesForPiece(gameState, fromSquare, piece, gameRules, false));
         break;
     }
 

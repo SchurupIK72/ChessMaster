@@ -1,0 +1,138 @@
+Game rules being passed: Array(3)
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Filtering 40 moves for king at e1
+Console.js:61 Blink move detected from e1 to a4, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink move detected from e1 to a5, checking destination for check
+Console.js:61 Blink destination a5 would leave king in check
+Console.js:61 Move e1-a5 would leave king in check
+Console.js:61 Blink move detected from e1 to a6, checking destination for check
+Console.js:61 Blink destination a6 would leave king in check
+Console.js:61 Move e1-a6 would leave king in check
+Console.js:61 Blink move detected from e1 to a7, checking destination for check
+Console.js:61 Blink destination a7 would leave king in check
+Console.js:61 Move e1-a7 would leave king in check
+Console.js:61 Blink move detected from e1 to a8, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink move detected from e1 to b4, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink move detected from e1 to b5, checking destination for check
+Console.js:61 Blink destination b5 would leave king in check
+Console.js:61 Move e1-b5 would leave king in check
+Console.js:61 Blink move detected from e1 to b6, checking destination for check
+Console.js:61 Blink destination b6 would leave king in check
+Console.js:61 Move e1-b6 would leave king in check
+Console.js:61 Blink move detected from e1 to b7, checking destination for check
+Console.js:61 Blink destination b7 would leave king in check
+Console.js:61 Move e1-b7 would leave king in check
+Console.js:61 Blink move detected from e1 to b8, checking destination for check
+Console.js:61 Blink destination b8 would leave king in check
+Console.js:61 Move e1-b8 would leave king in check
+Console.js:61 Blink move detected from e1 to c4, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink move detected from e1 to c5, checking destination for check
+Console.js:61 Blink destination c5 would leave king in check
+Console.js:61 Move e1-c5 would leave king in check
+Console.js:61 Blink move detected from e1 to c6, checking destination for check
+Console.js:61 Blink destination c6 would leave king in check
+Console.js:61 Move e1-c6 would leave king in check
+Console.js:61 Blink move detected from e1 to c7, checking destination for check
+Console.js:61 Blink destination c7 would leave king in check
+Console.js:61 Move e1-c7 would leave king in check
+Console.js:61 Blink move detected from e1 to c8, checking destination for check
+Console.js:61 Blink destination c8 would leave king in check
+Console.js:61 Move e1-c8 would leave king in check
+Console.js:61 Blink move detected from e1 to d4, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink move detected from e1 to d5, checking destination for check
+Console.js:61 Blink destination d5 would leave king in check
+Console.js:61 Move e1-d5 would leave king in check
+Console.js:61 Blink move detected from e1 to d6, checking destination for check
+Console.js:61 Blink destination d6 would leave king in check
+Console.js:61 Move e1-d6 would leave king in check
+Console.js:61 Blink move detected from e1 to d7, checking destination for check
+Console.js:61 Blink destination d7 would leave king in check
+Console.js:61 Move e1-d7 would leave king in check
+Console.js:61 Blink move detected from e1 to d8, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink destination d8 would leave king in check
+Console.js:61 Move e1-d8 would leave king in check
+Console.js:61 Blink move detected from e1 to e4, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink move detected from e1 to e5, checking destination for check
+Console.js:61 Blink destination e5 would leave king in check
+Console.js:61 Move e1-e5 would leave king in check
+Console.js:61 Blink move detected from e1 to e6, checking destination for check
+Console.js:61 Blink destination e6 would leave king in check
+Console.js:61 Move e1-e6 would leave king in check
+Console.js:61 Blink move detected from e1 to e7, checking destination for check
+Console.js:61 Blink destination e7 would leave king in check
+Console.js:61 Move e1-e7 would leave king in check
+Console.js:61 Blink move detected from e1 to e8, checking destination for check
+Console.js:61 Blink destination e8 would leave king in check
+Console.js:61 Move e1-e8 would leave king in check
+Console.js:61 Blink move detected from e1 to f4, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink move detected from e1 to f5, checking destination for check
+Console.js:61 Blink destination f5 would leave king in check
+Console.js:61 Move e1-f5 would leave king in check
+Console.js:61 Blink move detected from e1 to f6, checking destination for check
+Console.js:61 Blink destination f6 would leave king in check
+Console.js:61 Move e1-f6 would leave king in check
+Console.js:61 Blink move detected from e1 to f7, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink destination f7 would leave king in check
+Console.js:61 Move e1-f7 would leave king in check
+Console.js:61 Blink move detected from e1 to f8, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink destination f8 would leave king in check
+Console.js:61 Move e1-f8 would leave king in check
+Console.js:61 Blink move detected from e1 to g4, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink move detected from e1 to g5, checking destination for check
+Console.js:61 Blink destination g5 would leave king in check
+Console.js:61 Move e1-g5 would leave king in check
+Console.js:61 Blink move detected from e1 to g6, checking destination for check
+Console.js:61 Blink destination g6 would leave king in check
+Console.js:61 Move e1-g6 would leave king in check
+Console.js:61 Blink move detected from e1 to g7, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink destination g7 would leave king in check
+Console.js:61 Move e1-g7 would leave king in check
+Console.js:61 Blink move detected from e1 to g8, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink destination g8 would leave king in check
+Console.js:61 Move e1-g8 would leave king in check
+Console.js:61 Blink move detected from e1 to h4, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink move detected from e1 to h5, checking destination for check
+Console.js:61 Blink destination h5 would leave king in check
+Console.js:61 Move e1-h5 would leave king in check
+Console.js:61 Blink move detected from e1 to h6, checking destination for check
+Console.js:61 Blink destination h6 would leave king in check
+Console.js:61 Move e1-h6 would leave king in check
+Console.js:61 Blink move detected from e1 to h7, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 Blink destination h7 would leave king in check
+Console.js:61 Move e1-h7 would leave king in check
+Console.js:61 Blink move detected from e1 to h8, checking destination for check
+Console.js:61 getKingMoves called with gameRules: Array(2)
+Console.js:61 Blink mode not detected Object
+Console.js:61 After check filtering: 10 moves remain for king
+Console.js:61 UI: Found 10 valid moves for king at e1: Array(10)
