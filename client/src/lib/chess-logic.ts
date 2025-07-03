@@ -604,8 +604,10 @@ export class ChessLogic {
         
         // Blink ability: king can teleport to any empty square once per game
         if (gameRules?.includes('blink')) {
+          console.log("Blink mode detected for king!", { piece, gameRules, blinkUsed: (gameState as any).blinkUsed });
           const blinkUsed = (gameState as any).blinkUsed?.[piece.color];
           if (!blinkUsed) {
+            console.log("Blink available! Adding all empty squares as targets");
             // Add all empty squares as potential blink targets
             for (let file = 0; file < 8; file++) {
               for (let rank = 1; rank <= 8; rank++) {
@@ -618,7 +620,12 @@ export class ChessLogic {
                 }
               }
             }
+            console.log("Total moves with blink:", moves.length);
+          } else {
+            console.log("Blink already used for this color");
           }
+        } else {
+          console.log("Blink mode not detected", { gameRules });
         }
         break;
     }
