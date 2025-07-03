@@ -759,8 +759,8 @@ export class ChessLogic {
                 // Skip current position
                 if (square === fromSquare) continue;
                 
-                // King can blink to any empty square or capture enemy pieces
-                if (!targetPiece || targetPiece.color !== piece.color) {
+                // King can blink ONLY to empty squares (not capture)
+                if (!targetPiece) {
                   moves.push(square);
                 }
               }
