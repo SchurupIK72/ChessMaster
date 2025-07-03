@@ -174,6 +174,10 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
           if (targetPiece && targetPiece.color !== piece.color) {
             moves.push(captureSquare);
           }
+          // En passant capture
+          if (captureSquare === gameState.enPassantTarget) {
+            moves.push(captureSquare);
+          }
         }
       }
       
@@ -765,12 +769,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (Math.abs(toRank - fromRank) === 2) {
           // Pawn moved two squares, set en passant target
-          let enPassantRank;
-          if (piece.color === 'white') {
-            enPassantRank = fromRank === 2 ? '3' : '4'; // From 2nd rank -> 3, from 3rd rank -> 4
-          } else {
-            enPassantRank = fromRank === 7 ? '6' : '5'; // From 7th rank -> 6, from 6th rank -> 5
-          }
+          // The en passant target is the square the pawn "jumped over"
+          const enPassantRank = piece.color === 'white' ? fromRank + 1 : fromRank - 1;
           gameState.enPassantTarget = moveData.to[0] + enPassantRank;
         }
         
