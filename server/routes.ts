@@ -318,6 +318,7 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
       break;
       
     case 'king':
+      // Normal king moves
       for (const [dx, dy] of [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]) {
         const newFile = fromFileIndex + dx;
         const newRank = fromRankNum + dy;
@@ -328,6 +329,29 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
           
           if (!targetPiece || targetPiece.color !== piece.color) {
             moves.push(newSquare);
+          }
+        }
+      }
+      
+      // Blink ability - can teleport to any square once per game
+      if (gameRules && gameRules.includes('blink')) {
+        const blinkUsed = gameState.blinkUsed || { white: false, black: false };
+        if (!blinkUsed[piece.color]) {
+          // King can blink to any empty square or capture any enemy piece
+          for (let fileIdx = 0; fileIdx < 8; fileIdx++) {
+            for (let rankIdx = 1; rankIdx <= 8; rankIdx++) {
+              const file = String.fromCharCode(fileIdx + 'a'.charCodeAt(0));
+              const square = `${file}${rankIdx}`;
+              
+              // Skip current position
+              if (square === fromSquare) continue;
+              
+              const targetPiece = gameState.board[square];
+              // Can blink to empty square or capture enemy piece
+              if (!targetPiece || targetPiece.color !== piece.color) {
+                moves.push(square);
+              }
+            }
           }
         }
       }
@@ -642,6 +666,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Standard rules - toggle turn normally
         nextTurn = game.currentTurn === 'white' ? 'black' : 'white';
         gameState.currentTurn = nextTurn;
+      }
+      
+      // Apply blink rule if applicable
+      if (Array.isArray(game.rules) && game.rules.includes('blink') && piece?.type === 'king') {
+        const fromCol = moveData.from.charCodeAt(0) - 'a'.charCodeAt(0);
+        const fromRow = parseInt(moveData.from[1]) - 1;
+        const toCol = moveData.to.charCodeAt(0) - 'a'.charCodeAt(0);
+        const toRow = parseInt(moveData.to[1]) - 1;
+        
+        const colDiff = Math.abs(toCol - fromCol);
+        const rowDiff = Math.abs(toRow - fromRow);
+        
+        // Check if this is a blink move (beyond normal king range)
+        if (colDiff > 1 || rowDiff > 1) {
+          // Initialize blink tracking if not present
+          if (!gameState.blinkUsed) {
+            gameState.blinkUsed = { white: false, black: false };
+          }
+          // Mark blink as used for this color
+          gameState.blinkUsed[piece.color] = true;
+        }
       }
       
       // Check for check, checkmate, and stalemate
