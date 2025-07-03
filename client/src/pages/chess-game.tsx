@@ -537,15 +537,7 @@ export default function ChessGame() {
                 <h1 className="text-2xl font-bold text-slate-800">Sword Master</h1>
                 <span className="text-sm text-slate-500 hidden sm:block">Special Rules Edition</span>
               </div>
-              <div className="flex items-center space-x-4">
-                <Button onClick={handleNewGame} className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Новая игра
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Settings className="h-5 w-5" />
-                </Button>
-              </div>
+  
             </div>
           </div>
         </header>
