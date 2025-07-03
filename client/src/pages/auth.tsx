@@ -120,6 +120,33 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
     registerMutation.mutate(data);
   };
 
+  const handleGuestLogin = async () => {
+    try {
+      const response = await fetch("/api/auth/guest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error("Ошибка создания гостевой сессии");
+      }
+      
+      toast({
+        title: "Успех",
+        description: "Гостевая сессия создана",
+      });
+      onSuccess();
+    } catch (error: any) {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Ошибка создания гостевой сессии",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-green-50 dark:bg-green-950 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
