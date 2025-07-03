@@ -317,7 +317,20 @@ export default function ChessGame() {
             }
           }
           
-          const captured = piece ? `${piece.color}-${piece.type}` : undefined;
+          // Check for en passant capture
+          let captured = piece ? `${piece.color}-${piece.type}` : undefined;
+          
+          // Special case for en passant: if pawn moves to enPassantTarget, capture the pawn that was "jumped over"
+          if (fromPiece.type === 'pawn' && square === gameState.enPassantTarget && !piece) {
+            // This is an en passant capture - the captured pawn is not on the target square
+            const captureRank = fromPiece.color === 'white' ? '5' : '4';
+            const captureSquare = square[0] + captureRank;
+            const capturedPawn = gameState.board[captureSquare];
+            if (capturedPawn) {
+              captured = `${capturedPawn.color}-${capturedPawn.type}`;
+            }
+          }
+          
           makeMoveMutation.mutate({
             from: selectedSquare,
             to: square,
@@ -499,7 +512,20 @@ export default function ChessGame() {
     
     const currentGameState = game.gameState as ChessGameState;
     const targetPiece = currentGameState?.board?.[promotionMove.to];
-    const captured = targetPiece ? `${targetPiece.color}-${targetPiece.type}` : undefined;
+    
+    // Check for en passant capture in promotion move
+    let captured = targetPiece ? `${targetPiece.color}-${targetPiece.type}` : undefined;
+    
+    // Special case for en passant: if pawn moves to enPassantTarget, capture the pawn that was "jumped over"
+    if (promotionMove.to === currentGameState.enPassantTarget && !targetPiece) {
+      // This is an en passant capture - the captured pawn is not on the target square
+      const captureRank = promotionMove.piece.color === 'white' ? '5' : '4';
+      const captureSquare = promotionMove.to[0] + captureRank;
+      const capturedPawn = currentGameState.board[captureSquare];
+      if (capturedPawn) {
+        captured = `${capturedPawn.color}-${capturedPawn.type}`;
+      }
+    }
       
     makeMoveMutation.mutate({
       from: promotionMove.from,
