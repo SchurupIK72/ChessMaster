@@ -620,6 +620,12 @@ export class ChessLogic {
         
       case 'king':
         console.log(`getKingMoves called with gameRules:`, gameRules);
+        console.log("Checking for blink mode:", { 
+          gameRules, 
+          hasBlinkRule: gameRules?.includes('blink'), 
+          gameRulesType: typeof gameRules,
+          gameRulesContent: gameRules ? [...gameRules] : null
+        });
         // Basic king moves without castling
         const kingDirections = [
           [-1, -1], [-1, 0], [-1, 1],
