@@ -39,7 +39,7 @@ export class ChessLogic {
         moves.push(...this.getQueenMoves(gameState, fromSquare, piece, gameRules));
         break;
       case 'king':
-        moves.push(...this.getKingMoves(gameState, fromSquare, piece));
+        moves.push(...this.getKingMoves(gameState, fromSquare, piece, gameRules));
         break;
     }
 
