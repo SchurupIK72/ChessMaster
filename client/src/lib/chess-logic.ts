@@ -601,6 +601,25 @@ export class ChessLogic {
             }
           }
         }
+        
+        // Blink ability: king can teleport to any empty square once per game
+        if (gameRules?.includes('blink')) {
+          const blinkUsed = (gameState as any).blinkUsed?.[piece.color];
+          if (!blinkUsed) {
+            // Add all empty squares as potential blink targets
+            for (let file = 0; file < 8; file++) {
+              for (let rank = 1; rank <= 8; rank++) {
+                const square = `${String.fromCharCode(file + 'a'.charCodeAt(0))}${rank}`;
+                const targetPiece = gameState.board[square];
+                
+                // King can blink to any empty square
+                if (!targetPiece) {
+                  moves.push(square);
+                }
+              }
+            }
+          }
+        }
         break;
     }
 
