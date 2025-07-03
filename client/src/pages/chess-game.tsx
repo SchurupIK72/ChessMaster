@@ -37,6 +37,25 @@ export default function ChessGame() {
 
   const chessLogic = new ChessLogic();
 
+  // Get current player's color
+  const getCurrentPlayerColor = (): 'white' | 'black' | null => {
+    if (!game) return null;
+    
+    // Simple player identification system for demo
+    // In a real app this would use proper user authentication
+    let playerId = parseInt(localStorage.getItem('playerId') || '1');
+    
+    // If no playerId stored, generate one
+    if (!playerId) {
+      playerId = Math.floor(Math.random() * 1000) + 1;
+      localStorage.setItem('playerId', playerId.toString());
+    }
+    
+    if (game.whitePlayerId === playerId) return 'white';
+    if (game.blackPlayerId === playerId) return 'black';
+    return null;
+  };
+
   // Query for current game with automatic refresh
   const { data: game, isLoading: gameLoading } = useQuery<Game>({
     queryKey: ["/api/games", gameId],
@@ -131,8 +150,9 @@ export default function ChessGame() {
       // If this is not the first time we're checking moves
       if (lastMoveCount > 0 && moves.length > lastMoveCount) {
         const newMove = moves[moves.length - 1];
-        const isMyMove = (game?.whitePlayerId === 1 && newMove.player === 'white') || 
-                        (game?.blackPlayerId === 1 && newMove.player === 'black');
+        const playerId = parseInt(localStorage.getItem('playerId') || '1');
+        const isMyMove = (game?.whitePlayerId === playerId && newMove.player === 'white') || 
+                        (game?.blackPlayerId === playerId && newMove.player === 'black');
         
         // Only show notification if it's NOT my move (opponent's move)
         if (!isMyMove) {
@@ -262,6 +282,21 @@ export default function ChessGame() {
         }
         
         if (fromPiece) {
+          const playerColor = getCurrentPlayerColor();
+          
+          // Check if it's the player's turn
+          if (playerColor !== gameState.currentTurn) {
+            toast({
+              title: "Не ваш ход",
+              description: "Дождитесь своей очереди",
+              variant: "destructive",
+              duration: 2000,
+            });
+            setSelectedSquare(null);
+            setValidMoves([]);
+            return;
+          }
+          
           // Check if this is a pawn promotion
           if (fromPiece.type === 'pawn') {
             const toRank = parseInt(square[1]);
@@ -294,7 +329,9 @@ export default function ChessGame() {
       }
     } else {
       // Selecting a piece
-      if (piece && piece.color === gameState.currentTurn) {
+      const playerColor = getCurrentPlayerColor();
+      
+      if (piece && piece.color === gameState.currentTurn && piece.color === playerColor) {
         setSelectedSquare(square);
         const moves = chessLogic.getValidMoves(gameState, square, game?.rules);
         setValidMoves(moves);
@@ -302,6 +339,16 @@ export default function ChessGame() {
         // Clear selection if clicking on wrong color or empty square
         setSelectedSquare(null);
         setValidMoves([]);
+        
+        // Show message if trying to move opponent's piece
+        if (piece && piece.color !== playerColor && playerColor) {
+          toast({
+            title: "Неверный ход",
+            description: "Вы можете ходить только своими фигурами",
+            variant: "destructive",
+            duration: 2000,
+          });
+        }
       }
     }
   };
