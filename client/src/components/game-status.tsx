@@ -15,6 +15,8 @@ const ruleDescriptions: Record<string, { name: string; description: string; stat
   'double-knight': { name: 'Двойной конь', description: 'Нужно ходить конем дважды подряд', status: 'active' },
   'pawn-rotation': { name: 'Поворот пешек', description: 'Пешки могут ходить горизонтально и делать неограниченные двойные ходы', status: 'active' },
   'xray-bishop': { name: 'Рентген слон', description: 'Слон проходит сквозь фигуры', status: 'active' },
+  'pawn-wall': { name: 'Стена пешек', description: 'Двойные ряды пешек на 2-3 и 6-7 линиях', status: 'active' },
+  'blink': { name: 'Блинк', description: 'Король может телепортироваться раз за игру на любую пустую клетку', status: 'active' },
 };
 
 export default function GameStatus({ game, elapsedTime, onChangeRules }: GameStatusProps) {
@@ -61,6 +63,31 @@ export default function GameStatus({ game, elapsedTime, onChangeRules }: GameSta
             <>
               {activeRules.filter(rule => rule !== 'standard').map(ruleKey => {
                 const rule = ruleDescriptions[ruleKey];
+                
+                // Special handling for Blink mode to show usage status
+                if (ruleKey === 'blink' && rule) {
+                  const blinkUsed = gameState?.blinkUsed || { white: false, black: false };
+                  return (
+                    <div key={ruleKey} className="p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-green-800">{rule.name}</p>
+                          <p className="text-sm text-green-600">{rule.description}</p>
+                          <div className="mt-2 flex space-x-3">
+                            <span className={`text-xs px-2 py-1 rounded ${blinkUsed.white ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+                              Белые: {blinkUsed.white ? 'Использован' : 'Доступен'}
+                            </span>
+                            <span className={`text-xs px-2 py-1 rounded ${blinkUsed.black ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+                              Черные: {blinkUsed.black ? 'Использован' : 'Доступен'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-3 h-3 bg-green-600 rounded-full" />
+                      </div>
+                    </div>
+                  );
+                }
+                
                 return rule ? (
                   <div key={ruleKey} className="p-3 bg-green-50 rounded-lg border border-green-200">
                     <div className="flex items-center justify-between">
