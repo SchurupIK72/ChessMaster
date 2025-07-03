@@ -675,6 +675,50 @@ export class ChessLogic {
         } else {
           console.log("Blink mode not detected", { gameRules });
         }
+        
+        // Add castling logic
+        if (!this.isKingInCheck(gameState, piece.color, gameRules)) {
+          // Check kingside castling
+          if (piece.color === 'white' && gameState.castlingRights.whiteKingside) {
+            if (!gameState.board['f1'] && !gameState.board['g1'] && gameState.board['h1']?.type === 'rook') {
+              // Check if squares are not under attack
+              if (!this.isSquareUnderAttack(gameState, 'f1', piece.color, gameRules) && 
+                  !this.isSquareUnderAttack(gameState, 'g1', piece.color, gameRules)) {
+                moves.push('g1');
+                console.log("Added kingside castling for white");
+              }
+            }
+          } else if (piece.color === 'black' && gameState.castlingRights.blackKingside) {
+            if (!gameState.board['f8'] && !gameState.board['g8'] && gameState.board['h8']?.type === 'rook') {
+              if (!this.isSquareUnderAttack(gameState, 'f8', piece.color, gameRules) && 
+                  !this.isSquareUnderAttack(gameState, 'g8', piece.color, gameRules)) {
+                moves.push('g8');
+                console.log("Added kingside castling for black");
+              }
+            }
+          }
+
+          // Check queenside castling
+          if (piece.color === 'white' && gameState.castlingRights.whiteQueenside) {
+            if (!gameState.board['d1'] && !gameState.board['c1'] && !gameState.board['b1'] && gameState.board['a1']?.type === 'rook') {
+              if (!this.isSquareUnderAttack(gameState, 'd1', piece.color, gameRules) && 
+                  !this.isSquareUnderAttack(gameState, 'c1', piece.color, gameRules)) {
+                moves.push('c1');
+                console.log("Added queenside castling for white");
+              }
+            }
+          } else if (piece.color === 'black' && gameState.castlingRights.blackQueenside) {
+            if (!gameState.board['d8'] && !gameState.board['c8'] && !gameState.board['b8'] && gameState.board['a8']?.type === 'rook') {
+              if (!this.isSquareUnderAttack(gameState, 'd8', piece.color, gameRules) && 
+                  !this.isSquareUnderAttack(gameState, 'c8', piece.color, gameRules)) {
+                moves.push('c8');
+                console.log("Added queenside castling for black");
+              }
+            }
+          }
+        } else {
+          console.log("King in check, castling not allowed");
+        }
         break;
     }
 
