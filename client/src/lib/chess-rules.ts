@@ -8,12 +8,49 @@ export class ChessRules {
     for (const rule of rules) {
       if (rule === 'double-knight') {
         newGameState = this.applyDoubleKnightRule(newGameState, fromSquare, toSquare);
+      } else if (rule === 'blink') {
+        newGameState = this.applyBlinkRule(newGameState, fromSquare, toSquare);
       }
       // xray-bishop rule doesn't need special handling in applySpecialRules
       // as it's handled in the move validation logic
     }
     
     return newGameState;
+  }
+
+  private static applyBlinkRule(gameState: ChessGameState, fromSquare: string, toSquare: string): ChessGameState {
+    const piece = gameState.board[fromSquare];
+    const newGameState = { ...gameState };
+    
+    // Initialize blink tracking if not present
+    if (!newGameState.blinkUsed) {
+      newGameState.blinkUsed = { white: false, black: false };
+    }
+    
+    // Check if this is a king move that uses blink ability
+    if (piece?.type === 'king') {
+      const isBlinkMove = this.isBlinkMove(fromSquare, toSquare);
+      if (isBlinkMove) {
+        // Mark blink as used for this color
+        newGameState.blinkUsed[piece.color] = true;
+      }
+    }
+    
+    return newGameState;
+  }
+
+  private static isBlinkMove(fromSquare: string, toSquare: string): boolean {
+    const fromCol = fromSquare.charCodeAt(0) - 'a'.charCodeAt(0);
+    const fromRow = parseInt(fromSquare[1]) - 1;
+    const toCol = toSquare.charCodeAt(0) - 'a'.charCodeAt(0);
+    const toRow = parseInt(toSquare[1]) - 1;
+    
+    const colDiff = Math.abs(toCol - fromCol);
+    const rowDiff = Math.abs(toRow - fromRow);
+    
+    // Normal king move is maximum 1 square in any direction
+    // Blink move is anything beyond that
+    return colDiff > 1 || rowDiff > 1;
   }
 
   private static applyDoubleKnightRule(gameState: ChessGameState, fromSquare: string, toSquare: string): ChessGameState {

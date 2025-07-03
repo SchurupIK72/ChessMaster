@@ -42,6 +42,13 @@ const availableRules = [
     badges: ['Оборона', 'Массовость'],
     badgeColors: ['bg-gray-100 text-gray-800', 'bg-blue-100 text-blue-800'],
   },
+  {
+    id: 'blink' as GameRules,
+    name: 'Блинк',
+    description: 'Король может телепортироваться один раз за игру на любую легальную клетку',
+    badges: ['Телепорт', 'Особый'],
+    badgeColors: ['bg-violet-100 text-violet-800', 'bg-pink-100 text-pink-800'],
+  },
 ];
 
 export default function RuleSelectionModal({ open, onOpenChange, onRuleSelect }: RuleSelectionModalProps) {

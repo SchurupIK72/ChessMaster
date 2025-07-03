@@ -265,6 +265,28 @@ export class ChessLogic {
       }
     }
 
+    // Add blink ability if enabled and not used yet
+    if (gameRules?.includes('blink')) {
+      if (!gameState.blinkUsed || !gameState.blinkUsed[piece.color]) {
+        // King can blink to any empty square or capture any enemy piece
+        for (let fileIdx = 0; fileIdx < 8; fileIdx++) {
+          for (let rankIdx = 1; rankIdx <= 8; rankIdx++) {
+            const file = String.fromCharCode(fileIdx + 'a'.charCodeAt(0));
+            const square = `${file}${rankIdx}`;
+            
+            // Skip current position
+            if (square === fromSquare) continue;
+            
+            const targetPiece = gameState.board[square];
+            // Can blink to empty square or capture enemy piece
+            if (!targetPiece || targetPiece.color !== piece.color) {
+              moves.push(square);
+            }
+          }
+        }
+      }
+    }
+
     // Add castling logic
     if (!this.isKingInCheck(gameState, piece.color, gameRules)) {
       // Check kingside castling

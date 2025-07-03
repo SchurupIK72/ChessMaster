@@ -103,7 +103,12 @@ export type ChessGameState = {
   pawnRotationMoves?: {
     [pawnId: string]: boolean; // true if pawn has made any move (identified by original position)
   };
+  // For blink rule - track if kings have used their blink ability
+  blinkUsed?: {
+    white: boolean;
+    black: boolean;
+  };
 };
 
-export type GameRules = 'standard' | 'double-knight' | 'pawn-rotation' | 'xray-bishop' | 'pawn-wall';
+export type GameRules = 'standard' | 'double-knight' | 'pawn-rotation' | 'xray-bishop' | 'pawn-wall' | 'blink';
 export type GameRulesArray = GameRules[];
