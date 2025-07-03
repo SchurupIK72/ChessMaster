@@ -719,9 +719,25 @@ export class ChessLogic {
 
     if (checkForCheck) {
       console.log(`Filtering ${moves.length} moves for check validation`);
-      const filteredMoves = moves.filter(move => !this.wouldBeInCheck(gameState, fromSquare, move, piece.color, gameRules));
-      console.log(`After filtering: ${filteredMoves.length} moves remain`);
-      moves = filteredMoves;
+      
+      // Special case: if this is a king with blink ability, don't filter moves
+      if (piece.type === 'king' && gameRules?.includes('blink')) {
+        const blinkUsed = (gameState as any).blinkUsed?.[piece.color];
+        if (!blinkUsed) {
+          console.log(`Blink king detected - skipping check validation for all moves`);
+          // Don't filter any moves for blink-enabled king
+        } else {
+          // Blink already used, filter normally
+          const filteredMoves = moves.filter(move => !this.wouldBeInCheck(gameState, fromSquare, move, piece.color, gameRules));
+          console.log(`After filtering: ${filteredMoves.length} moves remain`);
+          moves = filteredMoves;
+        }
+      } else {
+        // Normal filtering for other pieces
+        const filteredMoves = moves.filter(move => !this.wouldBeInCheck(gameState, fromSquare, move, piece.color, gameRules));
+        console.log(`After filtering: ${filteredMoves.length} moves remain`);
+        moves = filteredMoves;
+      }
     }
 
     return moves;
