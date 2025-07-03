@@ -527,7 +527,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/games", async (req, res) => {
     try {
       const gameData = insertGameSchema.parse(req.body);
-      const game = await storage.createGame(gameData);
+      
+      // Create a unique player for this game session
+      const playerName = `Player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const player = await storage.createUser({
+        username: playerName,
+        password: 'temp_password'
+      });
+      
+      // Add player ID to game data
+      const gameWithPlayer = {
+        ...gameData,
+        whitePlayerId: player.id,
+        shareId: Math.random().toString(36).substring(2, 8).toUpperCase()
+      };
+      
+      const game = await storage.createGame(gameWithPlayer);
       res.json(game);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -563,6 +578,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Join game by share ID
+  app.post("/api/join-game", async (req, res) => {
+    try {
+      console.log('Join game request:', req.body);
+      const { shareId } = req.body;
+      
+      if (!shareId) {
+        return res.status(400).json({ message: "shareId is required" });
+      }
+      
+      // Create a unique player for this game session
+      const playerName = `Player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const player = await storage.createUser({
+        username: playerName,
+        password: 'temp_password'
+      });
+      
+      console.log('Created player:', player);
+      
+      const game = await storage.joinGame(shareId, player.id);
+      console.log('Joined game:', game);
+      res.json(game);
+    } catch (error: any) {
+      console.error('Join game error:', error);
+      res.status(400).json({ message: error.message });
+    }
+  });
   app.post("/api/games/join/:shareId", async (req, res) => {
     try {
       const shareId = req.params.shareId;
