@@ -6,6 +6,9 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  email: text("email").notNull().unique(),
+  phone: text("phone").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const games = pgTable("games", {
@@ -41,6 +44,16 @@ export const moves = pgTable("moves", {
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  email: true,
+  phone: true,
+}).extend({
+  password: z.string().min(6, "Пароль должен содержать минимум 6 символов")
+    .regex(/^[a-zA-Z0-9]+$/, "Пароль должен содержать только английские буквы и цифры"),
+  username: z.string().min(2, "Никнейм должен содержать минимум 2 символа")
+    .max(50, "Никнейм не может быть длиннее 50 символов"),
+  email: z.string().email("Неправильный формат email"),
+  phone: z.string().min(10, "Номер телефона должен содержать минимум 10 цифр")
+    .max(20, "Номер телефона не может быть длиннее 20 символов"),
 });
 
 export const insertGameSchema = createInsertSchema(games).pick({

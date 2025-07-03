@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGameSchema, insertMoveSchema } from "@shared/schema";
+import { insertGameSchema, insertMoveSchema, insertUserSchema } from "@shared/schema";
+import { z } from "zod";
 
 // Simple chess logic for server-side checkmate detection
 function isKingInCheck(gameState: any, color: 'white' | 'black', gameRules?: string[]): boolean {
@@ -532,7 +533,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const playerName = `Player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const player = await storage.createUser({
         username: playerName,
-        password: 'temp_password'
+        password: 'temp_password',
+        email: `${playerName}@temp.com`,
+        phone: '0000000000'
       });
       
       // Add player ID to game data
@@ -591,7 +594,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const playerName = `Player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const player = await storage.createUser({
         username: playerName,
-        password: 'temp_password'
+        password: 'temp_password',
+        email: `${playerName}@temp.com`,
+        phone: '0000000000'
       });
       
       console.log('Created player:', player);
@@ -871,6 +876,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
+  });
+
+  // Auth routes
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const validatedData = insertUserSchema.parse(req.body);
+      
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(validatedData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: 'Никнейм уже занят' });
+      }
+
+      // Check if email already exists
+      const existingEmail = await storage.getUserByEmail(validatedData.email);
+      if (existingEmail) {
+        return res.status(400).json({ message: 'Email уже зарегистрирован' });
+      }
+
+      // Create user
+      const user = await storage.createUser({
+        username: validatedData.username,
+        password: validatedData.password,
+        email: validatedData.email,
+        phone: validatedData.phone,
+      });
+
+      // Create session
+      (req as any).session = { userId: user.id };
+      
+      res.status(201).json({ 
+        message: 'Регистрация успешна',
+        user: { id: user.id, username: user.username, email: user.email }
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: 'Ошибка валидации',
+          errors: error.errors
+        });
+      }
+      console.error('Registration error:', error);
+      res.status(500).json({ message: 'Ошибка регистрации' });
+    }
+  });
+
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: 'Никнейм и пароль обязательны' });
+      }
+
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(401).json({ message: 'Неверный никнейм или пароль' });
+      }
+
+      // In a real app, you would hash the password
+      if (user.password !== password) {
+        return res.status(401).json({ message: 'Неверный никнейм или пароль' });
+      }
+
+      // Create a very simple session
+      (req as any).session = { userId: user.id };
+      
+      res.json({ 
+        message: 'Авторизация успешна',
+        user: { id: user.id, username: user.username, email: user.email }
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Ошибка авторизации' });
+    }
+  });
+
+  app.get('/api/auth/session', async (req, res) => {
+    const session = (req as any).session;
+    if (!session?.userId) {
+      return res.status(401).json({ message: 'Не авторизован' });
+    }
+    
+    try {
+      const user = await storage.getUser(session.userId);
+      if (!user) {
+        return res.status(401).json({ message: 'Пользователь не найден' });
+      }
+      
+      res.json({ 
+        user: { id: user.id, username: user.username, email: user.email }
+      });
+    } catch (error) {
+      console.error('Session error:', error);
+      res.status(500).json({ message: 'Ошибка сессии' });
+    }
+  });
+
+  app.post('/api/auth/logout', (req, res) => {
+    (req as any).session = null;
+    res.json({ message: 'Выход выполнен' });
   });
 
   const httpServer = createServer(app);
