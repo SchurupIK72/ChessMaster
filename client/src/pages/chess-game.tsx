@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ChessPiece, ChessGameState, GameRules, GameRulesArray, Game, Move } from "@shared/schema";
 import { ChessLogic } from "@/lib/chess-logic";
-import { Sword, Crown, Plus, Settings, Users, Share2 } from "lucide-react";
+import { Sword, Crown, Plus, Settings, Users, Share2, LogOut } from "lucide-react";
 
 export default function ChessGame() {
   const [gameId, setGameId] = useState<number | null>(null);
@@ -403,6 +403,27 @@ export default function ChessGame() {
     }
   };
 
+  const handleLogout = () => {
+    // Clear localStorage data
+    localStorage.removeItem('guestUser');
+    localStorage.removeItem('playerId');
+    
+    // Reset game state
+    setGameId(null);
+    setSelectedSquare(null);
+    setValidMoves([]);
+    setGameStartTime(null);
+    setElapsedTime("00:00");
+    
+    toast({
+      title: "Выход выполнен",
+      description: "Вы вышли из аккаунта",
+    });
+    
+    // Reload page to return to login screen
+    window.location.reload();
+  };
+
   const handleResign = () => {
     if (!game) return;
     const winner = game.currentTurn === 'white' ? 'black' : 'white';
@@ -537,7 +558,17 @@ export default function ChessGame() {
                 <h1 className="text-2xl font-bold text-slate-800">Sword Master</h1>
                 <span className="text-sm text-slate-500 hidden sm:block">Special Rules Edition</span>
               </div>
-  
+              <div className="flex items-center space-x-4">
+                <Button 
+                  onClick={handleLogout} 
+                  variant="outline"
+                  className="border-red-600 text-red-600 hover:bg-red-50"
+                  title="Выйти из аккаунта"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Выйти
+                </Button>
+              </div>
             </div>
           </div>
         </header>
@@ -616,6 +647,15 @@ export default function ChessGame() {
               </Button>
               <Button variant="ghost" size="icon">
                 <Settings className="h-5 w-5" />
+              </Button>
+              <Button 
+                onClick={handleLogout} 
+                variant="outline"
+                className="border-red-600 text-red-600 hover:bg-red-50"
+                title="Выйти из аккаунта"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Выйти
               </Button>
             </div>
           </div>
