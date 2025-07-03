@@ -716,7 +716,10 @@ export class ChessLogic {
     }
 
     if (checkForCheck) {
-      moves = moves.filter(move => !this.wouldBeInCheck(gameState, fromSquare, move, piece.color, gameRules));
+      console.log(`Filtering ${moves.length} moves for check validation`);
+      const filteredMoves = moves.filter(move => !this.wouldBeInCheck(gameState, fromSquare, move, piece.color, gameRules));
+      console.log(`After filtering: ${filteredMoves.length} moves remain`);
+      moves = filteredMoves;
     }
 
     return moves;
