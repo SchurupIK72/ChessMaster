@@ -280,7 +280,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
           <div className="mt-6 text-center">
             <Button
               variant="outline"
-              onClick={onSuccess}
+              onClick={handleGuestLogin}
               className="w-full"
             >
               Продолжить как гость

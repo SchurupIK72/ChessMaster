@@ -979,6 +979,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ message: 'Выход выполнен' });
   });
 
+  // Guest user route for anonymous players
+  app.post('/api/auth/guest', async (req, res) => {
+    try {
+      // Get a random guest user from pre-created accounts (IDs 12-61 based on the database)
+      const guestId = Math.floor(Math.random() * 50) + 12;
+      const guestUser = await storage.getUser(guestId);
+      
+      if (!guestUser) {
+        // Fallback: create a new guest user
+        const guestUsername = `guest_${Date.now()}`;
+        const newGuestUser = await storage.createUser({
+          username: guestUsername,
+          password: 'guest123',
+          email: `${guestUsername}@temp.com`,
+          phone: '0000000000'
+        });
+        
+        (req as any).session = { userId: newGuestUser.id };
+        
+        return res.json({ 
+          message: 'Гостевая сессия создана',
+          user: { id: newGuestUser.id, username: newGuestUser.username, email: newGuestUser.email }
+        });
+      }
+      
+      (req as any).session = { userId: guestUser.id };
+      
+      res.json({ 
+        message: 'Гостевая сессия создана',
+        user: { id: guestUser.id, username: guestUser.username, email: guestUser.email }
+      });
+    } catch (error) {
+      console.error('Guest user creation error:', error);
+      res.status(500).json({ message: 'Ошибка создания гостевого пользователя' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
