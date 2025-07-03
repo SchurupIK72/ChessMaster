@@ -452,10 +452,22 @@ export class ChessLogic {
           const fileDiff = Math.abs(toFile - fromFile);
           const rankDiff = Math.abs(toRank - fromRank);
           
-          // If this is a blink move (not adjacent), don't check for check
+          // If this is a blink move (not adjacent), still check for check at destination
           if (fileDiff > 1 || rankDiff > 1) {
-            console.log(`Blink move detected from ${fromSquare} to ${toSquare}, allowing without check validation`);
-            return false; // Blink moves are always allowed
+            console.log(`Blink move detected from ${fromSquare} to ${toSquare}, checking destination for check`);
+            // Create temp state with blink move to check if king would be in check at destination
+            const tempState = { ...gameState };
+            tempState.board = { ...gameState.board };
+            tempState.board[toSquare] = piece;
+            delete tempState.board[fromSquare];
+            
+            // Check if king would be in check at the destination (without blink rules for attack detection)
+            const attackGameRules = gameRules?.filter(rule => rule !== 'blink');
+            const wouldBeInCheck = this.isKingInCheck(tempState, color, attackGameRules);
+            if (wouldBeInCheck) {
+              console.log(`Blink destination ${toSquare} would leave king in check`);
+            }
+            return wouldBeInCheck;
           } else {
             console.log(`Regular king move from ${fromSquare} to ${toSquare}, checking for check`);
           }
