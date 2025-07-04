@@ -191,6 +191,12 @@ Changelog:
   * Successfully tested with 10 concurrent guest users and 5 simultaneous games
   * All game modes tested: standard, blink, double-knight + pawn-rotation, xray-bishop + pawn-wall
   * Multiplayer game joining and real-time synchronization working perfectly
+- July 04, 2025. Fixed Blink mode mechanics and improved real-time performance
+  * Fixed Blink mode castling logic: rook castling and Blink teleport are separate mechanics  
+  * King loses castling rights after any move (standard chess rules)
+  * Only actual teleport moves (not castling) are marked as Blink usage
+  * Improved multiplayer responsiveness: reduced polling interval from 3s to 0.5s
+  * Real-time game state updates now occur every 500ms for smoother gameplay
 ```
 
 ## User Preferences

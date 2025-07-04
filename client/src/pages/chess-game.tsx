@@ -61,7 +61,7 @@ export default function ChessGame() {
     queryKey: ["/api/games", gameId],
     queryFn: () => fetch(`/api/games/${gameId}`).then(res => res.json()),
     enabled: !!gameId,
-    refetchInterval: 3000, // Refresh every 3 seconds
+    refetchInterval: 500, // Refresh every 0.5 seconds
     refetchIntervalInBackground: true, // Continue refreshing when window is not focused
   });
 
@@ -70,7 +70,7 @@ export default function ChessGame() {
     queryKey: ["/api/games", gameId, "moves"],
     queryFn: () => fetch(`/api/games/${gameId}/moves`).then(res => res.json()),
     enabled: !!gameId,
-    refetchInterval: 3000, // Refresh every 3 seconds
+    refetchInterval: 500, // Refresh every 0.5 seconds
     refetchIntervalInBackground: true, // Continue refreshing when window is not focused
   });
 
