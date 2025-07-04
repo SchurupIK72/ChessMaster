@@ -1,0 +1,62 @@
+ame rules being passed: (2) ['pawn-rotation', 'blink']
+eruda.js:2 UI: Found 2 valid moves for pawn at e2: (2) ['e3', 'e4']
+eruda.js:2 Game rules being passed: (2) ['pawn-rotation', 'blink']
+eruda.js:2 UI: Found 4 valid moves for pawn at e4: (4) ['d4', 'c4', 'f4', 'g4']
+eruda.js:2 Game rules being passed: (2) ['pawn-rotation', 'blink']
+eruda.js:2 UI: Found 4 valid moves for pawn at e4: (4) ['d4', 'c4', 'f4', 'g4']
+eruda.js:2 Game rules being passed: (2) ['pawn-rotation', 'blink']
+eruda.js:2 UI: Found 5 valid moves for pawn at c4: (5) ['c5', 'c6', 'b4', 'a4', 'd4']
+eruda.js:2 [vite] server connection lost. Polling for restart...
+eruda.js:2 handleNewGame called
+eruda.js:2 Modal states: {showGameTypeModal: false, showRuleModal: false, showJoinModal: false, showInviteModal: false, showPromotionModal: false, …}
+eruda.js:2 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ Console.js:61
+(anonymous) @ @radix-ui_react-dialog.js?v=0bd37050:1412
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=0bd37050:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=0bd37050:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=0bd37050:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=0bd37050:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=0bd37050:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=0bd37050:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=0bd37050:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=0bd37050:19416
+commitRoot @ chunk-RPCDYKBN.js?v=0bd37050:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0bd37050:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0bd37050:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0bd37050:18627
+eruda.js:2 Game rules being passed: ['pawn-rotation']
+eruda.js:2 UI: Found 2 valid moves for pawn at e2: (2) ['e3', 'e4']
+eruda.js:2 Game rules being passed: ['pawn-rotation']
+eruda.js:2 UI: Found 4 valid moves for pawn at e4: (4) ['d4', 'c4', 'f4', 'g4']
+eruda.js:2 Game rules being passed: ['pawn-rotation']
+eruda.js:2 UI: Found 5 valid moves for pawn at c4: (5) ['c5', 'c6', 'b4', 'a4', 'd4']
+eruda.js:2 Game rules being passed: ['pawn-rotation']
+eruda.js:2 UI: Found 5 valid moves for pawn at c4: (5) ['c5', 'c6', 'b4', 'a4', 'd4']
+eruda.js:2 Game rules being passed: ['pawn-rotation']
+eruda.js:2 UI: Found 3 valid moves for pawn at a4: (3) ['a5', 'a6', 'b4']
+eruda.js:2 Game rules being passed: ['pawn-rotation']
+eruda.js:2 UI: Found 3 valid moves for pawn at a4: (3) ['a5', 'a6', 'b4']
+eruda.js:2 [vite] server connection lost. Polling for restart...
+Console.js:61 handleNewGame called
+Console.js:61 Modal states: {showGameTypeModal: false, showRuleModal: false, showJoinModal: false, showInviteModal: false, showPromotionModal: false, …}
+Console.js:61 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ Console.js:61
+(anonymous) @ @radix-ui_react-dialog.js?v=0bd37050:1412
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=0bd37050:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=0bd37050:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=0bd37050:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=0bd37050:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=0bd37050:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=0bd37050:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=0bd37050:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=0bd37050:19416
+commitRoot @ chunk-RPCDYKBN.js?v=0bd37050:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0bd37050:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0bd37050:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0bd37050:18627
+Console.js:61 Game rules being passed: ['pawn-rotation']
+Console.js:61 UI: Found 2 valid moves for pawn at e2: (2) ['e3', 'e4']
+Console.js:61 Game rules being passed: ['pawn-rotation']
+Console.js:61 UI: Found 4 valid moves for pawn at e4: (4) ['d4', 'c4', 'f4', 'g4']
+Console.js:61 Game rules being passed: ['pawn-rotation']
+Console.js:61 UI: Found 5 valid moves for pawn at c4: (5) ['c5', 'c6', 'b4', 'a4', 'd4']
