@@ -1,0 +1,44 @@
+Game rules being passed: (2) ['xray-bishop', 'blink']
+Console.js:61 UI: Found 2 valid moves for pawn at e2: (2) ['e3', 'e4']
+Console.js:61 Game rules being passed: (2) ['xray-bishop', 'blink']
+Console.js:61 UI: Found 3 valid moves for knight at g1: (3) ['e2', 'h3', 'f3']
+Console.js:61 Game rules being passed: (2) ['xray-bishop', 'blink']
+Console.js:61 UI: Found 6 valid moves for bishop at f1: (6) ['h3', 'e2', 'd3', 'c4', 'b5', 'a6']
+Console.js:61 Game rules being passed: (2) ['xray-bishop', 'blink']
+Console.js:61 UI: Found 6 valid moves for bishop at f1: (6) ['h3', 'e2', 'd3', 'c4', 'b5', 'a6']
+Console.js:61 Game rules being passed: (2) ['xray-bishop', 'blink']
+Console.js:61 getKingMoves called with gameRules: (2) ['xray-bishop', 'blink']
+Console.js:61 Checking for blink mode: {gameRules: Array(2), hasBlinkRule: true, gameRulesType: 'object', gameRulesContent: Array(2)}
+Console.js:61 Blink mode detected {gameRules: Array(2), blinkUsed: false}
+Console.js:61 Blink blocked to a1: occupied by own rook
+Console.js:61 Blink blocked to a2: occupied by own pawn
+Console.js:61 Blink blocked to a6: occupied by enemy bishop
+Console.js:61 Blink blocked to a7: occupied by enemy pawn
+Console.js:61 Blink blocked to a8: occupied by enemy rook
+Console.js:61 Blink blocked to b1: occupied by own knight
+Console.js:61 Blink blocked to b2: occupied by own pawn
+Console.js:61 Blink blocked to b7: occupied by enemy pawn
+Console.js:61 Blink blocked to b8: occupied by enemy knight
+Console.js:61 Blink blocked to c1: occupied by own bishop
+Console.js:61 Blink blocked to c2: occupied by own pawn
+Console.js:61 Blink blocked to c7: occupied by enemy pawn
+Console.js:61 Blink blocked to d1: occupied by own queen
+Console.js:61 Blink blocked to d2: occupied by own pawn
+Console.js:61 Blink blocked to d7: occupied by enemy pawn
+Console.js:61 Blink blocked to d8: occupied by enemy queen
+Console.js:61 Blink blocked to e4: occupied by own pawn
+Console.js:61 Blink blocked to e5: occupied by enemy pawn
+Console.js:61 Blink blocked to e8: occupied by enemy king
+Console.js:61 Blink blocked to f2: occupied by own pawn
+Console.js:61 Blink blocked to f3: occupied by own knight
+Console.js:61 Blink blocked to f6: occupied by enemy knight
+Console.js:61 Blink blocked to f7: occupied by enemy pawn
+Console.js:61 Blink blocked to f8: occupied by enemy bishop
+Console.js:61 Blink blocked to g2: occupied by own pawn
+Console.js:61 Blink blocked to g7: occupied by enemy pawn
+Console.js:61 Blink blocked to h1: occupied by own rook
+Console.js:61 Blink blocked to h2: occupied by own pawn
+Console.js:61 Blink blocked to h3: occupied by own bishop
+Console.js:61 Blink blocked to h7: occupied by enemy pawn
+Console.js:61 Blink blocked to h8: occupied by enemy rook
+Console.js:61 UI: Found 10 valid moves for king at e1: (10) ['a4', 'a5', 'b3', 'c3', 'e3', 'f5', 'g1', 'g3', 'g5', 'h4']

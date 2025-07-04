@@ -367,6 +367,9 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
               // Skip current position
               if (square === fromSquare) continue;
               
+              // Skip if already added as standard move
+              if (moves.includes(square)) continue;
+              
               const targetPiece = gameState.board[square];
               // Can blink only to empty squares
               if (!targetPiece) {

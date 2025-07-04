@@ -371,18 +371,24 @@ export class ChessLogic {
       gameRulesContent: gameRules
     });
     
+
+    
+    // Add Blink teleportation moves if available
     if (hasBlinkRule) {
       const blinkUsed = gameState.blinkUsed?.[piece.color];
       console.log('Blink mode detected', { gameRules, blinkUsed });
       
       if (!blinkUsed) {
-        // King can teleport to any empty square or capture any enemy piece
+        // King can teleport to any empty square (not adjacent squares, those are already added)
         for (let fileIdx = 0; fileIdx < 8; fileIdx++) {
           for (let rankIdx = 1; rankIdx <= 8; rankIdx++) {
             const targetSquare = `${String.fromCharCode(fileIdx + 'a'.charCodeAt(0))}${rankIdx}`;
             
             // Skip current position
             if (targetSquare === fromSquare) continue;
+            
+            // Skip if already added as standard move
+            if (moves.includes(targetSquare)) continue;
             
             const target = gameState.board[targetSquare];
             if (!target) {
