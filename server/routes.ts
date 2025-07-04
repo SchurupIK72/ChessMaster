@@ -723,14 +723,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check for castling before moving the piece
       let isCastling = false;
+      let isBlinkTeleport = false;
+      
       if (piece && piece.type === 'king') {
         const fromFile = moveData.from[0];
         const toFile = moveData.to[0];
+        const fromRank = moveData.from[1];
+        const toRank = moveData.to[1];
         
-        // Check if this is a castling move (king moves 2 squares)
-        if (Math.abs(fromFile.charCodeAt(0) - toFile.charCodeAt(0)) === 2) {
-          isCastling = true;
+        // Check if this could be castling (king moves 2 squares on same rank)
+        if (Math.abs(fromFile.charCodeAt(0) - toFile.charCodeAt(0)) === 2 && fromRank === toRank) {
+          // Additional checks for valid castling
+          const backRank = piece.color === 'white' ? '1' : '8';
+          const isOnBackRank = fromRank === backRank && toRank === backRank;
+          const hasRights = (toFile === 'g' && gameState.castlingRights[piece.color === 'white' ? 'whiteKingside' : 'blackKingside']) ||
+                           (toFile === 'c' && gameState.castlingRights[piece.color === 'white' ? 'whiteQueenside' : 'blackQueenside']);
           
+          if (isOnBackRank && hasRights) {
+            isCastling = true;
+          }
+        }
+        
+        // Check if this is a Blink teleport
+        if (!isCastling && game.rules && Array.isArray(game.rules) && game.rules.includes('blink')) {
+          const blinkUsed = gameState.blinkUsed || { white: false, black: false };
+          if (!blinkUsed[piece.color]) {
+            // This is a Blink teleport, not castling
+            isBlinkTeleport = true;
+          }
+        }
+        
+        if (isCastling) {
           // Move the rook as well
           if (toFile === 'g') {
             // Kingside castling
@@ -747,6 +770,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             gameState.board[rookTo] = gameState.board[rookFrom];
             delete gameState.board[rookFrom];
           }
+        } else if (isBlinkTeleport) {
+          // Mark Blink as used for this color
+          if (!gameState.blinkUsed) {
+            gameState.blinkUsed = { white: false, black: false };
+          }
+          gameState.blinkUsed[piece.color] = true;
         }
       }
 
