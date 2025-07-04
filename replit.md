@@ -205,6 +205,8 @@ Changelog:
   * Both client-side and server-side logic updated for consistent behavior
   * Fixed castling in Blink mode: castling no longer consumes Blink charge
   * Only true teleportation (non-castling moves >1 square) marks Blink as used
+  * Fixed en passant captures: captured pawn now properly removed from board
+  * Corrected horizontal en passant logic to remove pawn from "jumped over" square
 ```
 
 ## User Preferences

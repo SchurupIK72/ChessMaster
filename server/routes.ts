@@ -702,13 +702,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           delete gameState.board[captureSquare]; // Remove the captured pawn
         } else {
           // Horizontal en passant (PawnRotation mode)
-          // The captured pawn is adjacent to the target square, on the same rank
+          // The captured pawn is NOT at the target square - it's at the square the attacking pawn "jumped over"
           const fromFileIndex = fromFile.charCodeAt(0) - 'a'.charCodeAt(0);
           const targetFileIndex = targetFile.charCodeAt(0) - 'a'.charCodeAt(0);
-          const direction = targetFileIndex > fromFileIndex ? 1 : -1;
           
-          // The captured pawn is one square beyond the target in the same direction
-          const capturedFileIndex = targetFileIndex + direction;
+          // The captured pawn is between the from and to squares (the "jumped over" square)
+          const capturedFileIndex = fromFileIndex + (targetFileIndex - fromFileIndex) / 2;
           const capturedFile = String.fromCharCode(capturedFileIndex + 'a'.charCodeAt(0));
           const captureSquare = capturedFile + targetRank;
           delete gameState.board[captureSquare]; // Remove the captured pawn
