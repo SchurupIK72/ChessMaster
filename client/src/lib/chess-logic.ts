@@ -333,8 +333,8 @@ export class ChessLogic {
     const hasBlinkRule = Array.isArray(gameRules) && gameRules.includes('blink');
     const blinkUsed = gameState.blinkUsed?.[piece.color];
     
-    // Castling (but not in Blink mode, as Blink overrides castling)
-    if (!hasBlinkRule && !this.isKingInCheck(gameState, piece.color, gameRules)) {
+    // Castling (available in Blink mode until Blink is used)
+    if (!this.isKingInCheck(gameState, piece.color, gameRules)) {
       const backRank = piece.color === 'white' ? 1 : 8;
       
       // Kingside castling

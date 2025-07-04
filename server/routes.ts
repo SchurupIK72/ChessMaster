@@ -469,6 +469,15 @@ function applyBlinkRule(gameState: any, fromSquare: string, toSquare: string, pi
     }
     // Mark blink as used for this color
     newGameState.blinkUsed[piece.color] = true;
+    
+    // Using Blink disables castling rights for that color
+    if (piece.color === 'white') {
+      newGameState.castlingRights.whiteKingside = false;
+      newGameState.castlingRights.whiteQueenside = false;
+    } else {
+      newGameState.castlingRights.blackKingside = false;
+      newGameState.castlingRights.blackQueenside = false;
+    }
   }
 
   return newGameState;
