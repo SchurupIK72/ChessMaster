@@ -351,21 +351,17 @@ export default function ChessGame() {
               }
             } else {
               // Horizontal en passant (PawnRotation mode)
-              // For horizontal en passant, the captured pawn is NOT between the squares
-              // It's the pawn that just made a double move horizontally
-              // The enPassantTarget is where we capture, but the captured pawn is at the same rank
               console.log(`Horizontal en passant: from=${selectedSquare}, to=${square}, enPassantTarget=${gameState.enPassantTarget}`);
               
-              // In horizontal en passant, the captured pawn is at the same rank as the target square
-              // but at the position the opponent pawn started from before the double move
-              const captureSquare = targetFile + targetRank;
-              console.log(`Looking for captured pawn at: ${captureSquare}`);
-              
-              // Actually, we need to find the pawn that made the double move
-              // It should be adjacent to our pawn but at the same rank
+              // For horizontal en passant, the captured pawn is adjacent to our pawn at the same rank (fromRank)
+              // We need to find which adjacent pawn made the double move
               let capturedPawn = null;
               const leftSquare = String.fromCharCode(fromFile.charCodeAt(0) - 1) + fromRank;
               const rightSquare = String.fromCharCode(fromFile.charCodeAt(0) + 1) + fromRank;
+              
+              console.log(`Checking adjacent squares for captured pawn: left=${leftSquare}, right=${rightSquare}`);
+              console.log(`Left pawn:`, gameState.board[leftSquare]);
+              console.log(`Right pawn:`, gameState.board[rightSquare]);
               
               if (gameState.board[leftSquare] && gameState.board[leftSquare].color !== fromPiece.color) {
                 capturedPawn = gameState.board[leftSquare];
@@ -378,6 +374,8 @@ export default function ChessGame() {
               if (capturedPawn) {
                 captured = `${capturedPawn.color}-${capturedPawn.type}`;
                 console.log(`Captured pawn: ${captured}`);
+              } else {
+                console.log(`Warning: No adjacent pawn found for horizontal en passant`);
               }
             }
           }
