@@ -331,13 +331,17 @@ export default function ChessGame() {
           
           // Special case for en passant: if pawn moves to enPassantTarget, capture the pawn that was "jumped over"
           if (fromPiece.type === 'pawn' && square === gameState.enPassantTarget && !piece) {
+            console.log('En passant detected, entering capture logic');
             const targetFile = square[0];
             const targetRank = parseInt(square[1]);
             const fromFile = selectedSquare[0];
             const fromRank = parseInt(selectedSquare[1]);
             
+            console.log('En passant details:', { targetFile, targetRank, fromFile, fromRank });
+            
             // Determine if this is vertical or horizontal en passant
             if (fromRank !== targetRank) {
+              console.log('Vertical en passant detected');
               // Vertical en passant (standard)
               const captureRank = fromPiece.color === 'white' ? '5' : '4';
               const captureSquare = targetFile + captureRank;
