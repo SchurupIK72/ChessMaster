@@ -322,12 +322,32 @@ export default function ChessGame() {
           
           // Special case for en passant: if pawn moves to enPassantTarget, capture the pawn that was "jumped over"
           if (fromPiece.type === 'pawn' && square === gameState.enPassantTarget && !piece) {
-            // This is an en passant capture - the captured pawn is not on the target square
-            const captureRank = fromPiece.color === 'white' ? '5' : '4';
-            const captureSquare = square[0] + captureRank;
-            const capturedPawn = gameState.board[captureSquare];
-            if (capturedPawn) {
-              captured = `${capturedPawn.color}-${capturedPawn.type}`;
+            const targetFile = square[0];
+            const targetRank = parseInt(square[1]);
+            const fromFile = selectedSquare[0];
+            const fromRank = parseInt(selectedSquare[1]);
+            
+            // Determine if this is vertical or horizontal en passant
+            if (fromRank !== targetRank) {
+              // Vertical en passant (standard)
+              const captureRank = fromPiece.color === 'white' ? '5' : '4';
+              const captureSquare = targetFile + captureRank;
+              const capturedPawn = gameState.board[captureSquare];
+              if (capturedPawn) {
+                captured = `${capturedPawn.color}-${capturedPawn.type}`;
+              }
+            } else {
+              // Horizontal en passant (PawnRotation mode)
+              // The captured pawn is between the from and to squares (the "jumped over" square)
+              const fromFileIndex = fromFile.charCodeAt(0) - 'a'.charCodeAt(0);
+              const targetFileIndex = targetFile.charCodeAt(0) - 'a'.charCodeAt(0);
+              const capturedFileIndex = fromFileIndex + (targetFileIndex - fromFileIndex) / 2;
+              const capturedFile = String.fromCharCode(capturedFileIndex + 'a'.charCodeAt(0));
+              const captureSquare = capturedFile + targetRank;
+              const capturedPawn = gameState.board[captureSquare];
+              if (capturedPawn) {
+                captured = `${capturedPawn.color}-${capturedPawn.type}`;
+              }
             }
           }
           

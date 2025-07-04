@@ -207,6 +207,7 @@ Changelog:
   * Only true teleportation (non-castling moves >1 square) marks Blink as used
   * Fixed en passant captures: captured pawn now properly removed from board
   * Corrected horizontal en passant logic to remove pawn from "jumped over" square
+  * Fixed client-side en passant detection: added support for horizontal captures in PawnRotation mode
 ```
 
 ## User Preferences
