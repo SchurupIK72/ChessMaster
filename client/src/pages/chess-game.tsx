@@ -39,6 +39,8 @@ export default function ChessGame() {
   const [showPromotionModal, setShowPromotionModal] = useState(false);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
   const [showResignConfirm, setShowResignConfirm] = useState(false);
+  const [showDrawConfirm, setShowDrawConfirm] = useState(false);
+  const [showDrawOffer, setShowDrawOffer] = useState(false);
   const [gameOverShown, setGameOverShown] = useState(false);
   const [promotionMove, setPromotionMove] = useState<{from: string, to: string, piece: any} | null>(null);
   const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
@@ -223,6 +225,50 @@ export default function ChessGame() {
     },
   });
 
+  // Draw offer mutations
+  const offerDrawMutation = useMutation({
+    mutationFn: async (player: 'white' | 'black') => {
+      const response = await apiRequest("POST", `/api/games/${gameId}/offer-draw`, { player });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
+      toast({
+        title: "Предложение ничьей отправлено",
+        description: "Ожидаем ответа противника",
+      });
+    },
+  });
+
+  const acceptDrawMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/games/${gameId}/accept-draw`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
+      setShowGameOverModal(true);
+      toast({
+        title: "Ничья принята",
+        description: "Игра завершена вничью",
+      });
+    },
+  });
+
+  const declineDrawMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/games/${gameId}/decline-draw`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
+      toast({
+        title: "Предложение ничьей отклонено",
+        description: "Игра продолжается",
+      });
+    },
+  });
+
   // Timer effect
   useEffect(() => {
     if (!gameStartTime) return;
@@ -266,6 +312,18 @@ export default function ChessGame() {
       setShowGameOverModal(true);
     }
   }, [game]);
+
+  // Draw offer detection effect
+  useEffect(() => {
+    if (!game || !game.drawOfferedBy) return;
+    
+    const playerColor = getCurrentPlayerColor();
+    const drawOfferedByOpponent = game.drawOfferedBy !== playerColor;
+    
+    if (drawOfferedByOpponent && !showDrawOffer) {
+      setShowDrawOffer(true);
+    }
+  }, [game, showDrawOffer]);
 
   const handleSquareClick = (square: string) => {
     if (!game || !game.gameState) return;
@@ -514,12 +572,26 @@ export default function ChessGame() {
   };
 
   const handleOfferDraw = () => {
-    updateStatusMutation.mutate({ status: 'draw' });
-    setShowGameOverModal(true);
-    toast({
-      title: "Draw Offered",
-      description: "Game ended in a draw.",
-    });
+    setShowDrawConfirm(true);
+  };
+
+  const confirmOfferDraw = () => {
+    if (!game) return;
+    const playerColor = getCurrentPlayerColor();
+    if (playerColor) {
+      offerDrawMutation.mutate(playerColor);
+    }
+    setShowDrawConfirm(false);
+  };
+
+  const handleAcceptDraw = () => {
+    acceptDrawMutation.mutate();
+    setShowDrawOffer(false);
+  };
+
+  const handleDeclineDraw = () => {
+    declineDrawMutation.mutate();
+    setShowDrawOffer(false);
   };
 
   const handleGameOverClose = () => {
@@ -786,7 +858,7 @@ export default function ChessGame() {
                 Сдаться
               </Button>
               <Button variant="outline" className="bg-yellow-600 text-white hover:bg-yellow-700" onClick={handleOfferDraw}>
-                Draw
+                Ничья
               </Button>
             </div>
           </div>
@@ -861,6 +933,40 @@ export default function ChessGame() {
             <AlertDialogCancel>Отменить</AlertDialogCancel>
             <AlertDialogAction onClick={confirmResign} className="bg-red-600 hover:bg-red-700">
               Да, сдаться
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDrawConfirm} onOpenChange={setShowDrawConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Предложить ничью</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы хотите предложить ничью вашему противнику? Он сможет принять или отклонить предложение.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отменить</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmOfferDraw} className="bg-yellow-600 hover:bg-yellow-700">
+              Да, предложить ничью
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDrawOffer} onOpenChange={setShowDrawOffer}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Предложение ничьей</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ваш противник предлагает ничью. Хотите ли вы принять это предложение и завершить игру вничью?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleDeclineDraw}>Отклонить</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAcceptDraw} className="bg-green-600 hover:bg-green-700">
+              Принять ничью
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

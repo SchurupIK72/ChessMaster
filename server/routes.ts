@@ -1142,6 +1142,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Draw offer routes
+  app.post('/api/games/:id/offer-draw', async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      const { player } = req.body;
+      
+      if (!player || !['white', 'black'].includes(player)) {
+        return res.status(400).json({ message: "Invalid player" });
+      }
+      
+      const game = await storage.getGame(gameId);
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      // Check if draw already offered by this player
+      if (game.drawOfferedBy === player) {
+        return res.status(400).json({ message: "Draw already offered by this player" });
+      }
+      
+      const updatedGame = await storage.offerDraw(gameId, player);
+      res.json(updatedGame);
+    } catch (error) {
+      console.error('Error offering draw:', error);
+      res.status(500).json({ message: 'Ошибка предложения ничьей' });
+    }
+  });
+
+  app.post('/api/games/:id/accept-draw', async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      
+      const game = await storage.getGame(gameId);
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      if (!game.drawOfferedBy) {
+        return res.status(400).json({ message: "No draw offer to accept" });
+      }
+      
+      const updatedGame = await storage.acceptDraw(gameId);
+      res.json(updatedGame);
+    } catch (error) {
+      console.error('Error accepting draw:', error);
+      res.status(500).json({ message: 'Ошибка принятия ничьей' });
+    }
+  });
+
+  app.post('/api/games/:id/decline-draw', async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      
+      const game = await storage.getGame(gameId);
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      
+      if (!game.drawOfferedBy) {
+        return res.status(400).json({ message: "No draw offer to decline" });
+      }
+      
+      const updatedGame = await storage.declineDraw(gameId);
+      res.json(updatedGame);
+    } catch (error) {
+      console.error('Error declining draw:', error);
+      res.status(500).json({ message: 'Ошибка отклонения ничьей' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

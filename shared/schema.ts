@@ -16,7 +16,7 @@ export const games = pgTable("games", {
   shareId: text("share_id").unique(), // Unique identifier for sharing games
   whitePlayerId: integer("white_player_id"),
   blackPlayerId: integer("black_player_id"),
-  gameState: jsonb("game_state").notNull(),
+  gameState: jsonb("game_state").$type<ChessGameState>().notNull(),
   currentTurn: text("current_turn").notNull().default("white"),
   status: text("status").notNull().default("waiting"), // waiting, active, completed, draw, resigned
   rules: jsonb("rules").$type<GameRulesArray>().notNull().default(["standard"]),
@@ -25,6 +25,7 @@ export const games = pgTable("games", {
   gameStartTime: timestamp("game_start_time").defaultNow(),
   gameEndTime: timestamp("game_end_time"),
   winner: text("winner"), // white, black, draw
+  drawOfferedBy: text("draw_offered_by"), // white, black, null (tracks who offered draw)
 });
 
 export const moves = pgTable("moves", {
@@ -57,6 +58,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
 });
 
 export const insertGameSchema = createInsertSchema(games).pick({
+  shareId: true,
   whitePlayerId: true,
   blackPlayerId: true,
   rules: true,

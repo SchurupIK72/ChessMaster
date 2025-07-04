@@ -24,6 +24,11 @@ export interface IStorage {
   // Chess-specific methods
   updateGameTurn(id: number, turn: 'white' | 'black'): Promise<Game>;
   updateCapturedPieces(id: number, capturedPieces: { white: string[], black: string[] }): Promise<Game>;
+  
+  // Draw methods
+  offerDraw(id: number, player: 'white' | 'black'): Promise<Game>;
+  acceptDraw(id: number): Promise<Game>;
+  declineDraw(id: number): Promise<Game>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -59,7 +64,9 @@ export class DatabaseStorage implements IStorage {
     const [game] = await db
       .insert(games)
       .values({
-        ...insertGame,
+        shareId: insertGame.shareId || null,
+        whitePlayerId: insertGame.whitePlayerId || null,
+        blackPlayerId: insertGame.blackPlayerId || null,
         gameState: initialGameState,
         rules: rulesArray,
         gameStartTime: new Date(),
@@ -250,6 +257,41 @@ export class DatabaseStorage implements IStorage {
         black: false,
       },
     };
+  }
+
+  async offerDraw(id: number, player: 'white' | 'black'): Promise<Game> {
+    const [game] = await db
+      .update(games)
+      .set({ drawOfferedBy: player })
+      .where(eq(games.id, id))
+      .returning();
+    
+    return game;
+  }
+
+  async acceptDraw(id: number): Promise<Game> {
+    const [game] = await db
+      .update(games)
+      .set({ 
+        status: 'draw',
+        winner: 'draw',
+        drawOfferedBy: null,
+        gameEndTime: new Date()
+      })
+      .where(eq(games.id, id))
+      .returning();
+    
+    return game;
+  }
+
+  async declineDraw(id: number): Promise<Game> {
+    const [game] = await db
+      .update(games)
+      .set({ drawOfferedBy: null })
+      .where(eq(games.id, id))
+      .returning();
+    
+    return game;
   }
 }
 
