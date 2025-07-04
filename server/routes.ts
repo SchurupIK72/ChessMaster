@@ -461,8 +461,11 @@ function applyBlinkRule(gameState: any, fromSquare: string, toSquare: string, pi
   const colDiff = Math.abs(toCol - fromCol);
   const rowDiff = Math.abs(toRow - fromRow);
   
-  // Check if this is a blink move (beyond normal king range)
-  if (colDiff > 1 || rowDiff > 1) {
+  // Check if this is castling (king moves 2 squares horizontally on the same rank)
+  const isCastling = (colDiff === 2 && rowDiff === 0);
+  
+  // Check if this is a blink move (beyond normal king range, but not castling)
+  if ((colDiff > 1 || rowDiff > 1) && !isCastling) {
     // Initialize blink tracking if not present
     if (!newGameState.blinkUsed) {
       newGameState.blinkUsed = { white: false, black: false };
