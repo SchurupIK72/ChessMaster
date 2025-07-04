@@ -1,0 +1,105 @@
+
+Console.js:61 UI: Found 1 valid moves for king at a8: 
+Array(1)
+Console.js:61 Game rules being passed: 
+Array(1)
+Console.js:61 getKingMoves called with gameRules: 
+Array(1)
+Console.js:61 Checking for blink mode: 
+Object
+Console.js:61 Blink mode detected 
+Object
+Console.js:61 UI: Found 2 valid moves for king at b8: 
+Array(2)
+Console.js:61 Game rules being passed: 
+Array(1)
+Console.js:61 getKingMoves called with gameRules: 
+Array(1)
+Console.js:61 Checking for blink mode: 
+Object
+Console.js:61 Blink mode detected 
+Object
+Console.js:61 UI: Found 1 valid moves for king at a8: 
+Array(1)
+Console.js:61 Game rules being passed: 
+Array(1)
+Console.js:61 getKingMoves called with gameRules: 
+Array(1)
+Console.js:61 Checking for blink mode: 
+Object
+Console.js:61 Blink mode detected 
+Object
+Console.js:61 UI: Found 0 valid moves for king at b8: 
+Array(0)
+Console.js:61 Game rules being passed: 
+Array(1)
+Console.js:61 getKingMoves called with gameRules: 
+Array(1)
+Console.js:61 Checking for blink mode: 
+Object
+Console.js:61 Blink mode detected 
+Object
+Console.js:61 UI: Found 0 valid moves for king at b8: 
+Array(0)
+Console.js:61 Game rules being passed: 
+Array(1)
+Console.js:61 getKingMoves called with gameRules: 
+Array(1)
+Console.js:61 Checking for blink mode: 
+Object
+Console.js:61 Blink mode detected 
+Object
+Console.js:61 UI: Found 0 valid moves for king at b8: 
+Array(0)
+Console.js:61 Game rules being passed: 
+Array(1)
+Console.js:61 getKingMoves called with gameRules: 
+Array(1)
+Console.js:61 Checking for blink mode: 
+Object
+Console.js:61 Blink mode detected 
+Object
+Console.js:61 UI: Found 0 valid moves for king at b8: 
+Array(0)
+Console.js:61 Game rules being passed: 
+Array(1)
+Console.js:61 getKingMoves called with gameRules: 
+Array(1)
+Console.js:61 Checking for blink mode: 
+Object
+Console.js:61 Blink mode detected 
+Object
+Console.js:61 UI: Found 0 valid moves for king at b8: 
+Array(0)
+Console.js:61 Game rules being passed: 
+Array(1)
+Console.js:61 getKingMoves called with gameRules: 
+Array(1)
+Console.js:61 Checking for blink mode: 
+Object
+Console.js:61 Blink mode detected 
+Object
+Console.js:61 UI: Found 0 valid moves for king at b8: 
+Array(0)
+Console.js:61 Game rules being passed: 
+Array(1)
+Console.js:61 getKingMoves called with gameRules: 
+Array(1)
+Console.js:61 Checking for blink mode: 
+Object
+Console.js:61 Blink mode detected 
+Object
+Console.js:61 UI: Found 0 valid moves for king at b8: 
+Array(0)
+Console.js:61 Game rules being passed: 
+Array(1)
+Console.js:61 getKingMoves called with gameRules: 
+Array(1)
+Console.js:61 Checking for blink mode: 
+Object
+Console.js:61 Blink mode detected 
+Object
+Console.js:61 UI: Found 0 valid moves for king at b8: 
+Array(0)
+﻿
+

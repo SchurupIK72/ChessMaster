@@ -13,6 +13,16 @@ import GameStatus from "@/components/game-status";
 import MoveHistory from "@/components/move-history";
 import CapturedPieces from "@/components/captured-pieces";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ChessPiece, ChessGameState, GameRules, GameRulesArray, Game, Move } from "@shared/schema";
 import { ChessLogic } from "@/lib/chess-logic";
@@ -28,6 +38,7 @@ export default function ChessGame() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showPromotionModal, setShowPromotionModal] = useState(false);
   const [showGameOverModal, setShowGameOverModal] = useState(false);
+  const [showResignConfirm, setShowResignConfirm] = useState(false);
   const [gameOverShown, setGameOverShown] = useState(false);
   const [promotionMove, setPromotionMove] = useState<{from: string, to: string, piece: any} | null>(null);
   const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
@@ -487,13 +498,18 @@ export default function ChessGame() {
   };
 
   const handleResign = () => {
+    setShowResignConfirm(true);
+  };
+
+  const confirmResign = () => {
     if (!game) return;
     const winner = game.currentTurn === 'white' ? 'black' : 'white';
     updateStatusMutation.mutate({ status: 'completed', winner });
     setShowGameOverModal(true);
+    setShowResignConfirm(false);
     toast({
-      title: "Game Resigned",
-      description: `${game.currentTurn} player resigned. ${winner} wins!`,
+      title: "Партия завершена",
+      description: `${game.currentTurn === 'white' ? 'Белые' : 'Черные'} сдались. ${winner === 'white' ? 'Белые' : 'Черные'} победили!`,
     });
   };
 
@@ -767,7 +783,7 @@ export default function ChessGame() {
                 Redo
               </Button>
               <Button variant="destructive" onClick={handleResign}>
-                Resign
+                Сдаться
               </Button>
               <Button variant="outline" className="bg-yellow-600 text-white hover:bg-yellow-700" onClick={handleOfferDraw}>
                 Draw
@@ -832,6 +848,23 @@ export default function ChessGame() {
           gameUrl={`${window.location.origin}/?join=${game.shareId}`}
         />
       )}
+
+      <AlertDialog open={showResignConfirm} onOpenChange={setShowResignConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Подтвердить сдачу</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы уверены, что хотите сдаться? Эта игра будет завершена, и ваш противник победит.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отменить</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmResign} className="bg-red-600 hover:bg-red-700">
+              Да, сдаться
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
