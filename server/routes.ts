@@ -212,6 +212,22 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
             }
           }
         }
+        
+        // Horizontal captures (including en passant)
+        for (const dx of [-1, 1]) {
+          const captureFile = String.fromCharCode(fromFileIndex + dx + 'a'.charCodeAt(0));
+          if (captureFile >= 'a' && captureFile <= 'h') {
+            const captureSquare = `${captureFile}${fromRankNum}`;
+            const targetPiece = gameState.board[captureSquare];
+            if (targetPiece && targetPiece.color !== piece.color) {
+              moves.push(captureSquare);
+            }
+            // Horizontal en passant capture
+            if (captureSquare === gameState.enPassantTarget) {
+              moves.push(captureSquare);
+            }
+          }
+        }
       }
       break;
       
@@ -670,9 +686,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentEnPassantTarget = gameState.enPassantTarget;
       if (piece && piece.type === 'pawn' && moveData.to === currentEnPassantTarget) {
         // This is an en passant capture
-        const captureRank = piece.color === 'white' ? '5' : '4';
-        const captureSquare = moveData.to[0] + captureRank;
-        delete gameState.board[captureSquare]; // Remove the captured pawn
+        const targetFile = moveData.to[0];
+        const targetRank = parseInt(moveData.to[1]);
+        const fromFile = moveData.from[0];
+        const fromRank = parseInt(moveData.from[1]);
+        
+        // Determine if this is vertical or horizontal en passant
+        if (fromRank !== targetRank) {
+          // Vertical en passant (standard)
+          const captureRank = piece.color === 'white' ? '5' : '4';
+          const captureSquare = targetFile + captureRank;
+          delete gameState.board[captureSquare]; // Remove the captured pawn
+        } else {
+          // Horizontal en passant (PawnRotation mode)
+          // The captured pawn is adjacent to the target square, on the same rank
+          const fromFileIndex = fromFile.charCodeAt(0) - 'a'.charCodeAt(0);
+          const targetFileIndex = targetFile.charCodeAt(0) - 'a'.charCodeAt(0);
+          const direction = targetFileIndex > fromFileIndex ? 1 : -1;
+          
+          // The captured pawn is one square beyond the target in the same direction
+          const capturedFileIndex = targetFileIndex + direction;
+          const capturedFile = String.fromCharCode(capturedFileIndex + 'a'.charCodeAt(0));
+          const captureSquare = capturedFile + targetRank;
+          delete gameState.board[captureSquare]; // Remove the captured pawn
+        }
       }
       
       // Reset en passant target (will be set again if needed)
@@ -768,10 +805,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         if (Math.abs(toRank - fromRank) === 2) {
-          // Pawn moved two squares, set en passant target
+          // Pawn moved two squares vertically, set en passant target
           // The en passant target is the square the pawn "jumped over"
           const enPassantRank = piece.color === 'white' ? fromRank + 1 : fromRank - 1;
           gameState.enPassantTarget = moveData.to[0] + enPassantRank;
+        }
+        
+        // Check for horizontal double move in PawnRotation mode
+        if (Array.isArray(game.rules) && game.rules.includes('pawn-rotation')) {
+          const fromFileIndex = fromFile.charCodeAt(0) - 'a'.charCodeAt(0);
+          const toFileIndex = toFile.charCodeAt(0) - 'a'.charCodeAt(0);
+          
+          if (Math.abs(toFileIndex - fromFileIndex) === 2 && fromRank === toRank) {
+            // Pawn moved two squares horizontally, set horizontal en passant target
+            // The en passant target is the square the pawn "jumped over"
+            const enPassantFileIndex = fromFileIndex + (toFileIndex - fromFileIndex) / 2;
+            const enPassantFile = String.fromCharCode(enPassantFileIndex + 'a'.charCodeAt(0));
+            gameState.enPassantTarget = enPassantFile + fromRank;
+          }
         }
         
         // Check for pawn promotion

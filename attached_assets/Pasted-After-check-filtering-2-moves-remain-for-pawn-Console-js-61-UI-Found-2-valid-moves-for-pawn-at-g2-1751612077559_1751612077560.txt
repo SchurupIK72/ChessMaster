@@ -1,0 +1,35 @@
+After check filtering: 2 moves remain for pawn
+Console.js:61 UI: Found 2 valid moves for pawn at g2: (2) ['g3', 'g4']
+Console.js:61 Game rules being passed: (2) ['pawn-rotation', 'pawn-wall']
+Console.js:61 Filtering 2 moves for pawn at f2
+Console.js:61 getKingMoves called with gameRules: (2) ['pawn-rotation', 'pawn-wall']
+Console.js:61 Blink mode not detected {gameRules: Array(2)}
+Console.js:61 getKingMoves called with gameRules: (2) ['pawn-rotation', 'pawn-wall']
+Console.js:61 Blink mode not detected {gameRules: Array(2)}
+Console.js:61 After check filtering: 2 moves remain for pawn
+Console.js:61 UI: Found 2 valid moves for pawn at f2: (2) ['g3', 'g2']
+Console.js:61 Game rules being passed: (2) ['pawn-rotation', 'pawn-wall']
+Console.js:61 Filtering 2 moves for pawn at c3
+Console.js:61 getKingMoves called with gameRules: (2) ['pawn-rotation', 'pawn-wall']
+Console.js:61 Blink mode not detected {gameRules: Array(2)}
+Console.js:61 getKingMoves called with gameRules: (2) ['pawn-rotation', 'pawn-wall']
+Console.js:61 Blink mode not detected {gameRules: Array(2)}
+Console.js:61 After check filtering: 2 moves remain for pawn
+Console.js:61 UI: Found 2 valid moves for pawn at c3: (2) ['c4', 'c5']
+Console.js:61 Game rules being passed: (2) ['pawn-rotation', 'pawn-wall']
+Console.js:61 Filtering 1 moves for pawn at h2
+Console.js:61 getKingMoves called with gameRules: (2) ['pawn-rotation', 'pawn-wall']
+Console.js:61 Blink mode not detected {gameRules: Array(2)}
+Console.js:61 After check filtering: 1 moves remain for pawn
+Console.js:61 UI: Found 1 valid moves for pawn at h2: ['g3']
+Console.js:61 Game rules being passed: (2) ['pawn-rotation', 'pawn-wall']
+Console.js:61 Filtering 3 moves for pawn at h5
+Console.js:61 getKingMoves called with gameRules: (2) ['pawn-rotation', 'pawn-wall']
+Console.js:61 Blink mode not detected {gameRules: Array(2)}
+Console.js:61 getKingMoves called with gameRules: (2) ['pawn-rotation', 'pawn-wall']
+Console.js:61 Blink mode not detected {gameRules: Array(2)}
+Console.js:61 getKingMoves called with gameRules: (2) ['pawn-rotation', 'pawn-wall']
+Console.js:61 Blink mode not detected {gameRules: Array(2)}
+Console.js:61 After check filtering: 3 moves remain for pawn
+Console.js:61 UI: Found 3 valid moves for pawn at h5: (3) ['g6', 'g5', 'f5']
+взятие на проходе по горизонтали

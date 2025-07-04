@@ -179,6 +179,26 @@ export class ChessLogic {
           }
         }
       }
+      
+      // Horizontal captures (including en passant)
+      for (const fileOffset of [-1, 1]) {
+        const newFileIndex = fileIndex + fileOffset;
+        if (newFileIndex >= 0 && newFileIndex < 8) {
+          const newFile = String.fromCharCode(newFileIndex + 'a'.charCodeAt(0));
+          const captureSquare = `${newFile}${rankNum}`;
+          
+          if (this.isValidSquare(captureSquare)) {
+            const targetPiece = gameState.board[captureSquare];
+            if (targetPiece && targetPiece.color !== piece.color) {
+              moves.push(captureSquare);
+            }
+            // Horizontal en passant
+            if (captureSquare === gameState.enPassantTarget) {
+              moves.push(captureSquare);
+            }
+          }
+        }
+      }
     }
 
     return moves;
