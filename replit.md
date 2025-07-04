@@ -197,6 +197,12 @@ Changelog:
   * Only actual teleport moves (not castling) are marked as Blink usage
   * Improved multiplayer responsiveness: reduced polling interval from 3s to 0.5s
   * Real-time game state updates now occur every 500ms for smoother gameplay
+- July 04, 2025. Perfected PawnRotation mode with unlimited double moves
+  * Fixed Blink distance calculation: only moves >1 square count as teleportation
+  * Normal king moves (1 square) preserve Blink ability, only teleportation uses it
+  * PawnRotation mode: pawns ALWAYS have double move capability (horizontal/vertical)
+  * Removed movement history restrictions in PawnRotation - any pawn can double move anytime
+  * Both client-side and server-side logic updated for consistent behavior
 ```
 
 ## User Preferences

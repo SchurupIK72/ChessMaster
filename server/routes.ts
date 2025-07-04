@@ -186,7 +186,6 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
         const pawnRotationMoves = gameState.pawnRotationMoves || {};
         
         // In PawnRotation mode, no restrictions on double horizontal moves
-        const hasPawnMoved = false;
         
         // Horizontal moves (left and right)
         for (const dx of [-1, 1]) {
@@ -198,15 +197,13 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
             if (!targetPiece) {
               moves.push(horizontalSquare);
               
-              // Allow 2-square horizontal move only if pawn hasn't moved at all
-              if (!hasPawnMoved) {
-                const newFile2 = String.fromCharCode(fromFileIndex + 2 * dx + 'a'.charCodeAt(0));
-                if (newFile2 >= 'a' && newFile2 <= 'h') {
-                  const horizontalSquare2 = `${newFile2}${fromRankNum}`;
-                  const targetPiece2 = gameState.board[horizontalSquare2];
-                  if (!targetPiece2) {
-                    moves.push(horizontalSquare2);
-                  }
+              // Allow 2-square horizontal move (always available in PawnRotation mode)
+              const newFile2 = String.fromCharCode(fromFileIndex + 2 * dx + 'a'.charCodeAt(0));
+              if (newFile2 >= 'a' && newFile2 <= 'h') {
+                const horizontalSquare2 = `${newFile2}${fromRankNum}`;
+                const targetPiece2 = gameState.board[horizontalSquare2];
+                if (!targetPiece2) {
+                  moves.push(horizontalSquare2);
                 }
               }
             }

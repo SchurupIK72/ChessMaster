@@ -102,10 +102,10 @@ export class ChessLogic {
     if (this.isValidSquare(oneForward) && !gameState.board[oneForward]) {
       moves.push(oneForward);
 
-      // Two squares forward if on starting rank or if pawn hasn't moved in rotation mode
+      // Two squares forward - always available in PawnRotation mode, or on starting rank
       const twoForward = `${file}${rankNum + 2 * direction}`;
       if (this.isValidSquare(twoForward) && !gameState.board[twoForward]) {
-        if (rankNum === startRank || (hasPawnRotation && !hasMoved)) {
+        if (rankNum === startRank || hasPawnRotation) {
           moves.push(twoForward);
         }
       }
@@ -153,24 +153,20 @@ export class ChessLogic {
       if (this.isValidSquare(leftSquare) && !gameState.board[leftSquare]) {
         moves.push(leftSquare);
         
-        // Double horizontal move if pawn hasn't moved
-        if (!hasMoved) {
-          const doubleLeftSquare = `${String.fromCharCode(file.charCodeAt(0) - 2)}${rankNum}`;
-          if (this.isValidSquare(doubleLeftSquare) && !gameState.board[doubleLeftSquare]) {
-            moves.push(doubleLeftSquare);
-          }
+        // Double horizontal move (always available in PawnRotation mode)
+        const doubleLeftSquare = `${String.fromCharCode(file.charCodeAt(0) - 2)}${rankNum}`;
+        if (this.isValidSquare(doubleLeftSquare) && !gameState.board[doubleLeftSquare]) {
+          moves.push(doubleLeftSquare);
         }
       }
 
       if (this.isValidSquare(rightSquare) && !gameState.board[rightSquare]) {
         moves.push(rightSquare);
         
-        // Double horizontal move if pawn hasn't moved
-        if (!hasMoved) {
-          const doubleRightSquare = `${String.fromCharCode(file.charCodeAt(0) + 2)}${rankNum}`;
-          if (this.isValidSquare(doubleRightSquare) && !gameState.board[doubleRightSquare]) {
-            moves.push(doubleRightSquare);
-          }
+        // Double horizontal move (always available in PawnRotation mode)
+        const doubleRightSquare = `${String.fromCharCode(file.charCodeAt(0) + 2)}${rankNum}`;
+        if (this.isValidSquare(doubleRightSquare) && !gameState.board[doubleRightSquare]) {
+          moves.push(doubleRightSquare);
         }
       }
 
