@@ -744,12 +744,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Check if this is a Blink teleport
+        // Check if this is a Blink teleport (not adjacent square)
         if (!isCastling && game.rules && Array.isArray(game.rules) && game.rules.includes('blink')) {
           const blinkUsed = gameState.blinkUsed || { white: false, black: false };
           if (!blinkUsed[piece.color]) {
-            // This is a Blink teleport, not castling
-            isBlinkTeleport = true;
+            // Check if this is teleportation (distance > 1) or regular king move
+            const fromFileIndex = fromFile.charCodeAt(0) - 'a'.charCodeAt(0);
+            const toFileIndex = toFile.charCodeAt(0) - 'a'.charCodeAt(0);
+            const fromRankNum = parseInt(fromRank);
+            const toRankNum = parseInt(toRank);
+            
+            const fileDistance = Math.abs(toFileIndex - fromFileIndex);
+            const rankDistance = Math.abs(toRankNum - fromRankNum);
+            const maxDistance = Math.max(fileDistance, rankDistance);
+            
+            // Only consider it Blink if moving more than 1 square
+            if (maxDistance > 1) {
+              isBlinkTeleport = true;
+            }
           }
         }
         
