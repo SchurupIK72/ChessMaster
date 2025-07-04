@@ -320,6 +320,15 @@ export default function ChessGame() {
           // Check for en passant capture
           let captured = piece ? `${piece.color}-${piece.type}` : undefined;
           
+          console.log('Move attempt:', {
+            from: selectedSquare,
+            to: square,
+            fromPiece,
+            toPiece: piece,
+            enPassantTarget: gameState.enPassantTarget,
+            isEnPassant: fromPiece.type === 'pawn' && square === gameState.enPassantTarget && !piece
+          });
+          
           // Special case for en passant: if pawn moves to enPassantTarget, capture the pawn that was "jumped over"
           if (fromPiece.type === 'pawn' && square === gameState.enPassantTarget && !piece) {
             const targetFile = square[0];
