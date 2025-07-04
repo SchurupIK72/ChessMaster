@@ -779,8 +779,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             gameState.board[rookTo] = gameState.board[rookFrom];
             delete gameState.board[rookFrom];
           }
-        } else if (isBlinkTeleport) {
-          // Mark Blink as used for this color
+        } else if (isBlinkTeleport && !isCastling) {
+          // Mark Blink as used for this color (but not for castling)
           if (!gameState.blinkUsed) {
             gameState.blinkUsed = { white: false, black: false };
           }

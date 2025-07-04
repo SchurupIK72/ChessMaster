@@ -203,6 +203,8 @@ Changelog:
   * PawnRotation mode: pawns ALWAYS have double move capability (horizontal/vertical)
   * Removed movement history restrictions in PawnRotation - any pawn can double move anytime
   * Both client-side and server-side logic updated for consistent behavior
+  * Fixed castling in Blink mode: castling no longer consumes Blink charge
+  * Only true teleportation (non-castling moves >1 square) marks Blink as used
 ```
 
 ## User Preferences
