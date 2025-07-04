@@ -1,0 +1,68 @@
+UI: Found 4 valid moves for pawn at b7: Array(4)
+chess-game.tsx?t=1751634414080:277 Move attempt: Object
+chess-game.tsx?t=1751634414080:332 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634414080:334 UI: Found 6 valid moves for pawn at g7: Array(6)
+chess-game.tsx?t=1751634414080:277 Move attempt: Object
+chess-game.tsx?t=1751634414080:332 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634414080:334 UI: Found 5 valid moves for pawn at e6: Array(5)
+chess-game.tsx?t=1751634414080:277 Move attempt: Object
+chess-game.tsx?t=1751634414080:332 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634414080:334 UI: Found 5 valid moves for pawn at d5: Array(5)
+chess-game.tsx?t=1751634414080:277 Move attempt: Object
+chess-game.tsx?t=1751634414080:332 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634414080:334 UI: Found 5 valid moves for pawn at c3: Array(5)
+chess-game.tsx?t=1751634414080:277 Move attempt: Object
+chess-game.tsx?t=1751634414080:332 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634414080:334 UI: Found 5 valid moves for pawn at b6: Array(5)
+chess-game.tsx?t=1751634414080:277 Move attempt: Object
+chess-game.tsx?t=1751634414080:332 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634414080:334 UI: Found 6 valid moves for pawn at b4: Array(6)
+chess-game.tsx?t=1751634414080:277 Move attempt: Object
+chess-game.tsx?t=1751634414080:332 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634414080:334 UI: Found 3 valid moves for pawn at c4: Array(3)
+chess-game.tsx?t=1751634414080:277 Move attempt: Object
+chess-game.tsx?t=1751634550791:335 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634550791:337 UI: Found 4 valid moves for pawn at e5: Array(4)
+chess-game.tsx?t=1751634550791:277 Move attempt: Object
+chess-game.tsx?t=1751634550791:335 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634550791:337 UI: Found 6 valid moves for pawn at g5: Array(6)
+chess-game.tsx?t=1751634550791:277 Move attempt: Object
+chess-game.tsx?t=1751634550791:335 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634550791:337 UI: Found 4 valid moves for pawn at a7: Array(4)
+chess-game.tsx?t=1751634550791:277 Move attempt: Object
+chess-game.tsx?t=1751634550791:335 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634550791:337 UI: Found 3 valid moves for pawn at a5: Array(3)
+chess-game.tsx?t=1751634550791:335 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634550791:337 UI: Found 3 valid moves for pawn at a5: Array(3)
+chess-game.tsx?t=1751634550791:277 Move attempt: Object
+chess-game.tsx?t=1751634550791:286 En passant detected, entering capture logic
+chess-game.tsx?t=1751634550791:291 En passant details: Object
+chess-game.tsx?t=1751634550791:301 Horizontal en passant: from=a5, to=b5, enPassantTarget=b5
+chess-game.tsx?t=1751634550791:303 Looking for captured pawn at: b5
+chess-game.tsx?t=1751634550791:335 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634550791:337 UI: Found 4 valid moves for pawn at e5: Array(4)
+chess-game.tsx?t=1751634550791:277 Move attempt: Object
+chess-game.tsx?t=1751634550791:335 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634550791:337 UI: Found 7 valid moves for bishop at f8: Array(7)
+chess-game.tsx?t=1751634550791:277 Move attempt: Object
+chess-game.tsx?t=1751634550791:335 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634550791:337 UI: Found 8 valid moves for bishop at e7: Array(8)
+chess-game.tsx?t=1751634550791:277 Move attempt: Object
+chess-game.tsx?t=1751634550791:335 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634550791:337 UI: Found 9 valid moves for queen at d8: Array(9)
+chess-game.tsx?t=1751634550791:277 Move attempt: Object
+chess-game.tsx?t=1751634550791:335 Game rules being passed: Array(1)
+chess-game.tsx?t=1751634550791:337 UI: Found 6 valid moves for pawn at d4: Array(6)
+chess-game.tsx?t=1751634550791:277 Move attempt: Object
+chess-game.tsx?t=1751634550791:286 En passant detected, entering capture logic
+chess-game.tsx?t=1751634550791:291 En passant details: Object
+chess-game.tsx?t=1751634550791:293 Vertical en passant detected
+chess-game.tsx:400 Game rules being passed: Array(1)
+chess-game.tsx:402 UI: Found 5 valid moves for pawn at b5: Array(5)
+chess-game.tsx:323 Move attempt: Object
+chess-game.tsx:400 Game rules being passed: Array(1)
+chess-game.tsx:402 UI: Found 6 valid moves for pawn at c5: Array(6)
+chess-game.tsx:323 Move attempt: Object
+chess-game.tsx:334 En passant detected, entering capture logic
+chess-game.tsx:340 En passant details: Object
+chess-game.tsx:344 Vertical en passant detected
