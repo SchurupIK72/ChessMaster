@@ -1,24 +1,23 @@
-import { ChessGameState, ChessPiece } from "@shared/schema";
+import type { ChessGameState, ChessPiece, GameRulesArray } from '@shared/schema';
 
 export class ChessLogic {
   getValidMoves(gameState: ChessGameState, fromSquare: string, gameRules?: string[]): string[] {
     const piece = gameState.board[fromSquare];
-    if (!piece || piece.color !== gameState.currentTurn) {
-      return [];
-    }
+    if (!piece) return [];
 
-    // Check for double knight rule restriction
+    // Check if we're in the middle of a double knight move
     if (gameState.doubleKnightMove) {
-      // Must move the specific knight that was moved in the first part
-      if (fromSquare !== gameState.doubleKnightMove.knightSquare || 
-          piece.type !== 'knight' || 
+      // Only the required knight can move
+      if (piece.type !== 'knight' || 
+          gameState.doubleKnightMove.knightSquare !== fromSquare ||
           piece.color !== gameState.doubleKnightMove.color) {
         return []; // Can only move the required knight
       }
     }
 
     const moves: string[] = [];
-    const [file, rank] = fromSquare;
+    const file = fromSquare[0];
+    const rank = fromSquare[1];
     const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
     const rankNum = parseInt(rank);
 
@@ -39,39 +38,23 @@ export class ChessLogic {
         moves.push(...this.getQueenMoves(gameState, fromSquare, piece, gameRules));
         break;
       case 'king':
-        // King moves are handled in getValidMovesForPiece function
-        moves.push(...this.getValidMovesForPiece(gameState, fromSquare, piece, gameRules, false));
+        moves.push(...this.getKingMoves(gameState, fromSquare, piece, gameRules));
         break;
     }
 
-    // Filter out moves that would put own king in check
-    console.log(`Filtering ${moves.length} moves for ${piece.type} at ${fromSquare}`);
-    let validMoves = moves.filter(move => {
-      const wouldBeCheck = this.wouldBeInCheck(gameState, fromSquare, move, piece.color, gameRules);
-      if (wouldBeCheck) {
-        console.log(`Move ${fromSquare}-${move} would leave king in check`);
-      }
-      return !wouldBeCheck;
+    // Filter out moves that would leave the king in check
+    const validMoves = moves.filter(move => {
+      return !this.wouldBeInCheck(gameState, fromSquare, move, piece.color, gameRules);
     });
-    console.log(`After check filtering: ${validMoves.length} moves remain for ${piece.type}`);
-    
-    // Special rule for double knight: cannot capture the king
-    if (gameState.doubleKnightMove) {
-      validMoves = validMoves.filter(move => {
-        const targetPiece = gameState.board[move];
-        return !(targetPiece && targetPiece.type === 'king');
-      });
-    }
-    
+
     return validMoves;
   }
 
-  // Check if the current player has any legal moves
   hasLegalMoves(gameState: ChessGameState, color: 'white' | 'black', gameRules?: string[]): boolean {
     for (const [square, piece] of Object.entries(gameState.board)) {
       if (piece && piece.color === color) {
-        const moves = this.getValidMovesForPiece(gameState, square, piece, gameRules);
-        if (moves.length > 0) {
+        const validMoves = this.getValidMoves(gameState, square, gameRules);
+        if (validMoves.length > 0) {
           return true;
         }
       }
@@ -79,124 +62,145 @@ export class ChessLogic {
     return false;
   }
 
-  // Update game state to detect checkmate and stalemate
   updateGameStatus(gameState: ChessGameState, gameRules?: string[]): ChessGameState {
-    const currentPlayerInCheck = this.isKingInCheck(gameState, gameState.currentTurn, gameRules);
-    const hasLegalMoves = this.hasLegalMoves(gameState, gameState.currentTurn, gameRules);
+    const newGameState = { ...gameState };
+    const currentPlayerColor = newGameState.currentTurn;
+    const isInCheck = this.isKingInCheck(newGameState, currentPlayerColor, gameRules);
+    const hasLegalMoves = this.hasLegalMoves(newGameState, currentPlayerColor, gameRules);
 
-    return {
-      ...gameState,
-      isCheck: currentPlayerInCheck,
-      isCheckmate: currentPlayerInCheck && !hasLegalMoves,
-      isStalemate: !currentPlayerInCheck && !hasLegalMoves
-    };
+    newGameState.isCheck = isInCheck;
+    newGameState.isCheckmate = isInCheck && !hasLegalMoves;
+    newGameState.isStalemate = !isInCheck && !hasLegalMoves;
+
+    return newGameState;
   }
 
   private getPawnMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece, gameRules?: string[]): string[] {
     const moves: string[] = [];
-    const [file, rank] = fromSquare;
+    const file = fromSquare[0];
+    const rank = fromSquare[1];
     const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
     const rankNum = parseInt(rank);
+
     const direction = piece.color === 'white' ? 1 : -1;
     const startRank = piece.color === 'white' ? 2 : 7;
+    const promotionRank = piece.color === 'white' ? 8 : 1;
 
-    // Standard forward move
+    // Check if PawnRotation rule is active
+    const hasPawnRotation = gameRules?.includes('pawn-rotation');
+    
+    // Check if this pawn has moved (for rotation rule)
+    let hasMoved = false;
+    if (hasPawnRotation && gameState.pawnRotationMoves) {
+      const standardOriginalSquare = `${file}${piece.color === 'white' ? 2 : 7}`;
+      const pawnWallStartSquare = `${file}${piece.color === 'white' ? 3 : 6}`;
+      hasMoved = gameState.pawnRotationMoves[standardOriginalSquare] || gameState.pawnRotationMoves[pawnWallStartSquare];
+    }
+
+    // Forward moves
     const oneForward = `${file}${rankNum + direction}`;
     if (this.isValidSquare(oneForward) && !gameState.board[oneForward]) {
       moves.push(oneForward);
 
-      // Two squares forward from starting position (only if pawn hasn't moved)
-      let canDoubleMoveForward = rankNum === startRank;
-      
-      // In pawn-wall mode, pawns on 3rd rank (white) and 6th rank (black) can also double move
-      if (gameRules && gameRules.includes('pawn-wall')) {
-        const pawnWallStartRank = piece.color === 'white' ? 3 : 6;
-        canDoubleMoveForward = canDoubleMoveForward || rankNum === pawnWallStartRank;
-      }
-      
-      // In PawnRotation mode, pawns can always make double moves (no restrictions)
-      if (gameRules && gameRules.includes('pawn-rotation')) {
-        // PawnRotation allows unrestricted double moves
-        canDoubleMoveForward = true;
-      }
-      
-      if (canDoubleMoveForward) {
-        const twoForward = `${file}${rankNum + 2 * direction}`;
-        if (this.isValidSquare(twoForward) && !gameState.board[twoForward]) {
+      // Two squares forward if on starting rank or if pawn hasn't moved in rotation mode
+      const twoForward = `${file}${rankNum + 2 * direction}`;
+      if (this.isValidSquare(twoForward) && !gameState.board[twoForward]) {
+        if (rankNum === startRank || (hasPawnRotation && !hasMoved)) {
           moves.push(twoForward);
         }
       }
     }
 
-    // Standard diagonal captures
-    for (const fileOffset of [-1, 1]) {
-      const newFileIndex = fileIndex + fileOffset;
-      if (newFileIndex >= 0 && newFileIndex < 8) {
-        const newFile = String.fromCharCode(newFileIndex + 'a'.charCodeAt(0));
-        const captureSquare = `${newFile}${rankNum + direction}`;
-        
-        if (this.isValidSquare(captureSquare)) {
-          const targetPiece = gameState.board[captureSquare];
-          if (targetPiece && targetPiece.color !== piece.color) {
-            moves.push(captureSquare);
-          }
-          // En passant
-          if (captureSquare === gameState.enPassantTarget) {
-            moves.push(captureSquare);
-          }
-        }
+    // Diagonal captures
+    const captureLeft = `${String.fromCharCode(file.charCodeAt(0) - 1)}${rankNum + direction}`;
+    const captureRight = `${String.fromCharCode(file.charCodeAt(0) + 1)}${rankNum + direction}`;
+
+    if (this.isValidSquare(captureLeft)) {
+      const target = gameState.board[captureLeft];
+      if (target && target.color !== piece.color) {
+        moves.push(captureLeft);
       }
     }
 
-    // PawnRotation rule: horizontal moves
-    if (gameRules && gameRules.includes('pawn-rotation')) {
-      const pawnRotationMoves = gameState.pawnRotationMoves || {};
+    if (this.isValidSquare(captureRight)) {
+      const target = gameState.board[captureRight];
+      if (target && target.color !== piece.color) {
+        moves.push(captureRight);
+      }
+    }
+
+    // En passant
+    if (gameState.enPassantTarget) {
+      const enPassantFile = gameState.enPassantTarget[0];
+      const enPassantRank = parseInt(gameState.enPassantTarget[1]);
       
-      // In PawnRotation mode, no restrictions on double horizontal moves
-      const hasPawnMoved = false;
+      // Check if pawn can capture en passant
+      const canCaptureEnPassant = 
+        Math.abs(fileIndex - (enPassantFile.charCodeAt(0) - 'a'.charCodeAt(0))) === 1 &&
+        rankNum + direction === enPassantRank;
       
-      // Horizontal moves (left and right)
-      for (const fileOffset of [-1, 1]) {
-        const newFileIndex = fileIndex + fileOffset;
-        if (newFileIndex >= 0 && newFileIndex < 8) {
-          const newFile = String.fromCharCode(newFileIndex + 'a'.charCodeAt(0));
-          const horizontalSquare = `${newFile}${rankNum}`;
-          
-          if (!gameState.board[horizontalSquare]) {
-            moves.push(horizontalSquare);
-            
-            // Allow 2-square horizontal move only if pawn hasn't moved at all
-            if (!hasPawnMoved) {
-              const newFileIndex2 = fileIndex + 2 * fileOffset;
-              if (newFileIndex2 >= 0 && newFileIndex2 < 8) {
-                const newFile2 = String.fromCharCode(newFileIndex2 + 'a'.charCodeAt(0));
-                const horizontalSquare2 = `${newFile2}${rankNum}`;
-                if (!gameState.board[horizontalSquare2]) {
-                  moves.push(horizontalSquare2);
-                }
-              }
-            }
+      if (canCaptureEnPassant) {
+        moves.push(gameState.enPassantTarget);
+      }
+    }
+
+    // Horizontal moves for PawnRotation rule
+    if (hasPawnRotation) {
+      // Horizontal forward moves
+      const leftSquare = `${String.fromCharCode(file.charCodeAt(0) - 1)}${rankNum}`;
+      const rightSquare = `${String.fromCharCode(file.charCodeAt(0) + 1)}${rankNum}`;
+
+      if (this.isValidSquare(leftSquare) && !gameState.board[leftSquare]) {
+        moves.push(leftSquare);
+        
+        // Double horizontal move if pawn hasn't moved
+        if (!hasMoved) {
+          const doubleLeftSquare = `${String.fromCharCode(file.charCodeAt(0) - 2)}${rankNum}`;
+          if (this.isValidSquare(doubleLeftSquare) && !gameState.board[doubleLeftSquare]) {
+            moves.push(doubleLeftSquare);
           }
         }
       }
-      
-      // Horizontal captures (including en passant)
-      for (const fileOffset of [-1, 1]) {
-        const newFileIndex = fileIndex + fileOffset;
-        if (newFileIndex >= 0 && newFileIndex < 8) {
-          const newFile = String.fromCharCode(newFileIndex + 'a'.charCodeAt(0));
-          const captureSquare = `${newFile}${rankNum}`;
-          
-          if (this.isValidSquare(captureSquare)) {
-            const targetPiece = gameState.board[captureSquare];
-            if (targetPiece && targetPiece.color !== piece.color) {
-              moves.push(captureSquare);
-            }
-            // Horizontal en passant
-            if (captureSquare === gameState.enPassantTarget) {
-              moves.push(captureSquare);
-            }
+
+      if (this.isValidSquare(rightSquare) && !gameState.board[rightSquare]) {
+        moves.push(rightSquare);
+        
+        // Double horizontal move if pawn hasn't moved
+        if (!hasMoved) {
+          const doubleRightSquare = `${String.fromCharCode(file.charCodeAt(0) + 2)}${rankNum}`;
+          if (this.isValidSquare(doubleRightSquare) && !gameState.board[doubleRightSquare]) {
+            moves.push(doubleRightSquare);
           }
+        }
+      }
+
+      // Horizontal captures
+      if (this.isValidSquare(leftSquare)) {
+        const target = gameState.board[leftSquare];
+        if (target && target.color !== piece.color) {
+          moves.push(leftSquare);
+        }
+      }
+
+      if (this.isValidSquare(rightSquare)) {
+        const target = gameState.board[rightSquare];
+        if (target && target.color !== piece.color) {
+          moves.push(rightSquare);
+        }
+      }
+
+      // Horizontal en passant
+      if (gameState.enPassantTarget) {
+        const enPassantFile = gameState.enPassantTarget[0];
+        const enPassantRank = parseInt(gameState.enPassantTarget[1]);
+        
+        // Check if pawn can capture horizontally en passant
+        const canCaptureHorizontalEnPassant = 
+          Math.abs(fileIndex - (enPassantFile.charCodeAt(0) - 'a'.charCodeAt(0))) === 1 &&
+          rankNum === enPassantRank;
+        
+        if (canCaptureHorizontalEnPassant) {
+          moves.push(gameState.enPassantTarget);
         }
       }
     }
@@ -206,10 +210,18 @@ export class ChessLogic {
 
   private getRookMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece): string[] {
     const moves: string[] = [];
-    const directions = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+    const file = fromSquare[0];
+    const rank = fromSquare[1];
+    const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
+    const rankNum = parseInt(rank);
+
+    // Horizontal and vertical directions
+    const directions = [
+      [0, 1], [0, -1], [1, 0], [-1, 0]
+    ];
 
     for (const [dx, dy] of directions) {
-      moves.push(...this.getMovesInDirection(gameState, fromSquare, piece, dx, dy));
+      moves.push(...this.getMovesInDirection(gameState, fromSquare, dx, dy, piece));
     }
 
     return moves;
@@ -217,15 +229,22 @@ export class ChessLogic {
 
   private getBishopMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece, gameRules?: string[]): string[] {
     const moves: string[] = [];
-    const directions = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+    const file = fromSquare[0];
+    const rank = fromSquare[1];
+    const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
+    const rankNum = parseInt(rank);
+
+    // Diagonal directions
+    const directions = [
+      [1, 1], [1, -1], [-1, 1], [-1, -1]
+    ];
 
     for (const [dx, dy] of directions) {
-      if (gameRules && gameRules.includes('xray-bishop')) {
-        // Рентген-режим: слон может проходить сквозь одну фигуру
-        moves.push(...this.getXrayMovesInDirection(gameState, fromSquare, piece, dx, dy));
+      // Check if X-ray bishop rule is active
+      if (gameRules?.includes('xray-bishop')) {
+        moves.push(...this.getXrayMovesInDirection(gameState, fromSquare, dx, dy, piece));
       } else {
-        // Стандартное движение слона
-        moves.push(...this.getMovesInDirection(gameState, fromSquare, piece, dx, dy));
+        moves.push(...this.getMovesInDirection(gameState, fromSquare, dx, dy, piece));
       }
     }
 
@@ -233,19 +252,33 @@ export class ChessLogic {
   }
 
   private getQueenMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece, gameRules?: string[]): string[] {
-    return [
-      ...this.getRookMoves(gameState, fromSquare, piece),
-      // Ферзь НЕ получает рентген эффект слона - только обычные диагональные ходы
-      ...this.getBishopMoves(gameState, fromSquare, piece, undefined)
+    const moves: string[] = [];
+    const file = fromSquare[0];
+    const rank = fromSquare[1];
+    const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
+    const rankNum = parseInt(rank);
+
+    // All 8 directions (rook + bishop)
+    const directions = [
+      [0, 1], [0, -1], [1, 0], [-1, 0], // Rook moves
+      [1, 1], [1, -1], [-1, 1], [-1, -1] // Bishop moves
     ];
+
+    for (const [dx, dy] of directions) {
+      moves.push(...this.getMovesInDirection(gameState, fromSquare, dx, dy, piece));
+    }
+
+    return moves;
   }
 
   private getKnightMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece): string[] {
     const moves: string[] = [];
-    const [file, rank] = fromSquare;
+    const file = fromSquare[0];
+    const rank = fromSquare[1];
     const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
     const rankNum = parseInt(rank);
 
+    // Knight moves in L-shape
     const knightMoves = [
       [2, 1], [2, -1], [-2, 1], [-2, -1],
       [1, 2], [1, -2], [-1, 2], [-1, -2]
@@ -253,14 +286,13 @@ export class ChessLogic {
 
     for (const [dx, dy] of knightMoves) {
       const newFileIndex = fileIndex + dx;
-      const newRank = rankNum + dy;
-
-      if (newFileIndex >= 0 && newFileIndex < 8 && newRank >= 1 && newRank <= 8) {
-        const newFile = String.fromCharCode(newFileIndex + 'a'.charCodeAt(0));
-        const newSquare = `${newFile}${newRank}`;
+      const newRankNum = rankNum + dy;
+      
+      if (newFileIndex >= 0 && newFileIndex < 8 && newRankNum >= 1 && newRankNum <= 8) {
+        const newSquare = `${String.fromCharCode(newFileIndex + 'a'.charCodeAt(0))}${newRankNum}`;
+        const target = gameState.board[newSquare];
         
-        const targetPiece = gameState.board[newSquare];
-        if (!targetPiece || targetPiece.color !== piece.color) {
+        if (!target || target.color !== piece.color) {
           moves.push(newSquare);
         }
       }
@@ -270,89 +302,94 @@ export class ChessLogic {
   }
 
   private getKingMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece, gameRules?: string[]): string[] {
+    console.log('getKingMoves called with gameRules:', gameRules);
     const moves: string[] = [];
-    const [file, rank] = fromSquare;
+    const file = fromSquare[0];
+    const rank = fromSquare[1];
     const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
     const rankNum = parseInt(rank);
 
-    const kingMoves = [
-      [1, 0], [-1, 0], [0, 1], [0, -1],
+    // Regular king moves (one square in any direction)
+    const directions = [
+      [0, 1], [0, -1], [1, 0], [-1, 0],
       [1, 1], [1, -1], [-1, 1], [-1, -1]
     ];
 
-    for (const [dx, dy] of kingMoves) {
+    for (const [dx, dy] of directions) {
       const newFileIndex = fileIndex + dx;
-      const newRank = rankNum + dy;
-
-      if (newFileIndex >= 0 && newFileIndex < 8 && newRank >= 1 && newRank <= 8) {
-        const newFile = String.fromCharCode(newFileIndex + 'a'.charCodeAt(0));
-        const newSquare = `${newFile}${newRank}`;
+      const newRankNum = rankNum + dy;
+      
+      if (newFileIndex >= 0 && newFileIndex < 8 && newRankNum >= 1 && newRankNum <= 8) {
+        const newSquare = `${String.fromCharCode(newFileIndex + 'a'.charCodeAt(0))}${newRankNum}`;
+        const target = gameState.board[newSquare];
         
-        const targetPiece = gameState.board[newSquare];
-        if (!targetPiece || targetPiece.color !== piece.color) {
+        if (!target || target.color !== piece.color) {
           moves.push(newSquare);
         }
       }
     }
 
-    // Add blink ability if enabled and not used yet
-    if (gameRules?.includes('blink')) {
-      if (!gameState.blinkUsed || !gameState.blinkUsed[piece.color]) {
-        // King can blink to any empty square or capture any enemy piece
-        for (let fileIdx = 0; fileIdx < 8; fileIdx++) {
-          for (let rankIdx = 1; rankIdx <= 8; rankIdx++) {
-            const file = String.fromCharCode(fileIdx + 'a'.charCodeAt(0));
-            const square = `${file}${rankIdx}`;
-            
-            // Skip current position
-            if (square === fromSquare) continue;
-            
-            const targetPiece = gameState.board[square];
-            // Can blink to empty square or capture enemy piece
-            if (!targetPiece || targetPiece.color !== piece.color) {
-              moves.push(square);
-            }
-          }
+    // Castling
+    if (!this.isKingInCheck(gameState, piece.color, gameRules)) {
+      const backRank = piece.color === 'white' ? 1 : 8;
+      
+      // Kingside castling
+      if (gameState.castlingRights[piece.color === 'white' ? 'whiteKingside' : 'blackKingside']) {
+        const f = `f${backRank}`;
+        const g = `g${backRank}`;
+        
+        if (!gameState.board[f] && !gameState.board[g] &&
+            !this.isSquareUnderAttack(gameState, f, piece.color, gameRules) &&
+            !this.isSquareUnderAttack(gameState, g, piece.color, gameRules)) {
+          moves.push(g);
+        }
+      }
+      
+      // Queenside castling
+      if (gameState.castlingRights[piece.color === 'white' ? 'whiteQueenside' : 'blackQueenside']) {
+        const b = `b${backRank}`;
+        const c = `c${backRank}`;
+        const d = `d${backRank}`;
+        
+        if (!gameState.board[b] && !gameState.board[c] && !gameState.board[d] &&
+            !this.isSquareUnderAttack(gameState, c, piece.color, gameRules) &&
+            !this.isSquareUnderAttack(gameState, d, piece.color, gameRules)) {
+          moves.push(c);
         }
       }
     }
 
-    // Add castling logic
-    if (!this.isKingInCheck(gameState, piece.color, gameRules)) {
-      // Check kingside castling
-      if (piece.color === 'white' && gameState.castlingRights.whiteKingside) {
-        if (!gameState.board['f1'] && !gameState.board['g1'] && gameState.board['h1']?.type === 'rook') {
-          // Check if squares are not under attack
-          if (!this.isSquareUnderAttack(gameState, 'f1', piece.color, gameRules) && 
-              !this.isSquareUnderAttack(gameState, 'g1', piece.color, gameRules)) {
-            moves.push('g1');
-          }
-        }
-      } else if (piece.color === 'black' && gameState.castlingRights.blackKingside) {
-        if (!gameState.board['f8'] && !gameState.board['g8'] && gameState.board['h8']?.type === 'rook') {
-          if (!this.isSquareUnderAttack(gameState, 'f8', piece.color, gameRules) && 
-              !this.isSquareUnderAttack(gameState, 'g8', piece.color, gameRules)) {
-            moves.push('g8');
-          }
-        }
-      }
-
-      // Check queenside castling
-      if (piece.color === 'white' && gameState.castlingRights.whiteQueenside) {
-        if (!gameState.board['d1'] && !gameState.board['c1'] && !gameState.board['b1'] && gameState.board['a1']?.type === 'rook') {
-          if (!this.isSquareUnderAttack(gameState, 'd1', piece.color, gameRules) && 
-              !this.isSquareUnderAttack(gameState, 'c1', piece.color, gameRules)) {
-            moves.push('c1');
-          }
-        }
-      } else if (piece.color === 'black' && gameState.castlingRights.blackQueenside) {
-        if (!gameState.board['d8'] && !gameState.board['c8'] && !gameState.board['b8'] && gameState.board['a8']?.type === 'rook') {
-          if (!this.isSquareUnderAttack(gameState, 'd8', piece.color, gameRules) && 
-              !this.isSquareUnderAttack(gameState, 'c8', piece.color, gameRules)) {
-            moves.push('c8');
+    // Blink move (teleport)
+    const hasBlinkRule = Array.isArray(gameRules) && gameRules.includes('blink');
+    console.log('Checking for blink mode:', {
+      gameRules,
+      hasBlinkRule,
+      gameRulesType: typeof gameRules,
+      gameRulesContent: gameRules
+    });
+    
+    if (hasBlinkRule) {
+      const blinkUsed = gameState.blinkUsed?.[piece.color];
+      console.log('Blink mode detected', { gameRules, blinkUsed });
+      
+      if (!blinkUsed) {
+        // King can teleport to any empty square or capture any enemy piece
+        for (let fileIdx = 0; fileIdx < 8; fileIdx++) {
+          for (let rankIdx = 1; rankIdx <= 8; rankIdx++) {
+            const targetSquare = `${String.fromCharCode(fileIdx + 'a'.charCodeAt(0))}${rankIdx}`;
+            
+            // Skip current position
+            if (targetSquare === fromSquare) continue;
+            
+            const target = gameState.board[targetSquare];
+            if (!target || target.color !== piece.color) {
+              moves.push(targetSquare);
+            }
           }
         }
       }
+    } else {
+      console.log('Blink mode not detected', { gameRules });
     }
 
     return moves;
@@ -361,35 +398,34 @@ export class ChessLogic {
   private getMovesInDirection(
     gameState: ChessGameState,
     fromSquare: string,
-    piece: ChessPiece,
     dx: number,
-    dy: number
+    dy: number,
+    piece: ChessPiece
   ): string[] {
     const moves: string[] = [];
-    const [file, rank] = fromSquare;
-    let fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
-    let rankNum = parseInt(rank);
+    const file = fromSquare[0];
+    const rank = fromSquare[1];
+    const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
+    const rankNum = parseInt(rank);
 
-    while (true) {
-      fileIndex += dx;
-      rankNum += dy;
+    let newFileIndex = fileIndex + dx;
+    let newRankNum = rankNum + dy;
 
-      if (fileIndex < 0 || fileIndex >= 8 || rankNum < 1 || rankNum > 8) {
-        break;
-      }
+    while (newFileIndex >= 0 && newFileIndex < 8 && newRankNum >= 1 && newRankNum <= 8) {
+      const newSquare = `${String.fromCharCode(newFileIndex + 'a'.charCodeAt(0))}${newRankNum}`;
+      const target = gameState.board[newSquare];
 
-      const newFile = String.fromCharCode(fileIndex + 'a'.charCodeAt(0));
-      const newSquare = `${newFile}${rankNum}`;
-      const targetPiece = gameState.board[newSquare];
-
-      if (!targetPiece) {
+      if (!target) {
         moves.push(newSquare);
       } else {
-        if (targetPiece.color !== piece.color) {
+        if (target.color !== piece.color) {
           moves.push(newSquare);
         }
-        break; // Can't move past any piece
+        break; // Stop at first piece encountered
       }
+
+      newFileIndex += dx;
+      newRankNum += dy;
     }
 
     return moves;
@@ -398,48 +434,46 @@ export class ChessLogic {
   private getXrayMovesInDirection(
     gameState: ChessGameState,
     fromSquare: string,
-    piece: ChessPiece,
     dx: number,
-    dy: number
+    dy: number,
+    piece: ChessPiece
   ): string[] {
     const moves: string[] = [];
-    const [file, rank] = fromSquare;
-    let fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
-    let rankNum = parseInt(rank);
-    let passedThroughPiece = false;
+    const file = fromSquare[0];
+    const rank = fromSquare[1];
+    const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
+    const rankNum = parseInt(rank);
 
-    while (true) {
-      fileIndex += dx;
-      rankNum += dy;
+    let newFileIndex = fileIndex + dx;
+    let newRankNum = rankNum + dy;
+    let pieceCount = 0;
 
-      if (fileIndex < 0 || fileIndex >= 8 || rankNum < 1 || rankNum > 8) {
-        break;
-      }
+    while (newFileIndex >= 0 && newFileIndex < 8 && newRankNum >= 1 && newRankNum <= 8) {
+      const newSquare = `${String.fromCharCode(newFileIndex + 'a'.charCodeAt(0))}${newRankNum}`;
+      const target = gameState.board[newSquare];
 
-      const newFile = String.fromCharCode(fileIndex + 'a'.charCodeAt(0));
-      const newSquare = `${newFile}${rankNum}`;
-      const targetPiece = gameState.board[newSquare];
-
-      if (targetPiece) {
-        if (!passedThroughPiece) {
-          // Первая встреченная фигура - проходим сквозь неё
-          passedThroughPiece = true;
-          
-          // Если это вражеская фигура, можем захватить её
-          if (targetPiece.color !== piece.color) {
-            moves.push(newSquare);
-          }
-        } else {
-          // Вторая фигура - останавливаемся, но можем захватить если вражеская
-          if (targetPiece.color !== piece.color) {
-            moves.push(newSquare);
-          }
-          break;
+      if (!target) {
+        if (pieceCount <= 1) {
+          moves.push(newSquare);
         }
       } else {
-        // Пустая клетка - можем ходить туда
-        moves.push(newSquare);
+        pieceCount++;
+        if (pieceCount === 1) {
+          // First piece encountered - can move here if it's an enemy
+          if (target.color !== piece.color) {
+            moves.push(newSquare);
+          }
+        } else if (pieceCount === 2) {
+          // Second piece encountered - can capture if it's an enemy
+          if (target.color !== piece.color) {
+            moves.push(newSquare);
+          }
+          break; // Stop after second piece
+        }
       }
+
+      newFileIndex += dx;
+      newRankNum += dy;
     }
 
     return moves;
@@ -448,75 +482,39 @@ export class ChessLogic {
   private isValidSquare(square: string): boolean {
     if (square.length !== 2) return false;
     const file = square[0];
-    const rank = parseInt(square[1]);
-    return file >= 'a' && file <= 'h' && rank >= 1 && rank <= 8;
+    const rank = square[1];
+    return file >= 'a' && file <= 'h' && rank >= '1' && rank <= '8';
   }
 
   private wouldBeInCheck(
     gameState: ChessGameState,
     fromSquare: string,
     toSquare: string,
-    color: 'white' | 'black',
+    kingColor: 'white' | 'black',
     gameRules?: string[]
   ): boolean {
-    // Check if this is a blink move (king moving to a non-adjacent square)
-    if (gameRules?.includes('blink')) {
-      const piece = gameState.board[fromSquare];
-      if (piece && piece.type === 'king') {
-        const blinkUsed = (gameState as any).blinkUsed?.[piece.color];
-        if (!blinkUsed) {
-          // Check if this is a blink move (non-adjacent square)
-          const fromFile = fromSquare.charCodeAt(0) - 'a'.charCodeAt(0);
-          const fromRank = parseInt(fromSquare[1]) - 1;
-          const toFile = toSquare.charCodeAt(0) - 'a'.charCodeAt(0);
-          const toRank = parseInt(toSquare[1]) - 1;
-          
-          const fileDiff = Math.abs(toFile - fromFile);
-          const rankDiff = Math.abs(toRank - fromRank);
-          
-          // If this is a blink move (not adjacent), still check for check at destination
-          if (fileDiff > 1 || rankDiff > 1) {
-            console.log(`Blink move detected from ${fromSquare} to ${toSquare}, checking destination for check`);
-            // Create temp state with blink move to check if king would be in check at destination
-            const tempState = { ...gameState };
-            tempState.board = { ...gameState.board };
-            tempState.board[toSquare] = piece;
-            delete tempState.board[fromSquare];
-            
-            // Check if king would be in check at the destination (without blink rules for attack detection)
-            const attackGameRules = gameRules?.filter(rule => rule !== 'blink');
-            const wouldBeInCheck = this.isKingInCheck(tempState, color, attackGameRules);
-            if (wouldBeInCheck) {
-              console.log(`Blink destination ${toSquare} would leave king in check`);
-            }
-            return wouldBeInCheck;
-          } else {
-            console.log(`Regular king move from ${fromSquare} to ${toSquare}, checking for check`);
-          }
-        }
-      }
-    }
+    // Create a copy of the game state with the move applied
+    const newGameState = { ...gameState };
+    newGameState.board = { ...gameState.board };
     
-    // Create a temporary game state with the move made
-    const tempState = { ...gameState };
-    tempState.board = { ...gameState.board };
-    
-    const piece = tempState.board[fromSquare];
-    tempState.board[toSquare] = piece;
-    delete tempState.board[fromSquare];
+    const piece = newGameState.board[fromSquare];
+    if (!piece) return false;
 
-    return this.isKingInCheck(tempState, color, gameRules);
+    // Apply the move
+    newGameState.board[toSquare] = piece;
+    delete newGameState.board[fromSquare];
+
+    // Check if king is in check after the move
+    return this.isKingInCheck(newGameState, kingColor, gameRules);
   }
 
   private isSquareUnderAttack(gameState: ChessGameState, square: string, kingColor: 'white' | 'black', gameRules?: string[]): boolean {
-    const opponentColor = kingColor === 'white' ? 'black' : 'white';
+    const enemyColor = kingColor === 'white' ? 'black' : 'white';
     
-    // Check if any opponent piece can attack this square
     for (const [fromSquare, piece] of Object.entries(gameState.board)) {
-      if (piece && piece.color === opponentColor) {
-        // Get raw moves without check validation to avoid recursion
-        const moves = this.getRawMovesForPiece(gameState, fromSquare, piece, gameRules);
-        if (moves.includes(square)) {
+      if (piece && piece.color === enemyColor) {
+        const rawMoves = this.getRawMovesForPiece(gameState, fromSquare, piece, gameRules);
+        if (rawMoves.includes(square)) {
           return true;
         }
       }
@@ -525,231 +523,54 @@ export class ChessLogic {
     return false;
   }
 
-  // Get moves without check validation to avoid recursion
   private getRawMovesForPiece(gameState: ChessGameState, fromSquare: string, piece: ChessPiece, gameRules?: string[]): string[] {
-    const moves: string[] = [];
-    const [file, rank] = fromSquare;
-    const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
-    const rankNum = parseInt(rank);
-
+    // Get moves without checking if they leave the king in check
     switch (piece.type) {
       case 'pawn':
-        // Direct pawn moves without calling getPawnMoves
-        const direction = piece.color === 'white' ? 1 : -1;
-        const startRank = piece.color === 'white' ? 2 : 7;
-        
-        // One square forward
-        const oneForward = `${file}${rankNum + direction}`;
-        if (rankNum + direction >= 1 && rankNum + direction <= 8 && !gameState.board[oneForward]) {
-          moves.push(oneForward);
-          
-          // Two squares forward from starting position
-          if (rankNum === startRank) {
-            const twoForward = `${file}${rankNum + 2 * direction}`;
-            if (!gameState.board[twoForward]) {
-              moves.push(twoForward);
-            }
-          }
-        }
-        
-        // Diagonal captures
-        for (const captureFile of [String.fromCharCode(fileIndex - 1 + 'a'.charCodeAt(0)), String.fromCharCode(fileIndex + 1 + 'a'.charCodeAt(0))]) {
-          if (captureFile >= 'a' && captureFile <= 'h') {
-            const captureSquare = `${captureFile}${rankNum + direction}`;
-            const targetPiece = gameState.board[captureSquare];
-            if (targetPiece && targetPiece.color !== piece.color) {
-              moves.push(captureSquare);
-            }
-          }
-        }
-        break;
-        
+        return this.getPawnMoves(gameState, fromSquare, piece, gameRules);
       case 'rook':
-        // Direct rook moves
-        const rookDirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
-        for (const [dx, dy] of rookDirs) {
-          for (let i = 1; i < 8; i++) {
-            const newFile = fileIndex + dx * i;
-            const newRank = rankNum + dy * i;
-            
-            if (newFile < 0 || newFile >= 8 || newRank < 1 || newRank > 8) break;
-            
-            const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
-            const targetPiece = gameState.board[newSquare];
-            
-            if (!targetPiece) {
-              moves.push(newSquare);
-            } else {
-              if (targetPiece.color !== piece.color) {
-                moves.push(newSquare);
-              }
-              break;
-            }
-          }
-        }
-        break;
-        
-      case 'bishop':
-        // Bishop moves - учитываем правило рентген-слона
-        if (gameRules && gameRules.includes('xray-bishop')) {
-          // Рентген-режим: слон может проходить сквозь одну фигуру
-          const bishopDirections = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
-          for (const [dx, dy] of bishopDirections) {
-            moves.push(...this.getXrayMovesInDirection(gameState, fromSquare, piece, dx, dy));
-          }
-        } else {
-          // Стандартное движение слона
-          const bishopDirections = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
-          for (const [dx, dy] of bishopDirections) {
-            moves.push(...this.getMovesInDirection(gameState, fromSquare, piece, dx, dy));
-          }
-        }
-        break;
-        
-      case 'queen':
-        // Queen moves (combination of rook and bishop) - НЕ получает рентген эффект
-        const queenDirs = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]];
-        
-        // Все ходы ферзя (горизонтальные, вертикальные и диагональные) - стандартные
-        for (const [dx, dy] of queenDirs) {
-          moves.push(...this.getMovesInDirection(gameState, fromSquare, piece, dx, dy));
-        }
-        break;
-        
+        return this.getRookMoves(gameState, fromSquare, piece);
       case 'knight':
-        // Direct knight moves
-        const knightMoves = [
-          [-2, -1], [-2, 1], [-1, -2], [-1, 2],
-          [1, -2], [1, 2], [2, -1], [2, 1]
-        ];
-        
-        for (const [dx, dy] of knightMoves) {
-          const newFile = fileIndex + dx;
-          const newRank = rankNum + dy;
-          
-          if (newFile >= 0 && newFile < 8 && newRank >= 1 && newRank <= 8) {
-            const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
-            const targetPiece = gameState.board[newSquare];
-            
-            if (!targetPiece || targetPiece.color !== piece.color) {
-              moves.push(newSquare);
-            }
-          }
-        }
-        break;
-        
+        return this.getKnightMoves(gameState, fromSquare, piece);
+      case 'bishop':
+        return this.getBishopMoves(gameState, fromSquare, piece, gameRules);
+      case 'queen':
+        return this.getQueenMoves(gameState, fromSquare, piece, gameRules);
       case 'king':
-        console.log(`getKingMoves called with gameRules:`, gameRules);
-        console.log("Checking for blink mode:", { 
-          gameRules, 
-          hasBlinkRule: gameRules?.includes('blink'), 
-          gameRulesType: typeof gameRules,
-          gameRulesContent: gameRules ? [...gameRules] : null
-        });
-        // Basic king moves without castling
-        const kingDirections = [
-          [-1, -1], [-1, 0], [-1, 1],
-          [0, -1],           [0, 1],
-          [1, -1],  [1, 0],  [1, 1]
+        // For king, we need to get basic moves without castling to avoid infinite recursion
+        const moves: string[] = [];
+        const file = fromSquare[0];
+        const rank = fromSquare[1];
+        const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
+        const rankNum = parseInt(rank);
+
+        const directions = [
+          [0, 1], [0, -1], [1, 0], [-1, 0],
+          [1, 1], [1, -1], [-1, 1], [-1, -1]
         ];
-        
-        for (const [dx, dy] of kingDirections) {
-          const newFile = fileIndex + dx;
-          const newRank = rankNum + dy;
+
+        for (const [dx, dy] of directions) {
+          const newFileIndex = fileIndex + dx;
+          const newRankNum = rankNum + dy;
           
-          if (newFile >= 0 && newFile < 8 && newRank >= 1 && newRank <= 8) {
-            const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
-            const targetPiece = gameState.board[newSquare];
+          if (newFileIndex >= 0 && newFileIndex < 8 && newRankNum >= 1 && newRankNum <= 8) {
+            const newSquare = `${String.fromCharCode(newFileIndex + 'a'.charCodeAt(0))}${newRankNum}`;
+            const target = gameState.board[newSquare];
             
-            if (!targetPiece || targetPiece.color !== piece.color) {
+            if (!target || target.color !== piece.color) {
               moves.push(newSquare);
             }
           }
         }
-        
-        // Blink ability: king can teleport to any empty square once per game
-        if (gameRules?.includes('blink')) {
-          console.log("Blink mode detected for king!", { piece, gameRules, blinkUsed: (gameState as any).blinkUsed });
-          const blinkUsed = (gameState as any).blinkUsed?.[piece.color];
-          if (!blinkUsed) {
-            console.log("Blink available! Adding all empty squares as targets");
-            // Add all empty squares as potential blink targets
-            for (let file = 0; file < 8; file++) {
-              for (let rank = 1; rank <= 8; rank++) {
-                const square = `${String.fromCharCode(file + 'a'.charCodeAt(0))}${rank}`;
-                const targetPiece = gameState.board[square];
-                
-                // Skip current position
-                if (square === fromSquare) continue;
-                
-                // King can blink to any empty square or capture enemy pieces
-                if (!targetPiece || targetPiece.color !== piece.color) {
-                  moves.push(square);
-                }
-              }
-            }
-            console.log("Total moves with blink:", moves.length);
-          } else {
-            console.log("Blink already used for this color");
-          }
-        } else {
-          console.log("Blink mode not detected", { gameRules });
-        }
-        
-        // Add castling logic
-        if (!this.isKingInCheck(gameState, piece.color, gameRules)) {
-          // Check kingside castling
-          if (piece.color === 'white' && gameState.castlingRights.whiteKingside) {
-            if (!gameState.board['f1'] && !gameState.board['g1'] && gameState.board['h1']?.type === 'rook') {
-              // Check if squares are not under attack
-              if (!this.isSquareUnderAttack(gameState, 'f1', piece.color, gameRules) && 
-                  !this.isSquareUnderAttack(gameState, 'g1', piece.color, gameRules)) {
-                moves.push('g1');
-                console.log("Added kingside castling for white");
-              }
-            }
-          } else if (piece.color === 'black' && gameState.castlingRights.blackKingside) {
-            if (!gameState.board['f8'] && !gameState.board['g8'] && gameState.board['h8']?.type === 'rook') {
-              if (!this.isSquareUnderAttack(gameState, 'f8', piece.color, gameRules) && 
-                  !this.isSquareUnderAttack(gameState, 'g8', piece.color, gameRules)) {
-                moves.push('g8');
-                console.log("Added kingside castling for black");
-              }
-            }
-          }
-
-          // Check queenside castling
-          if (piece.color === 'white' && gameState.castlingRights.whiteQueenside) {
-            if (!gameState.board['d1'] && !gameState.board['c1'] && !gameState.board['b1'] && gameState.board['a1']?.type === 'rook') {
-              if (!this.isSquareUnderAttack(gameState, 'd1', piece.color, gameRules) && 
-                  !this.isSquareUnderAttack(gameState, 'c1', piece.color, gameRules)) {
-                moves.push('c1');
-                console.log("Added queenside castling for white");
-              }
-            }
-          } else if (piece.color === 'black' && gameState.castlingRights.blackQueenside) {
-            if (!gameState.board['d8'] && !gameState.board['c8'] && !gameState.board['b8'] && gameState.board['a8']?.type === 'rook') {
-              if (!this.isSquareUnderAttack(gameState, 'd8', piece.color, gameRules) && 
-                  !this.isSquareUnderAttack(gameState, 'c8', piece.color, gameRules)) {
-                moves.push('c8');
-                console.log("Added queenside castling for black");
-              }
-            }
-          }
-        } else {
-          console.log("King in check, castling not allowed");
-        }
-        break;
+        return moves;
+      default:
+        return [];
     }
-
-    return moves;
   }
-
-
 
   private isKingInCheck(gameState: ChessGameState, color: 'white' | 'black', gameRules?: string[]): boolean {
     // Find the king
-    let kingSquare: string | null = null;
+    let kingSquare = '';
     for (const [square, piece] of Object.entries(gameState.board)) {
       if (piece && piece.type === 'king' && piece.color === color) {
         kingSquare = square;
@@ -759,143 +580,20 @@ export class ChessLogic {
 
     if (!kingSquare) return false;
 
-    // Check if any opponent piece can attack the king
-    const opponentColor = color === 'white' ? 'black' : 'white';
-    for (const [square, piece] of Object.entries(gameState.board)) {
-      if (piece && piece.color === opponentColor) {
-        // For check detection, don't include Blink moves (they cannot attack)
-        const attackGameRules = gameRules?.filter(rule => rule !== 'blink');
-        const moves = this.getRawMovesForPiece(gameState, square, piece, attackGameRules);
-        if (moves.includes(kingSquare)) {
-          return true;
-        }
-      }
-    }
-
-    return false;
+    return this.isSquareUnderAttack(gameState, kingSquare, color, gameRules);
   }
 
   private getValidMovesForPiece(
     gameState: ChessGameState,
     fromSquare: string,
     piece: ChessPiece,
-    gameRules?: string[],
-    checkForCheck: boolean = true
+    gameRules?: string[]
   ): string[] {
-    let moves: string[] = [];
-
-    switch (piece.type) {
-      case 'pawn':
-        moves = this.getPawnMoves(gameState, fromSquare, piece, gameRules);
-        break;
-      case 'rook':
-        moves = this.getRookMoves(gameState, fromSquare, piece);
-        break;
-      case 'knight':
-        moves = this.getKnightMoves(gameState, fromSquare, piece);
-        break;
-      case 'bishop':
-        moves = this.getBishopMoves(gameState, fromSquare, piece, gameRules);
-        break;
-      case 'queen':
-        moves = this.getQueenMoves(gameState, fromSquare, piece, gameRules);
-        break;
-      case 'king':
-        console.log(`King case called with gameRules:`, gameRules);
-        
-        // Basic king moves without castling
-        const kingDirections = [
-          [-1, -1], [-1, 0], [-1, 1],
-          [0, -1],           [0, 1],
-          [1, -1],  [1, 0],  [1, 1]
-        ];
-        
-        const [file, rank] = fromSquare;
-        const fileIndex = file.charCodeAt(0) - 'a'.charCodeAt(0);
-        const rankNum = parseInt(rank);
-        
-        // Check if Blink is enabled and not used yet
-        const blinkAvailable = gameRules?.includes('blink') && 
-          !(gameState as any).blinkUsed?.[piece.color];
-        
-        for (const [dx, dy] of kingDirections) {
-          const newFile = fileIndex + dx;
-          const newRank = rankNum + dy;
-          
-          if (newFile >= 0 && newFile < 8 && newRank >= 1 && newRank <= 8) {
-            const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
-            const targetPiece = gameState.board[newSquare];
-            
-            // In Blink mode, king can only move to empty squares (no capturing)
-            if (blinkAvailable) {
-              if (!targetPiece) {
-                moves.push(newSquare);
-              }
-            } else {
-              // Normal mode: can capture enemy pieces
-              if (!targetPiece || targetPiece.color !== piece.color) {
-                moves.push(newSquare);
-              }
-            }
-          }
-        }
-        
-        // Blink ability: king can teleport to any empty square once per game
-        if (gameRules?.includes('blink')) {
-          console.log("Blink mode detected for king!", { piece, gameRules, blinkUsed: (gameState as any).blinkUsed });
-          const blinkUsed = (gameState as any).blinkUsed?.[piece.color];
-          if (!blinkUsed) {
-            console.log("Blink available! Adding all empty squares as targets");
-            // Add all empty squares as potential blink targets
-            for (let fileIdx = 0; fileIdx < 8; fileIdx++) {
-              for (let rankIdx = 1; rankIdx <= 8; rankIdx++) {
-                const square = `${String.fromCharCode(fileIdx + 'a'.charCodeAt(0))}${rankIdx}`;
-                const targetPiece = gameState.board[square];
-                
-                // Skip current position
-                if (square === fromSquare) continue;
-                
-                // King can blink ONLY to empty squares (not capture)
-                if (!targetPiece) {
-                  moves.push(square);
-                }
-              }
-            }
-            console.log("Total moves with blink:", moves.length);
-          } else {
-            console.log("Blink already used for this color");
-          }
-        } else {
-          console.log("Blink mode not detected", { gameRules });
-        }
-        break;
-    }
-
-    if (checkForCheck) {
-      console.log(`Filtering ${moves.length} moves for check validation`);
-      
-      // Special case: if this is a king with blink ability, don't filter moves
-      if (piece.type === 'king' && gameRules?.includes('blink')) {
-        const blinkUsed = (gameState as any).blinkUsed?.[piece.color];
-        console.log(`King with blink rules detected, blinkUsed for ${piece.color}:`, blinkUsed);
-        if (!blinkUsed) {
-          console.log(`Blink king detected - skipping check validation for all moves`);
-          // Don't filter any moves for blink-enabled king
-        } else {
-          console.log(`Blink already used, filtering normally`);
-          // Blink already used, filter normally
-          const filteredMoves = moves.filter(move => !this.wouldBeInCheck(gameState, fromSquare, move, piece.color, gameRules));
-          console.log(`After filtering: ${filteredMoves.length} moves remain`);
-          moves = filteredMoves;
-        }
-      } else {
-        // Normal filtering for other pieces
-        const filteredMoves = moves.filter(move => !this.wouldBeInCheck(gameState, fromSquare, move, piece.color, gameRules));
-        console.log(`After filtering: ${filteredMoves.length} moves remain`);
-        moves = filteredMoves;
-      }
-    }
-
-    return moves;
+    const allMoves = this.getRawMovesForPiece(gameState, fromSquare, piece, gameRules);
+    
+    // Filter out moves that would leave the king in check
+    return allMoves.filter(move => {
+      return !this.wouldBeInCheck(gameState, fromSquare, move, piece.color, gameRules);
+    });
   }
 }
