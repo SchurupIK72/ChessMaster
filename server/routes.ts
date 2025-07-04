@@ -687,6 +687,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check for en passant move (capturing) BEFORE resetting enPassantTarget
       const currentEnPassantTarget = gameState.enPassantTarget;
+      console.log('Checking en passant:', {
+        from: moveData.from,
+        to: moveData.to,
+        pieceType: piece?.type,
+        currentEnPassantTarget,
+        isEnPassant: piece && piece.type === 'pawn' && moveData.to === currentEnPassantTarget
+      });
+      
       if (piece && piece.type === 'pawn' && moveData.to === currentEnPassantTarget) {
         // This is an en passant capture
         const targetFile = moveData.to[0];
@@ -694,11 +702,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fromFile = moveData.from[0];
         const fromRank = parseInt(moveData.from[1]);
         
+        console.log('En passant capture detected:', {
+          targetFile, targetRank, fromFile, fromRank,
+          isVertical: fromRank !== targetRank
+        });
+        
         // Determine if this is vertical or horizontal en passant
         if (fromRank !== targetRank) {
           // Vertical en passant (standard)
           const captureRank = piece.color === 'white' ? '5' : '4';
           const captureSquare = targetFile + captureRank;
+          console.log('Vertical en passant - removing pawn from:', captureSquare);
           delete gameState.board[captureSquare]; // Remove the captured pawn
         } else {
           // Horizontal en passant (PawnRotation mode)
@@ -710,6 +724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const capturedFileIndex = fromFileIndex + (targetFileIndex - fromFileIndex) / 2;
           const capturedFile = String.fromCharCode(capturedFileIndex + 'a'.charCodeAt(0));
           const captureSquare = capturedFile + targetRank;
+          console.log('Horizontal en passant - removing pawn from:', captureSquare);
           delete gameState.board[captureSquare]; // Remove the captured pawn
         }
       }
@@ -853,6 +868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // The en passant target is the square the pawn "jumped over"
           const enPassantRank = piece.color === 'white' ? fromRank + 1 : fromRank - 1;
           gameState.enPassantTarget = moveData.to[0] + enPassantRank;
+          console.log('Vertical double move - set en passant target:', gameState.enPassantTarget);
         }
         
         // Check for horizontal double move in PawnRotation mode
@@ -866,6 +882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const enPassantFileIndex = fromFileIndex + (toFileIndex - fromFileIndex) / 2;
             const enPassantFile = String.fromCharCode(enPassantFileIndex + 'a'.charCodeAt(0));
             gameState.enPassantTarget = enPassantFile + fromRank;
+            console.log('Horizontal double move - set en passant target:', gameState.enPassantTarget);
           }
         }
         
