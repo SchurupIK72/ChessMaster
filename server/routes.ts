@@ -762,12 +762,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update castling rights after moving pieces
       if (piece && piece.type === 'king') {
-        if (piece.color === 'white') {
-          gameState.castlingRights.whiteKingside = false;
-          gameState.castlingRights.whiteQueenside = false;
-        } else {
-          gameState.castlingRights.blackKingside = false;
-          gameState.castlingRights.blackQueenside = false;
+        // In Blink mode, only disable castling if castling was actually done or if it wasn't Blink mode
+        const hasBlinkRule = Array.isArray(game.rules) && game.rules.includes('blink');
+        
+        if (!hasBlinkRule || isCastling) {
+          // Standard rules: any king move disables castling
+          // OR Blink mode: only castling itself disables castling
+          if (piece.color === 'white') {
+            gameState.castlingRights.whiteKingside = false;
+            gameState.castlingRights.whiteQueenside = false;
+          } else {
+            gameState.castlingRights.blackKingside = false;
+            gameState.castlingRights.blackQueenside = false;
+          }
         }
       } else if (piece && piece.type === 'rook') {
         // Check which rook moved and disable appropriate castling
