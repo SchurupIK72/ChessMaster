@@ -208,6 +208,12 @@ Changelog:
   * Fixed en passant captures: captured pawn now properly removed from board
   * Corrected horizontal en passant logic to remove pawn from "jumped over" square
   * Fixed client-side en passant detection: added support for horizontal captures in PawnRotation mode
+- July 04, 2025. Enhanced horizontal en passant debugging and logic refinement
+  * Added comprehensive debugging logs for horizontal en passant detection
+  * Improved client-side captured pawn lookup logic for horizontal en passant
+  * Fixed search algorithm to properly find adjacent pawns on same rank
+  * Vertical en passant confirmed working correctly, focusing on horizontal edge cases
+  * Ready for final testing of horizontal double moves and subsequent en passant captures
 ```
 
 ## User Preferences
