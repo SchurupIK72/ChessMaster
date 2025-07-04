@@ -368,8 +368,8 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
               if (square === fromSquare) continue;
               
               const targetPiece = gameState.board[square];
-              // Can blink to empty square or capture enemy piece
-              if (!targetPiece || targetPiece.color !== piece.color) {
+              // Can blink only to empty squares
+              if (!targetPiece) {
                 moves.push(square);
               }
             }

@@ -385,10 +385,10 @@ export class ChessLogic {
             if (targetSquare === fromSquare) continue;
             
             const target = gameState.board[targetSquare];
-            if (!target || target.color !== piece.color) {
+            if (!target) {
               moves.push(targetSquare);
             } else {
-              console.log(`Blink blocked to ${targetSquare}: occupied by own ${target.type}`);
+              console.log(`Blink blocked to ${targetSquare}: occupied by ${target.color === piece.color ? 'own' : 'enemy'} ${target.type}`);
             }
           }
         }
