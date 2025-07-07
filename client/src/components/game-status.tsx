@@ -136,7 +136,7 @@ export default function GameStatus({ game, elapsedTime, onChangeRules }: GameSta
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Double Knight Special Status */}
-          {Array.isArray(game.rules) && game.rules.includes('double-knight') && gameState.doubleKnightMove && (
+          {game.rules.includes('double-knight') && gameState.doubleKnightMove && (
             <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse" />

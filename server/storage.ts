@@ -56,18 +56,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createGame(insertGame: InsertGame): Promise<Game> {
-    const rulesArray: GameRulesArray = Array.isArray(insertGame.rules) ? 
-                      insertGame.rules as GameRulesArray : 
-                      insertGame.rules ? [insertGame.rules] as GameRulesArray : ['standard'];
+    const rulesArray = Array.isArray(insertGame.rules) ? insertGame.rules : 
+                      insertGame.rules ? [insertGame.rules] : ['standard'];
     
-    const initialGameState: ChessGameState = this.getInitialGameState(rulesArray);
+    const initialGameState: ChessGameState = this.getInitialGameState(rulesArray as GameRulesArray);
     
     const [game] = await db
       .insert(games)
       .values({
-        shareId: insertGame.shareId,
-        whitePlayerId: insertGame.whitePlayerId,
-        blackPlayerId: insertGame.blackPlayerId,
+        shareId: insertGame.shareId || null,
+        whitePlayerId: insertGame.whitePlayerId || null,
+        blackPlayerId: insertGame.blackPlayerId || null,
         gameState: initialGameState,
         rules: rulesArray,
         gameStartTime: new Date(),

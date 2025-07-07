@@ -214,14 +214,6 @@ Changelog:
   * Fixed search algorithm to properly find adjacent pawns on same rank
   * Vertical en passant confirmed working correctly, focusing on horizontal edge cases
   * Ready for final testing of horizontal double moves and subsequent en passant captures
-- July 04, 2025. Major code simplification and deduplication
-  * Created shared chess utilities module (shared/chess-utils.ts) for common logic
-  * Simplified client-side chess-logic.ts from 800+ lines to 32 lines
-  * Simplified server-side routes.ts from 1000+ lines to 350 lines
-  * Removed duplicate move validation, board analysis, and piece movement code
-  * Centralized all chess rule logic in shared module for consistency
-  * Enhanced draw offer system with confirmation dialogs and proper state management
-  * Fixed database schema type issues and improved error handling
 ```
 
 ## User Preferences
