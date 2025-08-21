@@ -25,7 +25,7 @@ git commit -m "Initial commit: Chess Master with special rules"
 
 ### Шаг 4: Подключение удаленного репозитория
 ```bash
-git remote add origin https://github.com/schurupik/src_test.git
+git remote add origin https://github.com/schurupik72/ChessMaster.git
 ```
 
 ### Шаг 5: Отправка на GitHub
@@ -87,7 +87,7 @@ src_test/
 ### Клонирование и запуск:
 ```bash
 # Клонировать репозиторий
-git clone https://github.com/schurupik/src_test.git
+git clone https://github.com/schurupik72/ChessMaster.git
 cd src_test
 
 # Установить зависимости
