@@ -1,0 +1,572 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game - Special Rules Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'chess-light': '#f0d9b5',
+                        'chess-dark': '#b58863',
+                        'chess-selected': '#7dd3fc',
+                        'chess-valid': '#bbf7d0',
+                        'chess-invalid': '#fecaca',
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+<body class="bg-slate-50 font-inter min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between py-4">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-chess-king text-2xl text-blue-600"></i>
+                    <h1 class="text-2xl font-bold text-slate-800">Chess Master</h1>
+                    <span class="text-sm text-slate-500 hidden sm:block">Special Rules Edition</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>New Game
+                    </button>
+                    <button class="text-slate-600 hover:text-slate-800">
+                        <i class="fas fa-cog text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Area -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Left Sidebar - Game Rules & Controls -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- @COMPONENT: GameRules -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
+                        <i class="fas fa-scroll mr-2 text-blue-600"></i>
+                        Active Rules
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                            <div>
+                                <p class="font-medium text-green-800">Standard Chess</p>
+                                <p class="text-sm text-green-600">Classic rules</p>
+                            </div>
+                            <i class="fas fa-check-circle text-green-600"></i>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <div>
+                                <p class="font-medium text-slate-700">King of the Hill</p>
+                                <p class="text-sm text-slate-500">Win by reaching center</p>
+                            </div>
+                            <i class="fas fa-circle text-slate-400"></i>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <div>
+                                <p class="font-medium text-slate-700">Atomic Chess</p>
+                                <p class="text-sm text-slate-500">Captures cause explosions</p>
+                            </div>
+                            <i class="fas fa-circle text-slate-400"></i>
+                        </div>
+                    </div>
+                    <button class="w-full mt-4 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-edit mr-2"></i>Change Rules
+                    </button>
+                </div>
+                <!-- @END_COMPONENT: GameRules -->
+
+                <!-- @COMPONENT: GameStatus -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
+                        <i class="fas fa-info-circle mr-2 text-blue-600"></i>
+                        Game Status
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-600">Current Turn:</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-white border-2 border-slate-800 rounded-full"></div>
+                                <span class="font-medium text-slate-800" data-bind="game.currentPlayer">White</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-600">Move Count:</span>
+                            <span class="font-medium text-slate-800" data-bind="game.moveCount">1</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-600">Game Time:</span>
+                            <span class="font-medium text-slate-800" data-bind="game.elapsedTime">05:23</span>
+                        </div>
+                        <div class="pt-3 border-t border-slate-200">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-slate-600">White Pieces:</span>
+                                <span class="font-medium" data-bind="game.whitePieces">16</span>
+                            </div>
+                            <div class="flex items-center justify-between text-sm mt-1">
+                                <span class="text-slate-600">Black Pieces:</span>
+                                <span class="font-medium" data-bind="game.blackPieces">16</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: GameStatus -->
+            </div>
+
+            <!-- Chess Board -->
+            <div class="lg:col-span-6 flex flex-col items-center">
+                <!-- @COMPONENT: ChessBoard -->
+                <div class="bg-white rounded-xl shadow-lg border border-slate-200 p-6 w-full max-w-2xl">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-4 h-4 bg-slate-800 rounded-full"></div>
+                            <span class="font-medium text-slate-800" data-bind="players.black">Black Player</span>
+                        </div>
+                        <div class="text-sm text-slate-500">
+                            <i class="fas fa-clock mr-1"></i>
+                            <span data-bind="timers.black">15:00</span>
+                        </div>
+                    </div>
+
+                    <!-- Chess Board Grid -->
+                    <div class="aspect-square w-full bg-slate-800 p-2 rounded-lg">
+                        <div class="grid grid-cols-8 gap-0 w-full h-full">
+                            <!-- @STATE: selectedSquare:string = null, validMoves:array = [], boardPosition:object = initialPosition -->
+                            <!-- Row 8 (Black pieces) -->
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="a8" data-piece="black-rook">♜</div>
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="b8" data-piece="black-knight">♞</div>
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="c8" data-piece="black-bishop">♝</div>
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="d8" data-piece="black-queen">♛</div>
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="e8" data-piece="black-king">♚</div>
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="f8" data-piece="black-bishop">♝</div>
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="g8" data-piece="black-knight">♞</div>
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="h8" data-piece="black-rook">♜</div>
+                            
+                            <!-- Row 7 (Black pawns) -->
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="a7" data-piece="black-pawn">♟</div>
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="b7" data-piece="black-pawn">♟</div>
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="c7" data-piece="black-pawn">♟</div>
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="d7" data-piece="black-pawn">♟</div>
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="e7" data-piece="black-pawn">♟</div>
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="f7" data-piece="black-pawn">♟</div>
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="g7" data-piece="black-pawn">♟</div>
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="h7" data-piece="black-pawn">♟</div>
+                            
+                            <!-- Rows 6-3 (Empty squares) -->
+                            <!-- @MAP: emptySquares.map(square => ( -->
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="a6"></div>
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="b6"></div>
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="c6"></div>
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="d6"></div>
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="e6"></div>
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="f6"></div>
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="g6"></div>
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="h6"></div>
+                            
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="a5"></div>
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="b5"></div>
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="c5"></div>
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="d5"></div>
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="e5"></div>
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="f5"></div>
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="g5"></div>
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="h5"></div>
+                            
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="a4"></div>
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="b4"></div>
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="c4"></div>
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="d4"></div>
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="e4"></div>
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="f4"></div>
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="g4"></div>
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="h4"></div>
+                            
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="a3"></div>
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="b3"></div>
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="c3"></div>
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="d3"></div>
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="e3"></div>
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="f3"></div>
+                            <div class="bg-chess-dark flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="g3"></div>
+                            <div class="bg-chess-light flex items-center justify-center cursor-pointer hover:bg-chess-valid transition-colors" data-square="h3"></div>
+                            <!-- @END_MAP )) -->
+                            
+                            <!-- Row 2 (White pawns) -->
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="a2" data-piece="white-pawn">♙</div>
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="b2" data-piece="white-pawn">♙</div>
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="c2" data-piece="white-pawn">♙</div>
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="d2" data-piece="white-pawn">♙</div>
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="e2" data-piece="white-pawn">♙</div>
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="f2" data-piece="white-pawn">♙</div>
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="g2" data-piece="white-pawn">♙</div>
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="h2" data-piece="white-pawn">♙</div>
+                            
+                            <!-- Row 1 (White pieces) -->
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="a1" data-piece="white-rook">♖</div>
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="b1" data-piece="white-knight">♘</div>
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="c1" data-piece="white-bishop">♗</div>
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="d1" data-piece="white-queen">♕</div>
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="e1" data-piece="white-king">♔</div>
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="f1" data-piece="white-bishop">♗</div>
+                            <div class="bg-chess-dark flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="g1" data-piece="white-knight">♘</div>
+                            <div class="bg-chess-light flex items-center justify-center text-4xl cursor-pointer hover:bg-chess-selected transition-colors" data-square="h1" data-piece="white-rook">♖</div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between mt-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-4 h-4 bg-white border-2 border-slate-800 rounded-full"></div>
+                            <span class="font-medium text-slate-800" data-bind="players.white">White Player</span>
+                        </div>
+                        <div class="text-sm text-slate-500">
+                            <i class="fas fa-clock mr-1"></i>
+                            <span data-bind="timers.white">15:00</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: ChessBoard -->
+
+                <!-- Move Controls -->
+                <div class="flex items-center space-x-4 mt-6">
+                    <button class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300 transition-colors" data-event="click:undoMove">
+                        <i class="fas fa-undo mr-2"></i>Undo
+                    </button>
+                    <button class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300 transition-colors" data-event="click:redoMove">
+                        <i class="fas fa-redo mr-2"></i>Redo
+                    </button>
+                    <button class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors" data-event="click:resignGame">
+                        <i class="fas fa-flag mr-2"></i>Resign
+                    </button>
+                    <button class="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors" data-event="click:offerDraw">
+                        <i class="fas fa-handshake mr-2"></i>Draw
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Sidebar - Move History & Chat -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- @COMPONENT: MoveHistory -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
+                        <i class="fas fa-history mr-2 text-blue-600"></i>
+                        Move History
+                    </h3>
+                    <div class="space-y-2 max-h-64 overflow-y-auto">
+                        <!-- @MAP: moveHistory.map((move, index) => ( -->
+                        <div class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50" data-move-index="0">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-sm font-medium text-slate-500 w-6">1.</span>
+                                <span class="font-medium text-slate-800" data-bind="move.white">e4</span>
+                                <span class="font-medium text-slate-800" data-bind="move.black">e5</span>
+                            </div>
+                            <i class="fas fa-chevron-right text-slate-400"></i>
+                        </div>
+                        <div class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50" data-move-index="1">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-sm font-medium text-slate-500 w-6">2.</span>
+                                <span class="font-medium text-slate-800" data-bind="move.white">Nf3</span>
+                                <span class="font-medium text-slate-800" data-bind="move.black">Nc6</span>
+                            </div>
+                            <i class="fas fa-chevron-right text-slate-400"></i>
+                        </div>
+                        <div class="flex items-center justify-between p-2 rounded-lg bg-blue-50 border border-blue-200" data-move-index="2" data-current="true">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-sm font-medium text-blue-600 w-6">3.</span>
+                                <span class="font-medium text-blue-800" data-bind="move.white">Bb5</span>
+                                <span class="text-slate-400">...</span>
+                            </div>
+                            <i class="fas fa-play text-blue-600"></i>
+                        </div>
+                        <!-- @END_MAP )) -->
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-200">
+                        <button class="w-full text-sm text-blue-600 hover:text-blue-800 transition-colors" data-event="click:exportGame">
+                            <i class="fas fa-download mr-2"></i>Export Game (PGN)
+                        </button>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: MoveHistory -->
+
+                <!-- @COMPONENT: CapturedPieces -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
+                        <i class="fas fa-chess-pawn mr-2 text-blue-600"></i>
+                        Captured Pieces
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-sm font-medium text-slate-600 mb-2">White Captured:</p>
+                            <div class="flex flex-wrap gap-1" data-bind="capturedPieces.white">
+                                <span class="text-2xl" data-mock="true">♛</span>
+                                <span class="text-2xl" data-mock="true">♜</span>
+                                <span class="text-2xl" data-mock="true">♟</span>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-600 mb-2">Black Captured:</p>
+                            <div class="flex flex-wrap gap-1" data-bind="capturedPieces.black">
+                                <span class="text-2xl" data-mock="true">♕</span>
+                                <span class="text-2xl" data-mock="true">♖</span>
+                                <span class="text-2xl" data-mock="true">♙</span>
+                                <span class="text-2xl" data-mock="true">♙</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: CapturedPieces -->
+            </div>
+        </div>
+    </main>
+
+    <!-- @COMPONENT: RuleSelectionModal -->
+    <div id="ruleModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-slate-200">
+                <h2 class="text-2xl font-bold text-slate-800 flex items-center">
+                    <i class="fas fa-chess-board mr-3 text-blue-600"></i>
+                    Select Game Rules
+                </h2>
+                <p class="text-slate-600 mt-2">Choose special rules for your chess game</p>
+            </div>
+            
+            <div class="p-6 space-y-4">
+                <!-- @MAP: availableRules.map(rule => ( -->
+                <div class="border border-slate-200 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer" data-rule="standard">
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0 mt-1">
+                            <input type="radio" name="gameRule" value="standard" class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500" checked>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-slate-800">Standard Chess</h3>
+                            <p class="text-slate-600 mt-1">Classic chess rules with traditional gameplay</p>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Default</span>
+                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">Beginner Friendly</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="border border-slate-200 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer" data-rule="koth">
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0 mt-1">
+                            <input type="radio" name="gameRule" value="koth" class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500">
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-slate-800">King of the Hill</h3>
+                            <p class="text-slate-600 mt-1">Win by moving your king to the center four squares (d4, d5, e4, e5)</p>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">Aggressive</span>
+                                <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">Fast Paced</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="border border-slate-200 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer" data-rule="atomic">
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0 mt-1">
+                            <input type="radio" name="gameRule" value="atomic" class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500">
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-slate-800">Atomic Chess</h3>
+                            <p class="text-slate-600 mt-1">Captures cause explosions that destroy surrounding pieces</p>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">Explosive</span>
+                                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">Chaotic</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="border border-slate-200 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer" data-rule="threetime">
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0 mt-1">
+                            <input type="radio" name="gameRule" value="threetime" class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500">
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-slate-800">Three-Check</h3>
+                            <p class="text-slate-600 mt-1">Win by putting your opponent in check three times</p>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded">Tactical</span>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Strategic</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="border border-slate-200 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer" data-rule="fischer">
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0 mt-1">
+                            <input type="radio" name="gameRule" value="fischer" class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500">
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-slate-800">Fischer Random (Chess960)</h3>
+                            <p class="text-slate-600 mt-1">Randomized starting position for back-rank pieces</p>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <span class="bg-teal-100 text-teal-800 text-xs px-2 py-1 rounded">Creative</span>
+                                <span class="bg-pink-100 text-pink-800 text-xs px-2 py-1 rounded">Unpredictable</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_MAP )) -->
+            </div>
+            
+            <div class="p-6 border-t border-slate-200 flex items-center justify-between">
+                <button class="text-slate-600 hover:text-slate-800 px-4 py-2 rounded-lg transition-colors" data-event="click:closeModal">
+                    Cancel
+                </button>
+                <button class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors" data-event="click:startGameWithRules">
+                    Start Game
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: RuleSelectionModal -->
+
+    <!-- @COMPONENT: GameNotifications -->
+    <div id="notifications" class="fixed bottom-4 right-4 space-y-2 z-40">
+        <!-- @MAP: notifications.map(notification => ( -->
+        <div class="bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 hidden" data-notification="move-made">
+            <i class="fas fa-check-circle"></i>
+            <span data-bind="notification.message">Move made successfully!</span>
+            <button class="ml-auto" data-event="click:dismissNotification">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 hidden" data-notification="invalid-move">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span data-bind="notification.message">Invalid move!</span>
+            <button class="ml-auto" data-event="click:dismissNotification">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="bg-yellow-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 hidden" data-notification="check">
+            <i class="fas fa-exclamation-circle"></i>
+            <span data-bind="notification.message">Check!</span>
+            <button class="ml-auto" data-event="click:dismissNotification">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <!-- @END_MAP )) -->
+    </div>
+    <!-- @END_COMPONENT: GameNotifications -->
+
+    <script>
+        // Chess Game Logic Placeholder
+        (function() {
+            // TODO: Implement chess game logic including:
+            // - Piece movement validation
+            // - Game state management
+            // - Special rule implementations
+            // - Move history tracking
+            // - Timer functionality
+            
+            // Basic interaction handlers
+            const squares = document.querySelectorAll('[data-square]');
+            const ruleModal = document.getElementById('ruleModal');
+            let selectedSquare = null;
+            let gameState = {
+                currentPlayer: 'white',
+                moveCount: 1,
+                selectedPiece: null,
+                boardPosition: {},
+                activeRules: 'standard'
+            };
+
+            // Square click handlers
+            squares.forEach(square => {
+                square.addEventListener('click', function() {
+                    // TODO: Implement piece selection and movement logic
+                    handleSquareClick(this);
+                });
+            });
+
+            function handleSquareClick(square) {
+                const squareId = square.dataset.square;
+                const piece = square.dataset.piece;
+                
+                if (selectedSquare) {
+                    // TODO: Validate move and update board
+                    movepiece(selectedSquare, squareId);
+                    clearSelection();
+                } else if (piece) {
+                    // TODO: Validate piece ownership and show valid moves
+                    selectPiece(square);
+                }
+            }
+
+            function selectPiece(square) {
+                clearSelection();
+                selectedSquare = square;
+                square.classList.add('ring-4', 'ring-blue-400', 'ring-opacity-75');
+                // TODO: Highlight valid moves
+            }
+
+            function clearSelection() {
+                if (selectedSquare) {
+                    selectedSquare.classList.remove('ring-4', 'ring-blue-400', 'ring-opacity-75');
+                    selectedSquare = null;
+                }
+                // TODO: Clear move highlights
+            }
+
+            function movepiece(fromSquare, toSquare) {
+                // TODO: Implement move validation and execution
+                console.log(`Moving from ${fromSquare.dataset.square} to ${toSquare}`);
+            }
+
+            // Modal handlers
+            document.querySelector('[data-event="click:changeRules"]')?.addEventListener('click', function() {
+                ruleModal.classList.remove('hidden');
+            });
+
+            document.querySelector('[data-event="click:closeModal"]')?.addEventListener('click', function() {
+                ruleModal.classList.add('hidden');
+            });
+
+            // Game control handlers
+            document.querySelector('[data-event="click:startGameWithRules"]')?.addEventListener('click', function() {
+                const selectedRule = document.querySelector('input[name="gameRule"]:checked')?.value;
+                if (selectedRule) {
+                    gameState.activeRules = selectedRule;
+                    // TODO: Initialize game with selected rules
+                    ruleModal.classList.add('hidden');
+                }
+            });
+
+            // Other game controls
+            document.querySelector('[data-event="click:undoMove"]')?.addEventListener('click', function() {
+                // TODO: Implement undo functionality
+            });
+
+            document.querySelector('[data-event="click:redoMove"]')?.addEventListener('click', function() {
+                // TODO: Implement redo functionality
+            });
+
+            document.querySelector('[data-event="click:resignGame"]')?.addEventListener('click', function() {
+                // TODO: Implement resignation logic
+            });
+
+            document.querySelector('[data-event="click:offerDraw"]')?.addEventListener('click', function() {
+                // TODO: Implement draw offer logic
+            });
+        })();
+    </script>
+</body>
+</html>
