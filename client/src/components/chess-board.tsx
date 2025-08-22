@@ -7,6 +7,7 @@ interface ChessBoardProps {
   validMoves: string[];
   onSquareClick: (square: string) => void;
   currentTurn: 'white' | 'black';
+  flipped?: boolean;
 }
 
 const pieceSymbols: Record<string, string> = {
@@ -24,9 +25,9 @@ const pieceSymbols: Record<string, string> = {
   'black-pawn': '♟︎',
 };
 
-export default function ChessBoard({ gameState, selectedSquare, validMoves, onSquareClick, currentTurn }: ChessBoardProps) {
-  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-  const ranks = [8, 7, 6, 5, 4, 3, 2, 1];
+export default function ChessBoard({ gameState, selectedSquare, validMoves, onSquareClick, currentTurn, flipped = false }: ChessBoardProps) {
+  const files = flipped ? ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'] : ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const ranks = flipped ? [1, 2, 3, 4, 5, 6, 7, 8] : [8, 7, 6, 5, 4, 3, 2, 1];
 
   const isLightSquare = (file: string, rank: number) => {
     const fileIndex = files.indexOf(file);
