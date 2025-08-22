@@ -101,27 +101,40 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
 
       {/* Chess Board with coordinates */}
       <div className="aspect-square w-full p-2 rounded-lg relative overflow-hidden bg-slate-800">
-        {/* Left numbers */}
-        <div className="absolute left-0 top-0 h-full flex flex-col justify-between z-10 pointer-events-none select-none">
-          {ranks.map((rank) => (
-            <div key={rank} className="h-1/8 flex items-center" style={{height: '12.5%'}}>
-              <span className="text-white text-xs font-bold ml-1 drop-shadow">{rank}</span>
-            </div>
-          ))}
-        </div>
-        {/* Bottom letters */}
-        <div className="absolute bottom-0 left-0 w-full flex justify-between z-10 pointer-events-none select-none">
-          {files.map((file) => (
-            <div key={file} className="w-1/8 flex justify-center" style={{width: '12.5%'}}>
-              <span className="text-white text-xs font-bold mb-1 drop-shadow">{file}</span>
-            </div>
-          ))}
-        </div>
         {/* Board grid */}
-        <div className="grid grid-cols-8 gap-0 w-full h-full">
+        <div className="grid grid-cols-8 grid-rows-8 gap-0 w-full h-full relative">
+          {/* Squares */}
           {ranks.map(rank =>
             files.map(file => renderSquare(file, rank))
           )}
+          {/* Left numbers */}
+          {ranks.map((rank, i) => (
+            <span
+              key={rank}
+              className="absolute text-white text-xs font-bold drop-shadow pointer-events-none select-none"
+              style={{
+                left: 2,
+                top: `calc(${(i) * 12.5}% + 8px)`,
+                zIndex: 20
+              }}
+            >
+              {rank}
+            </span>
+          ))}
+          {/* Bottom letters */}
+          {files.map((file, i) => (
+            <span
+              key={file}
+              className="absolute text-white text-xs font-bold drop-shadow pointer-events-none select-none"
+              style={{
+                left: `calc(${i * 12.5}% + 18px)`,
+                bottom: 2,
+                zIndex: 20
+              }}
+            >
+              {file}
+            </span>
+          ))}
         </div>
       </div>
 

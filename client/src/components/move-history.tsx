@@ -15,13 +15,14 @@ export default function MoveHistory({ moves }: MoveHistoryProps) {
   };
 
   // Ссылка на контейнер с ходами
-  const movesEndRef = useRef<HTMLDivElement>(null);
+  
+ const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (movesEndRef.current) {
-      movesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [moves]);
+useEffect(() => {
+  if (scrollAreaRef.current) {
+    scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+  }
+}, [moves]);
 
   return (
     <Card>
@@ -32,7 +33,7 @@ export default function MoveHistory({ moves }: MoveHistoryProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-64 w-full">
+        <ScrollArea className="h-64 w-full" ref={scrollAreaRef}>
           <div className="space-y-2">
             {moves.length === 0 ? (
               <div className="text-center py-8 text-slate-500">
@@ -75,13 +76,13 @@ export default function MoveHistory({ moves }: MoveHistoryProps) {
                     </div>
                   );
                 })}
-                <div ref={movesEndRef} />
+              
               </>
             )}
           </div>
         </ScrollArea>
         {moves.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-slate-200">
+          <div className="mt-4">
             <Button
               variant="ghost"
               onClick={handleExport}
