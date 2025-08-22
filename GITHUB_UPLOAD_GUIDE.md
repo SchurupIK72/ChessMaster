@@ -40,7 +40,7 @@ git add .
 git commit -m "Initial commit: Chess Master with special rules"
 
 # Подключение к GitHub репозиторию
-git remote add origin https://github.com/schurupik/src_test.git
+git remote add origin https://github.com/schurupik72/ChessMaster.git
 
 # Отправка на GitHub
 git push -u origin main
@@ -103,7 +103,7 @@ src_test/
 
 ### 1. Клонирование проекта
 ```bash
-git clone https://github.com/schurupik/src_test.git
+git clone https://github.com/schurupik72/ChessMaster.git
 cd src_test
 ```
 
@@ -162,7 +162,7 @@ npm run dev
 ## Готово! 🎉
 
 Ваш проект Chess Master теперь доступен на GitHub по адресу:
-**https://github.com/schurupik/src_test**
+**https://github.com/schurupik72/ChessMaster**
 
 Любой пользователь сможет:
 - Клонировать репозиторий
