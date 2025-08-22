@@ -14,15 +14,14 @@ export default function MoveHistory({ moves }: MoveHistoryProps) {
     console.log("Exporting game as PGN...");
   };
 
-  // Ссылка на контейнер с ходами
-  
- const scrollAreaRef = useRef<HTMLDivElement>(null);
+  // Ссылка на viewport ScrollArea
+  const scrollAreaViewportRef = useRef<HTMLDivElement>(null);
 
-useEffect(() => {
-  if (scrollAreaRef.current) {
-    scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-  }
-}, [moves]);
+  useEffect(() => {
+    if (scrollAreaViewportRef.current) {
+      scrollAreaViewportRef.current.scrollTop = scrollAreaViewportRef.current.scrollHeight;
+    }
+  }, [moves]);
 
   return (
     <Card>
@@ -33,7 +32,7 @@ useEffect(() => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-64 w-full" ref={scrollAreaRef}>
+  <ScrollArea className="h-64 w-full" viewportRef={scrollAreaViewportRef}>
           <div className="space-y-2">
             {moves.length === 0 ? (
               <div className="text-center py-8 text-slate-500">
