@@ -68,7 +68,7 @@ export class DatabaseStorage implements IStorage {
         whitePlayerId: insertGame.whitePlayerId || null,
         blackPlayerId: insertGame.blackPlayerId || null,
         gameState: initialGameState,
-        rules: rulesArray,
+        rules: rulesArray as GameRulesArray,
         gameStartTime: new Date(),
         status: 'waiting'
       })
