@@ -32,6 +32,7 @@ export default function ChessGame() {
   const [gameId, setGameId] = useState<number | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [validMoves, setValidMoves] = useState<string[]>([]);
+  const [lastMoveSquares, setLastMoveSquares] = useState<{from: string, to: string} | null>(null);
   const [showGameTypeModal, setShowGameTypeModal] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -162,13 +163,20 @@ export default function ChessGame() {
   // Monitor for new moves and show notifications
   useEffect(() => {
     if (moves.length > 0) {
+      // Подсветка последнего хода
+      const lastMove = moves[moves.length - 1];
+      if (lastMove && lastMove.from && lastMove.to) {
+        setLastMoveSquares({ from: lastMove.from, to: lastMove.to });
+      } else {
+        setLastMoveSquares(null);
+      }
+
       // If this is not the first time we're checking moves
       if (lastMoveCount > 0 && moves.length > lastMoveCount) {
         const newMove = moves[moves.length - 1];
         const playerId = parseInt(localStorage.getItem('playerId') || '1');
         const isMyMove = (game?.whitePlayerId === playerId && newMove.player === 'white') || 
                         (game?.blackPlayerId === playerId && newMove.player === 'black');
-        
         // Only show notification if it's NOT my move (opponent's move)
         if (!isMyMove) {
           toast({
@@ -179,6 +187,8 @@ export default function ChessGame() {
         }
       }
       setLastMoveCount(moves.length);
+    } else {
+      setLastMoveSquares(null);
     }
   }, [moves, lastMoveCount, game, toast]);
 
@@ -784,7 +794,7 @@ export default function ChessGame() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-inter">
+  <div className="min-h-screen bg-slate-50 font-inter">
       <header className="bg-white shadow-sm border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
@@ -845,6 +855,7 @@ export default function ChessGame() {
                 onSquareClick={handleSquareClick}
                 currentTurn={game!.currentTurn as 'white' | 'black'}
                 flipped={getCurrentPlayerColor() === 'black'}
+                lastMoveSquares={lastMoveSquares}
               />
 
             {/* Game Controls */}

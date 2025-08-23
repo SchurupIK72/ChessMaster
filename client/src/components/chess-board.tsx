@@ -8,6 +8,7 @@ interface ChessBoardProps {
   onSquareClick: (square: string) => void;
   currentTurn: 'white' | 'black';
   flipped?: boolean;
+  lastMoveSquares?: { from: string, to: string } | null;
 }
 
 const pieceSymbols: Record<string, string> = {
@@ -28,6 +29,8 @@ const pieceSymbols: Record<string, string> = {
 export default function ChessBoard({ gameState, selectedSquare, validMoves, onSquareClick, currentTurn, flipped = false }: ChessBoardProps) {
   const files = flipped ? ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'] : ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const ranks = flipped ? [1, 2, 3, 4, 5, 6, 7, 8] : [8, 7, 6, 5, 4, 3, 2, 1];
+  // Получаем lastMoveSquares из пропсов
+  const { lastMoveSquares } = arguments[0];
 
   const isLightSquare = (file: string, rank: number) => {
     const fileIndex = files.indexOf(file);
@@ -40,6 +43,8 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
     const isSelected = selectedSquare === square;
     const isValidMove = validMoves.includes(square);
     const isLight = isLightSquare(file, rank);
+    const isLastMoveFrom = lastMoveSquares?.from === square;
+    const isLastMoveTo = lastMoveSquares?.to === square;
 
     return (
       <div
@@ -52,7 +57,9 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
           isSelected && "bg-blue-400 bg-opacity-60 ring-2 ring-blue-600",
           isValidMove && "bg-yellow-300 bg-opacity-70",
           !piece && isValidMove && "hover:bg-yellow-400 hover:bg-opacity-80",
-          piece && !isSelected && isLight ? "hover:bg-green-200" : "hover:bg-green-600"
+          piece && !isSelected && isLight ? "hover:bg-green-200" : "hover:bg-green-600",
+          isLastMoveFrom && "ring-4 ring-yellow-500 ring-opacity-80",
+          isLastMoveTo && "ring-4 ring-orange-500 ring-opacity-80"
         )}
         onClick={() => onSquareClick(square)}
       >
