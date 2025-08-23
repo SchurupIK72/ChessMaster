@@ -29,6 +29,8 @@ import { ChessLogic } from "@/lib/chess-logic";
 import { Sword, Crown, Plus, Settings, Users, Share2, LogOut } from "lucide-react";
 
 export default function ChessGame() {
+  // Звук хода
+  const moveAudio = typeof window !== 'undefined' ? new Audio('/move.mp3') : null;
   const [gameId, setGameId] = useState<number | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [validMoves, setValidMoves] = useState<string[]>([]);
@@ -196,7 +198,6 @@ export default function ChessGame() {
   const makeMoveMutation = useMutation({
     mutationFn: async ({ from, to, piece, captured }: { from: string; to: string; piece: string; captured?: string }) => {
       if (!game) throw new Error("No active game");
-      
       const response = await apiRequest("POST", `/api/games/${gameId}/moves`, {
         moveNumber: Math.floor(moves.length / 2) + 1,
         player: game.currentTurn,
@@ -209,6 +210,10 @@ export default function ChessGame() {
       return response.json();
     },
     onSuccess: async () => {
+      // Воспроизвести звук хода
+      if (moveAudio) {
+        try { moveAudio.currentTime = 0; moveAudio.play(); } catch (e) {}
+      }
       // Immediately refetch the game state to get the updated turn
       await queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
       await queryClient.invalidateQueries({ queryKey: ["/api/games", gameId, "moves"] });
