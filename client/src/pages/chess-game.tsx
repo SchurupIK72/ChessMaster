@@ -839,12 +839,13 @@ export default function ChessGame() {
           {/* Sword Board */}
           <div className="lg:col-span-6 flex flex-col items-center">
             <ChessBoard
-              gameState={game!.gameState as ChessGameState}
-              selectedSquare={selectedSquare}
-              validMoves={validMoves}
-              onSquareClick={handleSquareClick}
-              currentTurn={game!.currentTurn as 'white' | 'black'}
-            />
+                gameState={game!.gameState as ChessGameState}
+                selectedSquare={selectedSquare}
+                validMoves={validMoves}
+                onSquareClick={handleSquareClick}
+                currentTurn={game!.currentTurn as 'white' | 'black'}
+                flipped={getCurrentPlayerColor() === 'black'}
+              />
 
             {/* Game Controls */}
             <div className="flex items-center space-x-4 mt-6">
