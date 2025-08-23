@@ -51,8 +51,8 @@
 
 ```bash
 # Клонировать репозиторий
-git clone https://github.com/schurupik/src_test.git
-cd src_test
+git clone https://github.com/schurupik72/ChessMaster.git
+cd ChessMaster
 
 # Установить зависимости
 npm install
