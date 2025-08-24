@@ -332,26 +332,28 @@ export class ChessLogic {
     // Castling (available in Blink mode until Blink is used)
     if (!this.isKingInCheck(gameState, piece.color, gameRules)) {
       const backRank = piece.color === 'white' ? 1 : 8;
-      
       // Kingside castling
       if (gameState.castlingRights[piece.color === 'white' ? 'whiteKingside' : 'blackKingside']) {
         const f = `f${backRank}`;
         const g = `g${backRank}`;
-        
-        if (!gameState.board[f] && !gameState.board[g] &&
+        const rookSquare = piece.color === 'white' ? 'h1' : 'h8';
+        const rook = gameState.board[rookSquare];
+        // Проверяем, что путь свободен и ладья на месте
+        if (!gameState.board[f] && !gameState.board[g] && rook && rook.type === 'rook' && rook.color === piece.color &&
             !this.isSquareUnderAttack(gameState, f, piece.color, gameRules) &&
             !this.isSquareUnderAttack(gameState, g, piece.color, gameRules)) {
           moves.push(g);
         }
       }
-      
       // Queenside castling
       if (gameState.castlingRights[piece.color === 'white' ? 'whiteQueenside' : 'blackQueenside']) {
         const b = `b${backRank}`;
         const c = `c${backRank}`;
         const d = `d${backRank}`;
-        
-        if (!gameState.board[b] && !gameState.board[c] && !gameState.board[d] &&
+        const rookSquare = piece.color === 'white' ? 'a1' : 'a8';
+        const rook = gameState.board[rookSquare];
+        // Проверяем, что путь свободен и ладья на месте
+        if (!gameState.board[b] && !gameState.board[c] && !gameState.board[d] && rook && rook.type === 'rook' && rook.color === piece.color &&
             !this.isSquareUnderAttack(gameState, c, piece.color, gameRules) &&
             !this.isSquareUnderAttack(gameState, d, piece.color, gameRules)) {
           moves.push(c);
