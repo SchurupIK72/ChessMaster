@@ -334,16 +334,16 @@ export class ChessLogic {
     if (!this.isKingInCheck(gameState, piece.color, gameRules)) {
       const backRank = piece.color === 'white' ? 1 : 8;
       // Kingside castling
-      if (gameState.castlingRights[piece.color === 'white' ? 'whiteKingside' : 'blackKingside']) {
+      const kingsideRight = piece.color === 'white' ? 'whiteKingside' : 'blackKingside';
+      if (gameState.castlingRights[kingsideRight]) {
         const rookSquare = piece.color === 'white' ? 'h1' : 'h8';
         const rook = gameState.board[rookSquare];
         let pathClear = true;
         let safeSquares = true;
-        // Проверяем все клетки между королём и ладьёй
-        for (let fileIdx = Math.min('e'.charCodeAt(0), 'h'.charCodeAt(0)); fileIdx <= Math.max('e'.charCodeAt(0), 'h'.charCodeAt(0)); fileIdx++) {
-          const sq = `${String.fromCharCode(fileIdx)}${backRank}`;
-          // Пропускаем начальную позицию короля и ладьи
-          if (sq === fromSquare || sq === rookSquare) continue;
+        // Проверяем все клетки между королём и ладьёй (f и g для белых, f8 и g8 для черных)
+        const pathFiles = piece.color === 'white' ? ['f', 'g'] : ['f', 'g'];
+        for (const file of pathFiles) {
+          const sq = `${file}${backRank}`;
           if (gameState.board[sq]) {
             pathClear = false;
             break;
@@ -354,23 +354,24 @@ export class ChessLogic {
           }
         }
         // Проверяем, что король не под шахом, не проходит через битые поля, и не попадает на битое поле
-        const g = `g${backRank}`;
+        const kingTarget = `g${backRank}`;
         if (pathClear && safeSquares && rook && rook.type === 'rook' && rook.color === piece.color &&
-            !this.isSquareUnderAttack(gameState, g, piece.color, gameRules) &&
+            !this.isSquareUnderAttack(gameState, kingTarget, piece.color, gameRules) &&
             !this.isSquareUnderAttack(gameState, fromSquare, piece.color, gameRules)) {
-          moves.push(g);
+          moves.push(kingTarget);
         }
       }
       // Queenside castling
-      if (gameState.castlingRights[piece.color === 'white' ? 'whiteQueenside' : 'blackKingside']) {
+      const queensideRight = piece.color === 'white' ? 'whiteQueenside' : 'blackQueenside';
+      if (gameState.castlingRights[queensideRight]) {
         const rookSquare = piece.color === 'white' ? 'a1' : 'a8';
         const rook = gameState.board[rookSquare];
         let pathClear = true;
         let safeSquares = true;
-        for (let fileIdx = Math.min('e'.charCodeAt(0), 'a'.charCodeAt(0)); fileIdx <= Math.max('e'.charCodeAt(0), 'a'.charCodeAt(0)); fileIdx++) {
-          const sq = `${String.fromCharCode(fileIdx)}${backRank}`;
-          // Пропускаем начальную позицию короля и ладьи
-          if (sq === fromSquare || sq === rookSquare) continue;
+        // Проверяем все клетки между королём и ладьёй (b, c, d для белых, b8, c8, d8 для черных)
+        const pathFiles = piece.color === 'white' ? ['b', 'c', 'd'] : ['b', 'c', 'd'];
+        for (const file of pathFiles) {
+          const sq = `${file}${backRank}`;
           if (gameState.board[sq]) {
             pathClear = false;
             break;
@@ -380,11 +381,11 @@ export class ChessLogic {
             break;
           }
         }
-        const c = `c${backRank}`;
+        const kingTarget = `c${backRank}`;
         if (pathClear && safeSquares && rook && rook.type === 'rook' && rook.color === piece.color &&
-            !this.isSquareUnderAttack(gameState, c, piece.color, gameRules) &&
+            !this.isSquareUnderAttack(gameState, kingTarget, piece.color, gameRules) &&
             !this.isSquareUnderAttack(gameState, fromSquare, piece.color, gameRules)) {
-          moves.push(c);
+          moves.push(kingTarget);
         }
       }
     }
