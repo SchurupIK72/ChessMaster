@@ -334,28 +334,51 @@ export class ChessLogic {
       const backRank = piece.color === 'white' ? 1 : 8;
       // Kingside castling
       if (gameState.castlingRights[piece.color === 'white' ? 'whiteKingside' : 'blackKingside']) {
-        const f = `f${backRank}`;
-        const g = `g${backRank}`;
         const rookSquare = piece.color === 'white' ? 'h1' : 'h8';
         const rook = gameState.board[rookSquare];
-        // Проверяем, что путь свободен и ладья на месте
-        if (!gameState.board[f] && !gameState.board[g] && rook && rook.type === 'rook' && rook.color === piece.color &&
-            !this.isSquareUnderAttack(gameState, f, piece.color, gameRules) &&
-            !this.isSquareUnderAttack(gameState, g, piece.color, gameRules)) {
+        let pathClear = true;
+        let safeSquares = true;
+        for (let fileIdx = Math.min('e'.charCodeAt(0), 'h'.charCodeAt(0)) + 1; fileIdx < Math.max('e'.charCodeAt(0), 'h'.charCodeAt(0)); fileIdx++) {
+          const sq = `${String.fromCharCode(fileIdx)}${backRank}`;
+          if (gameState.board[sq]) {
+            pathClear = false;
+            break;
+          }
+          if (this.isSquareUnderAttack(gameState, sq, piece.color, gameRules)) {
+            safeSquares = false;
+            break;
+          }
+        }
+        // Также проверяем конечную и начальную позиции короля
+        const g = `g${backRank}`;
+        if (pathClear && safeSquares && rook && rook.type === 'rook' && rook.color === piece.color &&
+            !this.isSquareUnderAttack(gameState, g, piece.color, gameRules) &&
+            !this.isSquareUnderAttack(gameState, fromSquare, piece.color, gameRules)) {
           moves.push(g);
         }
       }
       // Queenside castling
-      if (gameState.castlingRights[piece.color === 'white' ? 'whiteQueenside' : 'blackQueenside']) {
-        const b = `b${backRank}`;
-        const c = `c${backRank}`;
-        const d = `d${backRank}`;
+      if (gameState.castlingRights[piece.color === 'white' ? 'whiteQueenside' : 'blackKingside']) {
         const rookSquare = piece.color === 'white' ? 'a1' : 'a8';
         const rook = gameState.board[rookSquare];
-        // Проверяем, что путь свободен и ладья на месте
-        if (!gameState.board[b] && !gameState.board[c] && !gameState.board[d] && rook && rook.type === 'rook' && rook.color === piece.color &&
+        let pathClear = true;
+        let safeSquares = true;
+        for (let fileIdx = Math.min('e'.charCodeAt(0), 'a'.charCodeAt(0)) + 1; fileIdx < Math.max('e'.charCodeAt(0), 'a'.charCodeAt(0)); fileIdx++) {
+          const sq = `${String.fromCharCode(fileIdx)}${backRank}`;
+          if (gameState.board[sq]) {
+            pathClear = false;
+            break;
+          }
+          if (this.isSquareUnderAttack(gameState, sq, piece.color, gameRules)) {
+            safeSquares = false;
+            break;
+          }
+        }
+        // Также проверяем конечную и начальную позиции короля
+        const c = `c${backRank}`;
+        if (pathClear && safeSquares && rook && rook.type === 'rook' && rook.color === piece.color &&
             !this.isSquareUnderAttack(gameState, c, piece.color, gameRules) &&
-            !this.isSquareUnderAttack(gameState, d, piece.color, gameRules)) {
+            !this.isSquareUnderAttack(gameState, fromSquare, piece.color, gameRules)) {
           moves.push(c);
         }
       }
