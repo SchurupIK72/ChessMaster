@@ -330,6 +330,7 @@ export class ChessLogic {
     const blinkUsed = gameState.blinkUsed?.[piece.color];
     
     // Castling (available in Blink mode until Blink is used)
+    // Запрещаем рокировку из-под шаха
     if (!this.isKingInCheck(gameState, piece.color, gameRules)) {
       const backRank = piece.color === 'white' ? 1 : 8;
       // Kingside castling
@@ -338,8 +339,11 @@ export class ChessLogic {
         const rook = gameState.board[rookSquare];
         let pathClear = true;
         let safeSquares = true;
-        for (let fileIdx = Math.min('e'.charCodeAt(0), 'h'.charCodeAt(0)) + 1; fileIdx < Math.max('e'.charCodeAt(0), 'h'.charCodeAt(0)); fileIdx++) {
+        // Проверяем все клетки между королём и ладьёй
+        for (let fileIdx = Math.min('e'.charCodeAt(0), 'h'.charCodeAt(0)); fileIdx <= Math.max('e'.charCodeAt(0), 'h'.charCodeAt(0)); fileIdx++) {
           const sq = `${String.fromCharCode(fileIdx)}${backRank}`;
+          // Пропускаем начальную позицию короля и ладьи
+          if (sq === fromSquare || sq === rookSquare) continue;
           if (gameState.board[sq]) {
             pathClear = false;
             break;
@@ -349,7 +353,7 @@ export class ChessLogic {
             break;
           }
         }
-        // Также проверяем конечную и начальную позиции короля
+        // Проверяем, что король не под шахом, не проходит через битые поля, и не попадает на битое поле
         const g = `g${backRank}`;
         if (pathClear && safeSquares && rook && rook.type === 'rook' && rook.color === piece.color &&
             !this.isSquareUnderAttack(gameState, g, piece.color, gameRules) &&
@@ -363,8 +367,10 @@ export class ChessLogic {
         const rook = gameState.board[rookSquare];
         let pathClear = true;
         let safeSquares = true;
-        for (let fileIdx = Math.min('e'.charCodeAt(0), 'a'.charCodeAt(0)) + 1; fileIdx < Math.max('e'.charCodeAt(0), 'a'.charCodeAt(0)); fileIdx++) {
+        for (let fileIdx = Math.min('e'.charCodeAt(0), 'a'.charCodeAt(0)); fileIdx <= Math.max('e'.charCodeAt(0), 'a'.charCodeAt(0)); fileIdx++) {
           const sq = `${String.fromCharCode(fileIdx)}${backRank}`;
+          // Пропускаем начальную позицию короля и ладьи
+          if (sq === fromSquare || sq === rookSquare) continue;
           if (gameState.board[sq]) {
             pathClear = false;
             break;
@@ -374,7 +380,6 @@ export class ChessLogic {
             break;
           }
         }
-        // Также проверяем конечную и начальную позиции короля
         const c = `c${backRank}`;
         if (pathClear && safeSquares && rook && rook.type === 'rook' && rook.color === piece.color &&
             !this.isSquareUnderAttack(gameState, c, piece.color, gameRules) &&
