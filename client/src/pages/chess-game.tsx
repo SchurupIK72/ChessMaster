@@ -714,18 +714,35 @@ export default function ChessGame() {
 
   const formatMoveHistory = () => {
     const formatted: { moveNumber: number; white?: string; black?: string }[] = [];
-    
-    for (let i = 0; i < moves.length; i += 2) {
-      const whiteMove = moves[i];
-      const blackMove = moves[i + 1];
-      
-      formatted.push({
-        moveNumber: whiteMove.moveNumber,
-        white: `${whiteMove.from}-${whiteMove.to}`,
-        black: blackMove ? `${blackMove.from}-${blackMove.to}` : undefined,
-      });
+    const isDoubleKnight = game?.rules?.includes('double-knight');
+    let i = 0;
+    let moveNumber = 1;
+    while (i < moves.length) {
+      let whiteMoveStr = undefined;
+      let blackMoveStr = undefined;
+      // Белые
+      if (moves[i] && moves[i].player === 'white') {
+        if (isDoubleKnight && moves[i + 1] && moves[i + 1].player === 'white' && moves[i].piece?.includes('knight') && moves[i + 1].piece?.includes('knight')) {
+          whiteMoveStr = `${moves[i].from}-${moves[i].to}-${moves[i + 1].to}`;
+          i += 2;
+        } else {
+          whiteMoveStr = `${moves[i].from}-${moves[i].to}`;
+          i += 1;
+        }
+      }
+      // Черные
+      if (moves[i] && moves[i].player === 'black') {
+        if (isDoubleKnight && moves[i + 1] && moves[i + 1].player === 'black' && moves[i].piece?.includes('knight') && moves[i + 1].piece?.includes('knight')) {
+          blackMoveStr = `${moves[i].from}-${moves[i].to}-${moves[i + 1].to}`;
+          i += 2;
+        } else {
+          blackMoveStr = `${moves[i].from}-${moves[i].to}`;
+          i += 1;
+        }
+      }
+      formatted.push({ moveNumber, white: whiteMoveStr, black: blackMoveStr });
+      moveNumber++;
     }
-    
     return formatted;
   };
 
