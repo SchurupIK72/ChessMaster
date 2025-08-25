@@ -7,12 +7,54 @@ export class ChessLogic {
 
     // Check if we're in the middle of a double knight move
     if (gameState.doubleKnightMove) {
-      // Only the required knight can move
+      // Только нужный конь может ходить
       if (piece.type !== 'knight' || 
           gameState.doubleKnightMove.knightSquare !== fromSquare ||
           piece.color !== gameState.doubleKnightMove.color) {
-        return []; // Can only move the required knight
+        return [];
       }
+      // Второй ход коня: фильтруем так, чтобы после него король не был под шахом
+      const moves: string[] = this.getKnightMoves(gameState, fromSquare, piece);
+      return moves.filter(move => {
+        // Создаем копию состояния для проверки
+        const newGameState = { ...gameState, board: { ...gameState.board } };
+        // Двигаем коня
+        newGameState.board[move] = newGameState.board[fromSquare];
+        delete newGameState.board[fromSquare];
+        // Очищаем doubleKnightMove, меняем ход
+        newGameState.doubleKnightMove = null;
+        newGameState.currentTurn = piece.color === 'white' ? 'black' : 'white';
+        // Проверяем, не под шахом ли король
+        return !this.isKingInCheck(newGameState, piece.color, gameRules);
+      });
+    }
+
+    // Первый ход коня в режиме "Двойной конь": подсвечивать только те клетки, с которых возможен второй ход, закрывающийся от шаха
+    const isDoubleKnight = Array.isArray(gameRules) && gameRules.includes('double-knight');
+    if (isDoubleKnight && piece.type === 'knight' && !gameState.doubleKnightMove) {
+      const moves: string[] = this.getKnightMoves(gameState, fromSquare, piece);
+      return moves.filter(move => {
+        // Копируем состояние для первого шага
+        const firstStepState = { ...gameState, board: { ...gameState.board } };
+        firstStepState.board[move] = firstStepState.board[fromSquare];
+        delete firstStepState.board[fromSquare];
+        // Устанавливаем doubleKnightMove
+        firstStepState.doubleKnightMove = {
+          knightSquare: move,
+          color: piece.color
+        };
+        // Теперь ищем второй ход
+        const secondMoves = this.getKnightMoves(firstStepState, move, piece);
+        // Оставляем только те, после которых король не под шахом
+        return secondMoves.some(secondMove => {
+          const secondStepState = { ...firstStepState, board: { ...firstStepState.board } };
+          secondStepState.board[secondMove] = secondStepState.board[move];
+          delete secondStepState.board[move];
+          secondStepState.doubleKnightMove = null;
+          secondStepState.currentTurn = piece.color === 'white' ? 'black' : 'white';
+          return !this.isKingInCheck(secondStepState, piece.color, gameRules);
+        });
+      });
     }
 
     const moves: string[] = [];
