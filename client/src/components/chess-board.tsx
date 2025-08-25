@@ -32,11 +32,11 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
   // Получаем lastMoveSquares из пропсов
   const { lastMoveSquares } = arguments[0];
 
-  // Левая верхняя клетка (A8 для белых, H8 для черных) всегда темная
+  // Классическая шахматная раскраска: светлая, если сумма индексов четная
   const isLightSquare = (file: string, rank: number) => {
     const fileIndex = files.indexOf(file);
     const rankIndex = ranks.indexOf(rank);
-    return (fileIndex + rankIndex) % 2 !== 0;
+    return (fileIndex + rankIndex) % 2 === 0;
   };
 
   const renderSquare = (file: string, rank: number) => {
