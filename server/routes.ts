@@ -383,13 +383,71 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
 }
 
 function isMoveLegal(gameState: any, fromSquare: string, toSquare: string, color: 'white' | 'black', gameRules?: string[]): boolean {
-  // Create a temporary game state with the move made
+  // Double knight rule: special logic for first move
+  if (Array.isArray(gameRules) && gameRules.includes('double-knight')) {
+    // Первый ход конём
+    if (!gameState.doubleKnightMove) {
+      const piece = gameState.board[fromSquare];
+      if (piece && piece.type === 'knight' && piece.color === color) {
+        // Симулируем первый ход
+        const firstStepState = JSON.parse(JSON.stringify(gameState));
+        firstStepState.board[toSquare] = piece;
+        delete firstStepState.board[fromSquare];
+        firstStepState.doubleKnightMove = { knightSquare: toSquare, color };
+        // Ищем второй ход
+        const knightMoves = getPossibleMoves(firstStepState, toSquare, piece, gameRules);
+        for (const secondMove of knightMoves) {
+          const secondStepState = JSON.parse(JSON.stringify(firstStepState));
+          secondStepState.board[secondMove] = secondStepState.board[toSquare];
+          delete secondStepState.board[toSquare];
+          secondStepState.doubleKnightMove = null;
+          secondStepState.currentTurn = color === 'white' ? 'black' : 'white';
+          // Проверяем: король не под шахом
+          if (!isKingInCheck(secondStepState, color, gameRules)) {
+            return true;
+          }
+          // Или второй ход уничтожает атакующую фигуру
+          // Найти атакующую фигуру
+          let kingSquare = '';
+          for (const [sq, pcRaw] of Object.entries(secondStepState.board)) {
+            const pc = pcRaw as any;
+            if (pc && pc.type === 'king' && pc.color === color) {
+              kingSquare = sq;
+              break;
+            }
+          }
+          if (kingSquare) {
+            for (const [sq, pcRaw] of Object.entries(secondStepState.board)) {
+              const pc = pcRaw as any;
+              if (pc && pc.color !== color && canAttackSquare(secondStepState, sq, kingSquare, pc, gameRules)) {
+                // Если атакующая фигура была на втором ходе уничтожена
+                if (sq === secondMove) {
+                  return true;
+                }
+              }
+            }
+          }
+        }
+        return false;
+      }
+    } else {
+      // Второй ход конём: стандартная проверка
+      const piece = gameState.board[fromSquare];
+      if (piece && piece.type === 'knight' && piece.color === color && gameState.doubleKnightMove.knightSquare === fromSquare) {
+        const tempState = JSON.parse(JSON.stringify(gameState));
+        tempState.board[toSquare] = piece;
+        delete tempState.board[fromSquare];
+        tempState.doubleKnightMove = null;
+        tempState.currentTurn = color === 'white' ? 'black' : 'white';
+        return !isKingInCheck(tempState, color, gameRules);
+      }
+    }
+  }
+  // Обычная проверка
   const tempState = JSON.parse(JSON.stringify(gameState));
   const piece = tempState.board[fromSquare];
   tempState.board[toSquare] = piece;
   delete tempState.board[fromSquare];
-  
-  // Check if this move leaves the king in check
   return !isKingInCheck(tempState, color, gameRules);
 }
 
@@ -674,9 +732,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid piece or wrong turn" });
       }
       
-      // Validate move is legal (doesn't leave king in check)
+      // Validate move is legal (doesn't leave king in check or is allowed by double knight rule)
       if (!isMoveLegal(gameState, moveData.from, moveData.to, game.currentTurn as 'white' | 'black', game.rules as any)) {
-        return res.status(400).json({ message: "Illegal move: would leave king in check" });
+        return res.status(400).json({ message: "Illegal move: would leave king in check or no valid double knight sequence" });
       }
       
       // Special validation for double knight rule: cannot capture king
