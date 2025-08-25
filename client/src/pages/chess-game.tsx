@@ -187,6 +187,10 @@ export default function ChessGame() {
             duration: 3000,
           });
         }
+          // Воспроизвести звук хода при любом новом ходе
+          if (moveAudio) {
+            try { moveAudio.currentTime = 0; moveAudio.play(); } catch (e) {}
+          }
       }
       setLastMoveCount(moves.length);
     } else {
