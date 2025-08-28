@@ -729,7 +729,7 @@ export default function ChessGame() {
           moves[i].piece?.includes('knight') &&
           moves[i + 1].piece?.includes('knight')
         ) {
-          whiteMoveStr = `${moves[i].from}-${moves[i].to}, ${moves[i + 1].from}-${moves[i + 1].to}`;
+          whiteMoveStr = `${moves[i].from}-${moves[i].to}-${moves[i + 1].to}`;
           i += 2;
         } else {
           whiteMoveStr = `${moves[i].from}-${moves[i].to}`;
@@ -745,7 +745,7 @@ export default function ChessGame() {
           moves[i].piece?.includes('knight') &&
           moves[i + 1].piece?.includes('knight')
         ) {
-          blackMoveStr = `${moves[i].from}-${moves[i].to}, ${moves[i + 1].from}-${moves[i + 1].to}`;
+          blackMoveStr = `${moves[i].from}-${moves[i].to}-${moves[i + 1].to}`;
           i += 2;
         } else {
           blackMoveStr = `${moves[i].from}-${moves[i].to}`;
