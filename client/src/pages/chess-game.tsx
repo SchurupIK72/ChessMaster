@@ -722,8 +722,14 @@ export default function ChessGame() {
       let blackMoveStr = undefined;
       // Белые
       if (moves[i] && moves[i].player === 'white') {
-        if (isDoubleKnight && moves[i + 1] && moves[i + 1].player === 'white' && moves[i].piece?.includes('knight') && moves[i + 1].piece?.includes('knight')) {
-          whiteMoveStr = `${moves[i].from}-${moves[i].to}-${moves[i + 1].to}`;
+        if (
+          isDoubleKnight &&
+          moves[i + 1] &&
+          moves[i + 1].player === 'white' &&
+          moves[i].piece?.includes('knight') &&
+          moves[i + 1].piece?.includes('knight')
+        ) {
+          whiteMoveStr = `${moves[i].from}-${moves[i].to}, ${moves[i + 1].from}-${moves[i + 1].to}`;
           i += 2;
         } else {
           whiteMoveStr = `${moves[i].from}-${moves[i].to}`;
@@ -732,16 +738,25 @@ export default function ChessGame() {
       }
       // Черные
       if (moves[i] && moves[i].player === 'black') {
-        if (isDoubleKnight && moves[i + 1] && moves[i + 1].player === 'black' && moves[i].piece?.includes('knight') && moves[i + 1].piece?.includes('knight')) {
-          blackMoveStr = `${moves[i].from}-${moves[i].to}-${moves[i + 1].to}`;
+        if (
+          isDoubleKnight &&
+          moves[i + 1] &&
+          moves[i + 1].player === 'black' &&
+          moves[i].piece?.includes('knight') &&
+          moves[i + 1].piece?.includes('knight')
+        ) {
+          blackMoveStr = `${moves[i].from}-${moves[i].to}, ${moves[i + 1].from}-${moves[i + 1].to}`;
           i += 2;
         } else {
           blackMoveStr = `${moves[i].from}-${moves[i].to}`;
           i += 1;
         }
       }
-      formatted.push({ moveNumber, white: whiteMoveStr, black: blackMoveStr });
-      moveNumber++;
+      // Добавлять только если есть хотя бы один ход
+      if (whiteMoveStr || blackMoveStr) {
+        formatted.push({ moveNumber, white: whiteMoveStr, black: blackMoveStr });
+        moveNumber++;
+      }
     }
     return formatted;
   };
