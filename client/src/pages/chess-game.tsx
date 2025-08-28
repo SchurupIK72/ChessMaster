@@ -733,11 +733,11 @@ export default function ChessGame() {
           i += 2;
         } else {
           whiteMoveStr = `${moves[i].from}-${moves[i].to}`;
-          i += 1;
+          i++;
         }
       }
       // Черные
-      if (moves[i] && moves[i].player === 'black') {
+      if (i < moves.length && moves[i] && moves[i].player === 'black') {
         if (
           isDoubleKnight &&
           moves[i + 1] &&
@@ -749,14 +749,11 @@ export default function ChessGame() {
           i += 2;
         } else {
           blackMoveStr = `${moves[i].from}-${moves[i].to}`;
-          i += 1;
+          i++;
         }
       }
-      // Добавлять только если есть хотя бы один ход
-      if (whiteMoveStr || blackMoveStr) {
-        formatted.push({ moveNumber, white: whiteMoveStr, black: blackMoveStr });
-        moveNumber++;
-      }
+      formatted.push({ moveNumber, white: whiteMoveStr, black: blackMoveStr });
+      moveNumber++;
     }
     return formatted;
   };
