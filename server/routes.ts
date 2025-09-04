@@ -32,6 +32,76 @@ function isKingInCheck(gameState: any, color: 'white' | 'black', gameRules?: str
   return false;
 }
 
+// Helper: check if a square is attacked by opponent pieces
+function isSquareUnderAttack(gameState: any, square: string, color: 'white' | 'black', gameRules?: string[]): boolean {
+  const opponent = color === 'white' ? 'black' : 'white';
+  for (const [from, piece] of Object.entries(gameState.board)) {
+    if (piece && (piece as any).color === opponent) {
+      if (canAttackSquare(gameState, from, square, piece as any, gameRules)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// Robust castling validator: requires rights, clear path, rook present, and no pass-through check
+function isValidCastlingMove(
+  gameState: any,
+  piece: any,
+  fromSquare: string,
+  toSquare: string,
+  gameRules?: string[]
+): boolean {
+  if (!piece || piece.type !== 'king') return false;
+
+  const color: 'white' | 'black' = piece.color;
+  const backRank = color === 'white' ? '1' : '8';
+  // King must start on e-file back rank
+  if (fromSquare !== `e${backRank}`) return false;
+
+  const toFile = toSquare[0];
+  const toRank = toSquare[1];
+  if (toRank !== backRank) return false;
+
+  // Determine side
+  const isKingSide = toFile === 'g';
+  const isQueenSide = toFile === 'c';
+  if (!isKingSide && !isQueenSide) return false;
+
+  // Check rights and rook presence
+  const rightsKey = (color === 'white'
+    ? (isKingSide ? 'whiteKingside' : 'whiteQueenside')
+    : (isKingSide ? 'blackKingside' : 'blackQueenside')) as
+    'whiteKingside' | 'whiteQueenside' | 'blackKingside' | 'blackQueenside';
+  if (!gameState.castlingRights || !gameState.castlingRights[rightsKey]) return false;
+
+  const rookSquare = (isKingSide ? `h${backRank}` : `a${backRank}`);
+  const rook = gameState.board[rookSquare];
+  if (!rook || rook.type !== 'rook' || rook.color !== color) return false;
+
+  // Path between king and rook must be empty
+  const betweenSquares: string[] = [];
+  if (isKingSide) {
+    betweenSquares.push(`f${backRank}`, `g${backRank}`);
+  } else {
+    // For queenside, squares between rook and king must be empty: b, c, d
+    betweenSquares.push(`b${backRank}`, `c${backRank}`, `d${backRank}`);
+  }
+  for (const sq of betweenSquares) {
+    if (gameState.board[sq]) return false;
+  }
+
+  // King cannot be in check, pass through check, or end in check
+  const passThroughSquares = isKingSide ? [`e${backRank}`, `f${backRank}`, `g${backRank}`]
+                                        : [`e${backRank}`, `d${backRank}`, `c${backRank}`];
+  for (const sq of passThroughSquares) {
+    if (isSquareUnderAttack(gameState, sq, color, gameRules)) return false;
+  }
+
+  return true;
+}
+
 function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, piece: any, gameRules?: string[]): boolean {
   const fromFile = fromSquare[0];
   const fromRank = fromSquare[1];
@@ -103,6 +173,8 @@ function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, p
     
     case 'knight':
       return (Math.abs(dx) === 2 && Math.abs(dy) === 1) || (Math.abs(dx) === 1 && Math.abs(dy) === 2);
+    case 'king':
+      return Math.max(Math.abs(dx), Math.abs(dy)) === 1;
     
     default:
       return false;
@@ -444,6 +516,37 @@ function isMoveLegal(gameState: any, fromSquare: string, toSquare: string, color
       }
     }
   }
+  // Additional king-specific validation (castling/blink)
+  const movingPiece = gameState.board[fromSquare];
+  if (movingPiece && movingPiece.type === 'king') {
+    const fromCol = fromSquare.charCodeAt(0) - 'a'.charCodeAt(0);
+    const toCol = toSquare.charCodeAt(0) - 'a'.charCodeAt(0);
+    const fromRow = parseInt(fromSquare[1]);
+    const toRow = parseInt(toSquare[1]);
+    const colDiff = Math.abs(toCol - fromCol);
+    const rowDiff = Math.abs(toRow - fromRow);
+    const sameRank = fromRow === toRow;
+    // If trying to move two squares horizontally, ensure it's a valid castling move
+    if (colDiff === 2 && rowDiff === 0) {
+      if (!isValidCastlingMove(gameState, movingPiece, fromSquare, toSquare, gameRules)) {
+        // Not a valid castle; allow Blink if available and destination empty
+        const blinkAllowed = Array.isArray(gameRules) && gameRules.includes('blink');
+        const blinkUsedState = gameState.blinkUsed || { white: false, black: false };
+        const targetPiece = gameState.board[toSquare];
+        if (!(blinkAllowed && !blinkUsedState[movingPiece.color] && !targetPiece)) {
+          return false;
+        }
+      }
+    } else if (Math.max(colDiff, rowDiff) > 1) {
+      // Non-adjacent king move: only allowed as Blink
+      const blinkAllowed = Array.isArray(gameRules) && gameRules.includes('blink');
+      const blinkUsedState = gameState.blinkUsed || { white: false, black: false };
+      const targetPiece = gameState.board[toSquare];
+      if (!(blinkAllowed && !blinkUsedState[movingPiece.color] && !targetPiece)) {
+        return false;
+      }
+    }
+  }
   // Обычная проверка
   const tempState = JSON.parse(JSON.stringify(gameState));
   const piece = tempState.board[fromSquare];
@@ -710,12 +813,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const toFile = mv.to[0];
         const fromRank = mv.from[1];
         const toRank = mv.to[1];
-        if (Math.abs(fromFile.charCodeAt(0) - toFile.charCodeAt(0)) === 2 && fromRank === toRank) {
-          const backRank = piece.color === 'white' ? '1' : '8';
-          const isOnBackRank = fromRank === backRank && toRank === backRank;
-          const hasRights = (toFile === 'g' && state.castlingRights[piece.color === 'white' ? 'whiteKingside' : 'blackKingside']) ||
-                           (toFile === 'c' && state.castlingRights[piece.color === 'white' ? 'whiteQueenside' : 'blackQueenside']);
-          if (isOnBackRank && hasRights) isCastling = true;
+        if (isValidCastlingMove(state, piece, mv.from, mv.to, rulesArray as any)) {
+          isCastling = true;
         }
         if (!isCastling && Array.isArray(rulesArray) && rulesArray.includes('blink')) {
           const blinkUsed = state.blinkUsed || { white: false, black: false };
@@ -1045,17 +1144,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fromRank = moveData.from[1];
         const toRank = moveData.to[1];
         
-        // Check if this could be castling (king moves 2 squares on same rank)
-        if (Math.abs(fromFile.charCodeAt(0) - toFile.charCodeAt(0)) === 2 && fromRank === toRank) {
-          // Additional checks for valid castling
-          const backRank = piece.color === 'white' ? '1' : '8';
-          const isOnBackRank = fromRank === backRank && toRank === backRank;
-          const hasRights = (toFile === 'g' && gameState.castlingRights[piece.color === 'white' ? 'whiteKingside' : 'blackKingside']) ||
-                           (toFile === 'c' && gameState.castlingRights[piece.color === 'white' ? 'whiteQueenside' : 'blackQueenside']);
-          
-          if (isOnBackRank && hasRights) {
-            isCastling = true;
-          }
+        // Check robust castling validation
+        if (isValidCastlingMove(gameState, piece, moveData.from, moveData.to, game.rules as any)) {
+          isCastling = true;
         }
         
         // Check if this is a Blink teleport (not adjacent square)
@@ -1079,7 +1170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        if (isCastling) {
+  if (isCastling) {
           // Move the rook as well
           if (toFile === 'g') {
             // Kingside castling
