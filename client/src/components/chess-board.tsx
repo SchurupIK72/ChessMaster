@@ -1,4 +1,4 @@
-import { ChessGameState, ChessPiece } from "@shared/schema";
+import { ChessGameState, ChessPiece, GameRulesArray } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
 interface ChessBoardProps {
@@ -9,6 +9,8 @@ interface ChessBoardProps {
   currentTurn: 'white' | 'black';
   flipped?: boolean;
   lastMoveSquares?: { from: string, to: string } | null;
+  rules?: GameRulesArray | string[];
+  viewerColor?: 'white' | 'black' | null;
 }
 
 const pieceSymbols: Record<string, string> = {
@@ -26,11 +28,19 @@ const pieceSymbols: Record<string, string> = {
   'black-pawn': '♟︎',
 };
 
-export default function ChessBoard({ gameState, selectedSquare, validMoves, onSquareClick, currentTurn, flipped = false }: ChessBoardProps) {
+export default function ChessBoard({ gameState, selectedSquare, validMoves, onSquareClick, currentTurn, flipped = false, lastMoveSquares, rules = [], viewerColor }: ChessBoardProps) {
   const files = flipped ? ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'] : ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const ranks = flipped ? [1, 2, 3, 4, 5, 6, 7, 8] : [8, 7, 6, 5, 4, 3, 2, 1];
-  // Получаем lastMoveSquares из пропсов
-  const { lastMoveSquares } = arguments[0];
+
+  // Rule: Fog of War — for first 5 full moves, show only player's half
+  const isFogActive = Array.isArray(rules) && rules.includes('fog-of-war' as any) && (gameState.fullmoveNumber ?? 1) <= 5;
+  const isSquareMasked = (rank: number): boolean => {
+    if (!isFogActive || !viewerColor) return false;
+    // White sees ranks 1-4; Black sees ranks 5-8
+    if (viewerColor === 'white') return rank >= 5; // mask opponent half
+    if (viewerColor === 'black') return rank <= 4; // mask opponent half
+    return false;
+  };
 
   // Классическая шахматная раскраска: светлая, если сумма индексов четная
   const isLightSquare = (file: string, rank: number) => {
@@ -45,8 +55,9 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
     const isSelected = selectedSquare === square;
     const isValidMove = validMoves.includes(square);
     const isLight = isLightSquare(file, rank);
-    const isLastMoveFrom = lastMoveSquares?.from === square;
-    const isLastMoveTo = lastMoveSquares?.to === square;
+    const isMasked = isSquareMasked(rank);
+    const isLastMoveFrom = !isMasked && lastMoveSquares?.from === square;
+    const isLastMoveTo = !isMasked && lastMoveSquares?.to === square;
 
     return (
       <div
@@ -57,15 +68,30 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
           isLight ? "bg-green-100" : "bg-green-700",
           "hover:bg-opacity-80",
           isSelected && "bg-blue-400 bg-opacity-60 ring-2 ring-blue-600",
-          isValidMove && "bg-yellow-300 bg-opacity-70",
-          !piece && isValidMove && "hover:bg-yellow-400 hover:bg-opacity-80",
+          isValidMove && !isMasked && "bg-yellow-300 bg-opacity-70",
+          !piece && isValidMove && !isMasked && "hover:bg-yellow-400 hover:bg-opacity-80",
           piece && !isSelected && isLight ? "hover:bg-green-200" : "hover:bg-green-600",
           isLastMoveFrom && "ring-4 ring-yellow-500 ring-opacity-80",
           isLastMoveTo && "ring-4 ring-orange-500 ring-opacity-80"
         )}
-        onClick={() => onSquareClick(square)}
+        onClick={() => {
+          // In fog, prevent selecting hidden squares unless it's a valid destination from an already selected piece
+          if (isMasked) {
+            if (selectedSquare && isValidMove) {
+              onSquareClick(square);
+            }
+            return;
+          }
+          onSquareClick(square);
+        }}
       >
-        {piece && (
+        {/* Fog overlay */}
+        {isMasked && (
+          <div className="absolute inset-0 bg-slate-900/40 pointer-events-none" />
+        )}
+
+        {/* Pieces: hidden under fog */}
+        {piece && !isMasked && (
           <span 
             className={cn(
               "select-none font-bold",
@@ -84,13 +110,19 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
             {pieceSymbols[`${piece.color}-${piece.type}`]}
           </span>
         )}
-        {isValidMove && !piece && (
+        {isValidMove && !piece && !isMasked && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-5 h-5 bg-yellow-400 rounded-full opacity-80 shadow-lg border-2 border-yellow-600" />
           </div>
         )}
-        {isValidMove && piece && (
+        {isValidMove && piece && !isMasked && (
           <div className="absolute inset-0 border-4 border-yellow-400 opacity-80 pointer-events-none rounded-lg shadow-lg" />
+        )}
+        {/* Neutral marker in fog for valid moves without revealing captures */}
+        {isMasked && isValidMove && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-4 h-4 bg-yellow-300/80 rounded-full shadow" />
+          </div>
         )}
       </div>
     );

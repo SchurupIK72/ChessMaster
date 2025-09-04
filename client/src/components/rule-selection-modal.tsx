@@ -49,6 +49,13 @@ const availableRules = [
     badges: ['Телепорт', 'Особый'],
     badgeColors: ['bg-violet-100 text-violet-800', 'bg-pink-100 text-pink-800'],
   },
+  {
+    id: 'fog-of-war' as GameRules,
+    name: 'Туман войны',
+    description: 'Первые 5 ходов каждый видит только свою половину доски',
+    badges: ['Секретность', 'Адаптивность'],
+    badgeColors: ['bg-slate-100 text-slate-800', 'bg-amber-100 text-amber-800'],
+  },
 ];
 
 export default function RuleSelectionModal({ open, onOpenChange, onRuleSelect }: RuleSelectionModalProps) {

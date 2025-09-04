@@ -926,6 +926,8 @@ export default function ChessGame() {
                 onSquareClick={handleSquareClick}
                 currentTurn={game!.currentTurn as 'white' | 'black'}
                 flipped={getCurrentPlayerColor() === 'black'}
+                viewerColor={getCurrentPlayerColor()}
+                rules={(game!.rules as any) || []}
                 lastMoveSquares={lastMoveSquares}
               />
 
