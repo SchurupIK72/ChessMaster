@@ -638,13 +638,16 @@ export default function ChessGame() {
 
   const confirmResign = () => {
     if (!game) return;
-    const winner = game.currentTurn === 'white' ? 'black' : 'white';
+    // Determine the resigning player's color (not necessarily the current turn)
+    const playerColor = getCurrentPlayerColor();
+    const resigningColor = playerColor ?? game.currentTurn;
+    const winner = resigningColor === 'white' ? 'black' : 'white';
     updateStatusMutation.mutate({ status: 'completed', winner });
     setShowGameOverModal(true);
     setShowResignConfirm(false);
     toast({
       title: "Партия завершена",
-      description: `${game.currentTurn === 'white' ? 'Белые' : 'Черные'} сдались. ${winner === 'white' ? 'Белые' : 'Черные'} победили!`,
+      description: `${resigningColor === 'white' ? 'Белые' : 'Черные'} сдались. ${winner === 'white' ? 'Белые' : 'Черные'} победили!`,
     });
   };
 
