@@ -11,6 +11,7 @@ interface ChessBoardProps {
   lastMoveSquares?: { from: string, to: string } | null;
   rules?: GameRulesArray | string[];
   viewerColor?: 'white' | 'black' | null;
+  fogActiveOverride?: boolean;
 }
 
 const pieceSymbols: Record<string, string> = {
@@ -28,12 +29,12 @@ const pieceSymbols: Record<string, string> = {
   'black-pawn': '♟︎',
 };
 
-export default function ChessBoard({ gameState, selectedSquare, validMoves, onSquareClick, currentTurn, flipped = false, lastMoveSquares, rules = [], viewerColor }: ChessBoardProps) {
+export default function ChessBoard({ gameState, selectedSquare, validMoves, onSquareClick, currentTurn, flipped = false, lastMoveSquares, rules = [], viewerColor, fogActiveOverride }: ChessBoardProps) {
   const files = flipped ? ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'] : ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const ranks = flipped ? [1, 2, 3, 4, 5, 6, 7, 8] : [8, 7, 6, 5, 4, 3, 2, 1];
 
-  // Rule: Fog of War — for first 5 full moves, show only player's half
-  const isFogActive = Array.isArray(rules) && rules.includes('fog-of-war' as any) && (gameState.fullmoveNumber ?? 1) <= 5;
+  // Rule: Fog of War — active early-game masking; can be overridden by parent (e.g., with double-knight adjustments)
+  const isFogActive = fogActiveOverride ?? (Array.isArray(rules) && rules.includes('fog-of-war' as any) && (gameState.fullmoveNumber ?? 1) <= 5);
   const isSquareMasked = (rank: number): boolean => {
     if (!isFogActive || !viewerColor) return false;
     // White sees ranks 1-4; Black sees ranks 5-8

@@ -864,9 +864,31 @@ export default function ChessGame() {
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>;
   }
 
-  // Fog of War: hide Move History for first 5 full moves
+  // Fog of War: base first 5 full moves; reduce by 1 for each completed Double Knight sequence
   const fogRules = (game?.rules as any) || [];
-  const isFogOfWar = Array.isArray(fogRules) && fogRules.includes('fog-of-war') && (((game?.gameState as ChessGameState)?.fullmoveNumber ?? 1) <= 5);
+  const hasFog = Array.isArray(fogRules) && fogRules.includes('fog-of-war');
+  const hasDoubleKnight = Array.isArray(fogRules) && fogRules.includes('double-knight');
+  const baseFogFullMoves = 5;
+  const doubleKnightCompleted = hasDoubleKnight ? (() => {
+    let count = 0;
+    for (let i = 0; i < moves.length - 1; i++) {
+      const m1 = moves[i];
+      const m2 = moves[i + 1];
+      if (
+        m1 && m2 &&
+        m1.player === m2.player &&
+        typeof m1.piece === 'string' && m1.piece.endsWith('-knight') &&
+        typeof m2.piece === 'string' && m2.piece.endsWith('-knight') &&
+        m1.to && m2.from && m1.to === m2.from
+      ) {
+        count++;
+        i++; // skip the next since it's paired already
+      }
+    }
+    return count;
+  })() : 0;
+  const fogCutoff = Math.max(0, baseFogFullMoves - doubleKnightCompleted);
+  const fogActive = hasFog && (((game?.gameState as ChessGameState)?.fullmoveNumber ?? 1) <= fogCutoff);
   return (
   <div className="min-h-screen bg-slate-50 font-inter">
       <header className="bg-white shadow-sm border-b border-slate-200">
@@ -931,6 +953,7 @@ export default function ChessGame() {
                 flipped={getCurrentPlayerColor() === 'black'}
                 viewerColor={getCurrentPlayerColor()}
                 rules={(game!.rules as any) || []}
+                fogActiveOverride={fogActive}
                 lastMoveSquares={lastMoveSquares}
               />
 
@@ -953,7 +976,7 @@ export default function ChessGame() {
 
           {/* Right Sidebar */}
           <div className="lg:col-span-3 space-y-6">
-              {!isFogOfWar && (
+              {!fogActive && (
                 <MoveHistory moves={formatMoveHistory()} />
               )}
             <CapturedPieces capturedPieces={getCapturedPieces()} />
