@@ -248,6 +248,13 @@ export default function ChessGame() {
       // best-effort: clear last move highlight after undo
       setLastMoveSquares(null);
     },
+    onError: (error: any) => {
+      toast({
+        title: "Не удалось выполнить Undo",
+        description: error?.message || "Попробуйте ещё раз",
+        variant: "destructive",
+      });
+    },
   });
 
   // Update game status mutation
@@ -924,7 +931,7 @@ export default function ChessGame() {
 
             {/* Game Controls */}
             <div className="flex items-center space-x-4 mt-6">
-              <Button variant="outline" onClick={() => undoMoveMutation.mutate()} disabled={!moves.length || undoMoveMutation.isPending}>
+              <Button variant="outline" onClick={() => undoMoveMutation.mutate()} disabled={undoMoveMutation.isPending}>
                 Undo
               </Button>
               <Button variant="outline" disabled>
