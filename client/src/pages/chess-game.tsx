@@ -864,31 +864,41 @@ export default function ChessGame() {
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>;
   }
 
-  // Fog of War: base first 5 full moves; reduce by 1 for each completed Double Knight sequence
+  // Fog of War: consider effective player turns (a double-knight pair counts as one turn)
   const fogRules = (game?.rules as any) || [];
   const hasFog = Array.isArray(fogRules) && fogRules.includes('fog-of-war');
   const hasDoubleKnight = Array.isArray(fogRules) && fogRules.includes('double-knight');
   const baseFogFullMoves = 5;
-  const doubleKnightCompleted = hasDoubleKnight ? (() => {
-    let count = 0;
-    for (let i = 0; i < moves.length - 1; i++) {
+  const effectiveTurns = (() => {
+    let turns = 0;
+    let i = 0;
+    while (i < moves.length) {
       const m1 = moves[i];
-      const m2 = moves[i + 1];
+      const currentPlayer = m1.player;
+      // Try to pair as a double-knight turn if the rule is active
       if (
-        m1 && m2 &&
-        m1.player === m2.player &&
+        hasDoubleKnight &&
+        i + 1 < moves.length &&
+        moves[i + 1].player === currentPlayer &&
         typeof m1.piece === 'string' && m1.piece.endsWith('-knight') &&
-        typeof m2.piece === 'string' && m2.piece.endsWith('-knight') &&
-        m1.to && m2.from && m1.to === m2.from
+        typeof moves[i + 1].piece === 'string' && moves[i + 1].piece.endsWith('-knight') &&
+        m1.to && moves[i + 1].from && m1.to === moves[i + 1].from
       ) {
-        count++;
-        i++; // skip the next since it's paired already
+        turns += 1; // both steps are one player's single turn
+        i += 2;
+      } else if (hasDoubleKnight && typeof m1.piece === 'string' && m1.piece.endsWith('-knight')) {
+        // Unpaired single knight step: don't count as completed turn yet
+        i += 1;
+      } else {
+        // Any non-knight move (or when rule is off) is a single completed turn
+        turns += 1;
+        i += 1;
       }
     }
-    return count;
-  })() : 0;
-  const fogCutoff = Math.max(0, baseFogFullMoves - doubleKnightCompleted);
-  const fogActive = hasFog && (((game?.gameState as ChessGameState)?.fullmoveNumber ?? 1) <= fogCutoff);
+    return turns;
+  })();
+  const effectiveFullMoves = Math.ceil(effectiveTurns / 2);
+  const fogActive = hasFog && effectiveFullMoves <= baseFogFullMoves;
   return (
   <div className="min-h-screen bg-slate-50 font-inter">
       <header className="bg-white shadow-sm border-b border-slate-200">
