@@ -720,6 +720,7 @@ export default function ChessGame() {
     while (i < moves.length) {
       let whiteMoveStr = undefined;
       let blackMoveStr = undefined;
+
       // Белые
       if (moves[i] && moves[i].player === 'white') {
         if (
@@ -729,6 +730,7 @@ export default function ChessGame() {
           moves[i].piece?.includes('knight') &&
           moves[i + 1].piece?.includes('knight')
         ) {
+          // DoubleKnight: два хода подряд одним конём
           whiteMoveStr = `${moves[i].from}-${moves[i].to}-${moves[i + 1].to}`;
           i += 2;
         } else {
@@ -736,6 +738,7 @@ export default function ChessGame() {
           i++;
         }
       }
+
       // Черные
       if (i < moves.length && moves[i] && moves[i].player === 'black') {
         if (
@@ -745,6 +748,7 @@ export default function ChessGame() {
           moves[i].piece?.includes('knight') &&
           moves[i + 1].piece?.includes('knight')
         ) {
+          // DoubleKnight: два хода подряд одним конём
           blackMoveStr = `${moves[i].from}-${moves[i].to}-${moves[i + 1].to}`;
           i += 2;
         } else {
@@ -752,8 +756,13 @@ export default function ChessGame() {
           i++;
         }
       }
-      formatted.push({ moveNumber, white: whiteMoveStr, black: blackMoveStr });
-      moveNumber++;
+
+      // Если оба пустые, значит ход был только один (например, белых), а черные ещё не сходили
+      // Не добавлять пустую строку
+      if (whiteMoveStr || blackMoveStr) {
+        formatted.push({ moveNumber, white: whiteMoveStr, black: blackMoveStr });
+        moveNumber++;
+      }
     }
     return formatted;
   };
