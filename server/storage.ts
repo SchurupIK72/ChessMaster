@@ -20,6 +20,7 @@ export interface IStorage {
   // Move methods
   addMove(move: InsertMove): Promise<Move>;
   getGameMoves(gameId: number): Promise<Move[]>;
+  deleteLastMove(gameId: number): Promise<Move | undefined>;
   
   // Chess-specific methods
   updateGameTurn(id: number, turn: 'white' | 'black'): Promise<Game>;
@@ -168,6 +169,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(moves.gameId, gameId))
       .orderBy(moves.id);
     return movesList;
+  }
+
+  async deleteLastMove(gameId: number): Promise<Move | undefined> {
+    const all = await this.getGameMoves(gameId);
+    const last = all[all.length - 1];
+    if (!last) return undefined;
+    await db.delete(moves).where(eq(moves.id, last.id));
+    return last;
   }
 
   async updateGameTurn(id: number, turn: 'white' | 'black'): Promise<Game> {

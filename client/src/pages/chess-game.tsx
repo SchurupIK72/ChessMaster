@@ -233,6 +233,23 @@ export default function ChessGame() {
     },
   });
 
+  // Undo last move mutation
+  const undoMoveMutation = useMutation({
+    mutationFn: async () => {
+      if (!gameId) throw new Error("No active game");
+      const response = await apiRequest("POST", `/api/games/${gameId}/undo`, {});
+      return response.json();
+    },
+    onSuccess: async (data: any) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/games", gameId, "moves"] });
+      setSelectedSquare(null);
+      setValidMoves([]);
+      // best-effort: clear last move highlight after undo
+      setLastMoveSquares(null);
+    },
+  });
+
   // Update game status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ status, winner }: { status: string; winner?: string }) => {
@@ -907,7 +924,7 @@ export default function ChessGame() {
 
             {/* Game Controls */}
             <div className="flex items-center space-x-4 mt-6">
-              <Button variant="outline" disabled>
+              <Button variant="outline" onClick={() => undoMoveMutation.mutate()} disabled={!moves.length || undoMoveMutation.isPending}>
                 Undo
               </Button>
               <Button variant="outline" disabled>

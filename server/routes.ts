@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertGameSchema, insertMoveSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
+import { ChessGameState, Game } from "@shared/schema";
 
 // Simple chess logic for server-side checkmate detection
 function isKingInCheck(gameState: any, color: 'white' | 'black', gameRules?: string[]): boolean {
@@ -605,6 +606,234 @@ function applyDoubleKnightRule(gameState: any, fromSquare: string, toSquare: str
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Helper: rebuild game state from initial rules and move list
+  async function rebuildGameStateFromMoves(game: Game, movesList: any[]): Promise<ChessGameState> {
+    // Re-create initial state the same way storage.createGame does
+    // We'll start from a fresh initial position using DatabaseStorage private logic replicated here
+    const rulesArray = Array.isArray(game.rules) ? game.rules : game.rules ? [game.rules] : ["standard"]; // fallback
+
+    // Minimal initial position builder (mirrors storage.getInitialGameState)
+    const initialBoard: { [square: string]: any } = {};
+    const standardSetup: { [key: string]: any } = {
+      'a1': { type: 'rook', color: 'white' },
+      'b1': { type: 'knight', color: 'white' },
+      'c1': { type: 'bishop', color: 'white' },
+      'd1': { type: 'queen', color: 'white' },
+      'e1': { type: 'king', color: 'white' },
+      'f1': { type: 'bishop', color: 'white' },
+      'g1': { type: 'knight', color: 'white' },
+      'h1': { type: 'rook', color: 'white' },
+      'a8': { type: 'rook', color: 'black' },
+      'b8': { type: 'knight', color: 'black' },
+      'c8': { type: 'bishop', color: 'black' },
+      'd8': { type: 'queen', color: 'black' },
+      'e8': { type: 'king', color: 'black' },
+      'f8': { type: 'bishop', color: 'black' },
+      'g8': { type: 'knight', color: 'black' },
+      'h8': { type: 'rook', color: 'black' },
+    };
+    for (let file = 'a'.charCodeAt(0); file <= 'h'.charCodeAt(0); file++) {
+      const f = String.fromCharCode(file);
+      (standardSetup as any)[`${f}2`] = { type: 'pawn', color: 'white' };
+      (standardSetup as any)[`${f}7`] = { type: 'pawn', color: 'black' };
+    }
+    if (rulesArray.includes('pawn-wall')) {
+      for (let file = 'a'.charCodeAt(0); file <= 'h'.charCodeAt(0); file++) {
+        const f = String.fromCharCode(file);
+        (standardSetup as any)[`${f}3`] = { type: 'pawn', color: 'white' };
+        (standardSetup as any)[`${f}6`] = { type: 'pawn', color: 'black' };
+      }
+    }
+    for (let rank = 1; rank <= 8; rank++) {
+      for (let file = 'a'.charCodeAt(0); file <= 'h'.charCodeAt(0); file++) {
+        const f = String.fromCharCode(file);
+        const sq = `${f}${rank}`;
+        initialBoard[sq] = (standardSetup as any)[sq] || null;
+      }
+    }
+    let state: ChessGameState = {
+      board: initialBoard,
+      currentTurn: 'white',
+      castlingRights: {
+        whiteKingside: true,
+        whiteQueenside: true,
+        blackKingside: true,
+        blackQueenside: true,
+      },
+      enPassantTarget: null,
+      halfmoveClock: 0,
+      fullmoveNumber: 1,
+      isCheck: false,
+      isCheckmate: false,
+      isStalemate: false,
+      doubleKnightMove: null,
+      pawnRotationMoves: {},
+      blinkUsed: { white: false, black: false }
+    };
+
+    // Replay moves through existing logic in this file
+    let currentTurn: 'white' | 'black' = 'white';
+    for (const mv of movesList) {
+      const piece = state.board[mv.from];
+      if (!piece) continue;
+      // note: using same server logic parts: en passant, castling, blink, promotion, counters, special rules
+      // For correctness, reuse fragments from the move handler above
+      const targetPiece = state.board[mv.to];
+      // en passant capture check
+      const currentEnPassantTarget = state.enPassantTarget;
+      if (piece.type === 'pawn' && mv.to === currentEnPassantTarget) {
+        const targetFile = mv.to[0];
+        const targetRank = parseInt(mv.to[1]);
+        const fromFile = mv.from[0];
+        const fromRank = parseInt(mv.from[1]);
+        if (fromRank !== targetRank) {
+          const captureRank = piece.color === 'white' ? '5' : '4';
+          const captureSquare = targetFile + captureRank;
+          delete (state.board as any)[captureSquare];
+        } else {
+          const leftSquare = String.fromCharCode(fromFile.charCodeAt(0) - 1) + fromRank;
+          const rightSquare = String.fromCharCode(fromFile.charCodeAt(0) + 1) + fromRank;
+          if (state.board[leftSquare] && state.board[leftSquare]!.color !== piece.color) {
+            delete (state.board as any)[leftSquare];
+          } else if (state.board[rightSquare] && state.board[rightSquare]!.color !== piece.color) {
+            delete (state.board as any)[rightSquare];
+          }
+        }
+      }
+      state.enPassantTarget = null;
+
+      // Castling or blink used detection
+      let isCastling = false;
+      let isBlinkTeleport = false;
+      if (piece.type === 'king') {
+        const fromFile = mv.from[0];
+        const toFile = mv.to[0];
+        const fromRank = mv.from[1];
+        const toRank = mv.to[1];
+        if (Math.abs(fromFile.charCodeAt(0) - toFile.charCodeAt(0)) === 2 && fromRank === toRank) {
+          const backRank = piece.color === 'white' ? '1' : '8';
+          const isOnBackRank = fromRank === backRank && toRank === backRank;
+          const hasRights = (toFile === 'g' && state.castlingRights[piece.color === 'white' ? 'whiteKingside' : 'blackKingside']) ||
+                           (toFile === 'c' && state.castlingRights[piece.color === 'white' ? 'whiteQueenside' : 'blackQueenside']);
+          if (isOnBackRank && hasRights) isCastling = true;
+        }
+        if (!isCastling && Array.isArray(rulesArray) && rulesArray.includes('blink')) {
+          const blinkUsed = state.blinkUsed || { white: false, black: false };
+          if (!blinkUsed[piece.color]) {
+            const fromFileIndex = fromFile.charCodeAt(0) - 'a'.charCodeAt(0);
+            const toFileIndex = toFile.charCodeAt(0) - 'a'.charCodeAt(0);
+            const fromRankNum = parseInt(fromRank);
+            const toRankNum = parseInt(toRank);
+            const fileDistance = Math.abs(toFileIndex - fromFileIndex);
+            const rankDistance = Math.abs(toRankNum - fromRankNum);
+            if (Math.max(fileDistance, rankDistance) > 1) isBlinkTeleport = true;
+          }
+        }
+        if (isCastling) {
+          if (toFile === 'g') {
+            const rank = mv.to[1];
+            const rookFrom = `h${rank}`;
+            const rookTo = `f${rank}`;
+            state.board[rookTo] = state.board[rookFrom];
+            delete (state.board as any)[rookFrom];
+          } else if (toFile === 'c') {
+            const rank = mv.to[1];
+            const rookFrom = `a${rank}`;
+            const rookTo = `d${rank}`;
+            state.board[rookTo] = state.board[rookFrom];
+            delete (state.board as any)[rookFrom];
+          }
+        } else if (isBlinkTeleport) {
+          if (!state.blinkUsed) state.blinkUsed = { white: false, black: false };
+          state.blinkUsed[piece.color] = true;
+        }
+      }
+
+      // move piece
+      state.board[mv.to] = piece;
+      delete (state.board as any)[mv.from];
+
+      // castling rights update
+      if (piece.type === 'king') {
+        if (piece.color === 'white') {
+          state.castlingRights.whiteKingside = false;
+          state.castlingRights.whiteQueenside = false;
+        } else {
+          state.castlingRights.blackKingside = false;
+          state.castlingRights.blackQueenside = false;
+        }
+      } else if (piece.type === 'rook') {
+        if (mv.from === 'a1') state.castlingRights.whiteQueenside = false;
+        else if (mv.from === 'h1') state.castlingRights.whiteKingside = false;
+        else if (mv.from === 'a8') state.castlingRights.blackQueenside = false;
+        else if (mv.from === 'h8') state.castlingRights.blackKingside = false;
+      }
+
+      // pawn specifics: en passant target and promotion and pawn-rotation tracking
+      if (piece.type === 'pawn') {
+        const fromRank = parseInt(mv.from[1]);
+        const toRank = parseInt(mv.to[1]);
+        const fromFile = mv.from[0];
+        const toFile = mv.to[0];
+        if (Array.isArray(rulesArray) && rulesArray.includes('pawn-rotation')) {
+          if (!state.pawnRotationMoves) state.pawnRotationMoves = {} as any;
+          const standardOriginalRank = piece.color === 'white' ? 2 : 7;
+          const standardOriginalSquare = `${fromFile}${standardOriginalRank}`;
+          if (Array.isArray(rulesArray) && rulesArray.includes('pawn-wall')) {
+            const pawnWallStartRank = piece.color === 'white' ? 3 : 6;
+            const wallOriginalSquare = `${fromFile}${pawnWallStartRank}`;
+            if (fromRank === standardOriginalRank) (state.pawnRotationMoves as any)[standardOriginalSquare] = true;
+            else if (fromRank === pawnWallStartRank) (state.pawnRotationMoves as any)[wallOriginalSquare] = true;
+          } else {
+            (state.pawnRotationMoves as any)[standardOriginalSquare] = true;
+          }
+        }
+        if (Math.abs(toRank - fromRank) === 2) {
+          const enPassantRank = piece.color === 'white' ? fromRank + 1 : fromRank - 1;
+          state.enPassantTarget = toFile + enPassantRank;
+        }
+        if (Array.isArray(rulesArray) && rulesArray.includes('pawn-rotation')) {
+          const fromFileIndex = fromFile.charCodeAt(0) - 'a'.charCodeAt(0);
+          const toFileIndex = toFile.charCodeAt(0) - 'a'.charCodeAt(0);
+          if (Math.abs(toFileIndex - fromFileIndex) === 2 && fromRank === toRank) {
+            const enPassantFileIndex = fromFileIndex + (toFileIndex - fromFileIndex) / 2;
+            const enPassantFile = String.fromCharCode(enPassantFileIndex + 'a'.charCodeAt(0));
+            state.enPassantTarget = enPassantFile + fromRank;
+          }
+        }
+        const shouldPromote = (piece.color === 'white' && toRank === 8) || (piece.color === 'black' && toRank === 1);
+        if (shouldPromote && mv.piece) {
+          const [, promotedPieceType] = mv.piece.split('-');
+          state.board[mv.to] = { type: promotedPieceType, color: piece.color } as any;
+        }
+      }
+
+      // counters
+      if (piece.type === 'pawn' || mv.captured) state.halfmoveClock = 0; else state.halfmoveClock++;
+      if (currentTurn === 'black') state.fullmoveNumber++;
+
+      // special rules application
+      state = applyAllSpecialRules(state as any, rulesArray as any, mv.from, mv.to, piece) as any;
+
+      // turn
+      if (Array.isArray(rulesArray) && rulesArray.includes('double-knight')) {
+        currentTurn = (state.currentTurn as any);
+      } else {
+        currentTurn = currentTurn === 'white' ? 'black' : 'white';
+        state.currentTurn = currentTurn;
+      }
+    }
+
+    // finalize check state
+    const nextTurn = state.currentTurn;
+    const check = isKingInCheck(state as any, nextTurn as any, rulesArray as any);
+    const hasMoves = hasLegalMoves(state as any, nextTurn as any, rulesArray as any);
+    state.isCheck = check;
+    state.isCheckmate = check && !hasMoves;
+    state.isStalemate = !check && !hasMoves;
+
+    return state;
+  }
   // Create a new game
   app.post("/api/games", async (req, res) => {
     try {
@@ -1056,6 +1285,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gameId = parseInt(req.params.id);
       const moves = await storage.getGameMoves(gameId);
       res.json(moves);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Undo last move
+  app.post("/api/games/:id/undo", async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      const game = await storage.getGame(gameId);
+      if (!game) return res.status(404).json({ message: "Game not found" });
+
+      // delete last move
+      const deleted = await storage.deleteLastMove(gameId);
+      if (!deleted) return res.status(400).json({ message: "No moves to undo" });
+
+      // fetch remaining moves and rebuild state
+      const remainingMoves = await storage.getGameMoves(gameId);
+      const rebuilt = await rebuildGameStateFromMoves(game as any, remainingMoves);
+      await storage.updateGameState(gameId, rebuilt);
+
+      // Update current turn explicitly from rebuilt
+      await storage.updateGameTurn(gameId, rebuilt.currentTurn);
+
+      res.json({ success: true, gameState: rebuilt, currentTurn: rebuilt.currentTurn });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
