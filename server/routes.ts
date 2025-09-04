@@ -1021,9 +1021,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateGameTurn(gameId, nextTurn);
       
       // Add the move to history
-      const move = await storage.addMove(moveData);
-
-      res.json(move);
+      // DoubleKnight: если это второй ход конём подряд, то оба хода должны быть отдельными объектами
+      // Проверяем, не был ли предыдущий ход тем же игроком и конём
+      let shouldAddMove = true;
+      if (Array.isArray(game.rules) && game.rules.includes('double-knight')) {
+        const lastMoves = await storage.getGameMoves(gameId);
+        const lastMove = lastMoves.length > 0 ? lastMoves[lastMoves.length - 1] : null;
+        if (
+          lastMove &&
+          lastMove.player === moveData.player &&
+          lastMove.piece?.includes('knight') &&
+          moveData.piece?.includes('knight') &&
+          gameState.doubleKnightMove &&
+          lastMove.to === gameState.doubleKnightMove.knightSquare
+        ) {
+          // Это второй ход DoubleKnight, оба хода должны быть в истории
+          shouldAddMove = true;
+        }
+      }
+      if (shouldAddMove) {
+        await storage.addMove(moveData);
+      }
+      // Возвращаем весь массив ходов, чтобы клиент всегда получал актуальную историю
+      const allMoves = await storage.getGameMoves(gameId);
+      res.json(allMoves[allMoves.length - 1]);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
