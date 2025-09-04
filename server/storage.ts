@@ -161,12 +161,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getGameMoves(gameId: number): Promise<Move[]> {
+    // Сортируем по уникальному id, чтобы порядок всегда был корректным
     const movesList = await db
       .select()
       .from(moves)
       .where(eq(moves.gameId, gameId))
-      .orderBy(moves.moveNumber);
-    
+      .orderBy(moves.id);
     return movesList;
   }
 
