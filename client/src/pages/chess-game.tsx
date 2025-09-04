@@ -864,6 +864,9 @@ export default function ChessGame() {
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>;
   }
 
+  // Fog of War: hide Move History for first 5 full moves
+  const fogRules = (game?.rules as any) || [];
+  const isFogOfWar = Array.isArray(fogRules) && fogRules.includes('fog-of-war') && (((game?.gameState as ChessGameState)?.fullmoveNumber ?? 1) <= 5);
   return (
   <div className="min-h-screen bg-slate-50 font-inter">
       <header className="bg-white shadow-sm border-b border-slate-200">
@@ -950,7 +953,9 @@ export default function ChessGame() {
 
           {/* Right Sidebar */}
           <div className="lg:col-span-3 space-y-6">
-            <MoveHistory moves={formatMoveHistory()} />
+              {!isFogOfWar && (
+                <MoveHistory moves={formatMoveHistory()} />
+              )}
             <CapturedPieces capturedPieces={getCapturedPieces()} />
           </div>
         </div>
