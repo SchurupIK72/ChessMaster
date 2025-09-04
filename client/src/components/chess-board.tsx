@@ -59,8 +59,10 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
     const isValidMove = validMoves.includes(square);
     const isLight = isLightSquare(file, rank);
     const isMasked = isSquareMasked(rank);
-    const isLastMoveFrom = !isMasked && lastMoveSquares?.from === square;
-    const isLastMoveTo = !isMasked && lastMoveSquares?.to === square;
+    // Own pieces should remain visible and selectable even under fog
+    const effectiveMasked = isMasked && !(piece && viewerColor && piece.color === viewerColor);
+    const isLastMoveFrom = !effectiveMasked && lastMoveSquares?.from === square;
+    const isLastMoveTo = !effectiveMasked && lastMoveSquares?.to === square;
 
     return (
       <div
@@ -71,17 +73,22 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
           isLight ? "bg-green-100" : "bg-green-700",
           "hover:bg-opacity-80",
           isSelected && "bg-blue-400 bg-opacity-60 ring-2 ring-blue-600",
-          isValidMove && !isMasked && "bg-yellow-300 bg-opacity-70",
-          !piece && isValidMove && !isMasked && "hover:bg-yellow-400 hover:bg-opacity-80",
+          isValidMove && !effectiveMasked && "bg-yellow-300 bg-opacity-70",
+          !piece && isValidMove && !effectiveMasked && "hover:bg-yellow-400 hover:bg-opacity-80",
           piece && !isSelected && isLight ? "hover:bg-green-200" : "hover:bg-green-600",
           isLastMoveFrom && "ring-4 ring-yellow-500 ring-opacity-80",
           isLastMoveTo && "ring-4 ring-orange-500 ring-opacity-80"
         )}
         onClick={() => {
-          // In fog, prevent selecting hidden squares unless it's a valid destination from an already selected piece
+          // In fog, prevent selecting hidden squares unless it's a valid destination or it's your own piece on that square
           if (isMasked) {
+            if (piece && viewerColor && piece.color === viewerColor) {
+              onSquareClick(square);
+              return;
+            }
             if (selectedSquare && isValidMove) {
               onSquareClick(square);
+              return;
             }
             return;
           }
@@ -90,14 +97,14 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
       >
         {/* Fog overlay */}
         {isMasked && (
-          <div className="absolute inset-0 bg-slate-900/40 pointer-events-none" />
+          <div className="absolute inset-0 bg-slate-900/40 pointer-events-none z-[5]" />
         )}
 
         {/* Pieces: hidden under fog */}
-        {piece && !isMasked && (
+        {piece && !effectiveMasked && (
           <span 
             className={cn(
-              "select-none font-bold",
+              "select-none font-bold relative z-[10]",
               piece.color === 'white' ? "text-white" : "text-black"
             )} 
             style={{ 
@@ -113,12 +120,12 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
             {pieceSymbols[`${piece.color}-${piece.type}`]}
           </span>
         )}
-        {isValidMove && !piece && !isMasked && (
+        {isValidMove && !piece && !effectiveMasked && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-5 h-5 bg-yellow-400 rounded-full opacity-80 shadow-lg border-2 border-yellow-600" />
           </div>
         )}
-        {isValidMove && piece && !isMasked && (
+        {isValidMove && piece && !effectiveMasked && (
           <div className="absolute inset-0 border-4 border-yellow-400 opacity-80 pointer-events-none rounded-lg shadow-lg" />
         )}
         {/* Neutral marker in fog for valid moves without revealing captures */}
