@@ -53,6 +53,39 @@ export default function ChessGame() {
 
   const chessLogic = new ChessLogic();
 
+  // Helper: compute whether Fog of War is currently active considering Double Knight pairing
+  const computeFogActive = (rules: any, movesList: Move[]): boolean => {
+    const fogRules = (rules as any) || [];
+    const hasFog = Array.isArray(fogRules) && fogRules.includes('fog-of-war');
+    if (!hasFog) return false;
+    const hasDoubleKnight = Array.isArray(fogRules) && fogRules.includes('double-knight');
+    let turns = 0;
+    let i = 0;
+    while (i < movesList.length) {
+      const m1 = movesList[i];
+      const currentPlayer = m1.player;
+      if (
+        hasDoubleKnight &&
+        i + 1 < movesList.length &&
+        movesList[i + 1].player === currentPlayer &&
+        typeof m1.piece === 'string' && m1.piece.endsWith('-knight') &&
+        typeof movesList[i + 1].piece === 'string' && movesList[i + 1].piece.endsWith('-knight') &&
+        m1.to && movesList[i + 1].from && m1.to === movesList[i + 1].from
+      ) {
+        turns += 1;
+        i += 2;
+      } else if (hasDoubleKnight && typeof m1.piece === 'string' && m1.piece.endsWith('-knight')) {
+        i += 1; // wait for second step to complete the player's turn
+      } else {
+        turns += 1;
+        i += 1;
+      }
+    }
+  // Fog remains active until 10 effective turns (i.e., through Black's 5th move);
+  // after Black's 5th move completes (turns >= 10), fog ends
+  return turns < 10;
+  };
+
   // Get current player's color
   const getCurrentPlayerColor = (): 'white' | 'black' | null => {
     if (!game) return null;
@@ -165,6 +198,7 @@ export default function ChessGame() {
   // Monitor for new moves and show notifications
   useEffect(() => {
     if (moves.length > 0) {
+      const fogActiveNow = computeFogActive(game?.rules as any, moves);
       // Подсветка последнего хода
       const lastMove = moves[moves.length - 1];
       if (lastMove && lastMove.from && lastMove.to) {
@@ -179,8 +213,8 @@ export default function ChessGame() {
         const playerId = parseInt(localStorage.getItem('playerId') || '1');
         const isMyMove = (game?.whitePlayerId === playerId && newMove.player === 'white') || 
                         (game?.blackPlayerId === playerId && newMove.player === 'black');
-        // Only show notification if it's NOT my move (opponent's move)
-        if (!isMyMove) {
+        // Only show notification if it's NOT my move and fog is not active
+        if (!isMyMove && !fogActiveNow) {
           toast({
             title: "Ход противника",
             description: `${newMove.from} → ${newMove.to}`,
@@ -866,41 +900,8 @@ export default function ChessGame() {
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>;
   }
 
-  // Fog of War: consider effective player turns (a double-knight pair counts as one turn)
-  const fogRules = (game?.rules as any) || [];
-  const hasFog = Array.isArray(fogRules) && fogRules.includes('fog-of-war');
-  const hasDoubleKnight = Array.isArray(fogRules) && fogRules.includes('double-knight');
-  const baseFogFullMoves = 5;
-  const effectiveTurns = (() => {
-    let turns = 0;
-    let i = 0;
-    while (i < moves.length) {
-      const m1 = moves[i];
-      const currentPlayer = m1.player;
-      // Try to pair as a double-knight turn if the rule is active
-      if (
-        hasDoubleKnight &&
-        i + 1 < moves.length &&
-        moves[i + 1].player === currentPlayer &&
-        typeof m1.piece === 'string' && m1.piece.endsWith('-knight') &&
-        typeof moves[i + 1].piece === 'string' && moves[i + 1].piece.endsWith('-knight') &&
-        m1.to && moves[i + 1].from && m1.to === moves[i + 1].from
-      ) {
-        turns += 1; // both steps are one player's single turn
-        i += 2;
-      } else if (hasDoubleKnight && typeof m1.piece === 'string' && m1.piece.endsWith('-knight')) {
-        // Unpaired single knight step: don't count as completed turn yet
-        i += 1;
-      } else {
-        // Any non-knight move (or when rule is off) is a single completed turn
-        turns += 1;
-        i += 1;
-      }
-    }
-    return turns;
-  })();
-  const effectiveFullMoves = Math.ceil(effectiveTurns / 2);
-  const fogActive = hasFog && effectiveFullMoves <= baseFogFullMoves;
+  // Fog of War: use the same helper for consistency across UI
+  const fogActive = computeFogActive(game?.rules as any, moves);
   return (
   <div className="min-h-screen bg-slate-50 font-inter">
       <header className="bg-white shadow-sm border-b border-slate-200">
