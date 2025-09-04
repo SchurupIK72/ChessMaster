@@ -17,6 +17,7 @@ const ruleDescriptions: Record<string, { name: string; description: string; stat
   'xray-bishop': { name: 'Рентген слон', description: 'Слон проходит сквозь фигуры', status: 'active' },
   'pawn-wall': { name: 'Стена пешек', description: 'Двойные ряды пешек на 2-3 и 6-7 линиях', status: 'active' },
   'blink': { name: 'Блинк', description: 'Король может телепортироваться раз за игру на любую пустую клетку', status: 'active' },
+  'fog-of-war': { name: 'Туман войны', description: 'Первые 5 ходов видна только своя половина доски; история ходов скрыта', status: 'active' },
 };
 
 export default function GameStatus({ game, elapsedTime, onChangeRules }: GameStatusProps) {
