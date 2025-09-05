@@ -658,29 +658,10 @@ function applyAllSpecialRules(gameState: any, rules: string[], fromSquare: strin
         newGameState = applyPawnWallRule(newGameState, fromSquare, toSquare, piece);
         break;
       case 'meteor-shower':
-  // After every 5 FULL moves: only evaluate on Black's move (the moment fullmoveNumber increments)
+  // Meteor-shower is applied at end-of-turn after fullmoveNumber increments.
+  // Here we only ensure fields exist; the actual strike happens later.
   if (!newGameState.burnedSquares) newGameState.burnedSquares = [];
-  // Keep a UI counter equal to fullmoveNumber for convenience
   newGameState.meteorCounter = newGameState.fullmoveNumber;
-  // Only trigger on Black's move to avoid duplicate firing on the subsequent White move
-  if (piece?.color === 'black' && newGameState.fullmoveNumber > 1 && (newGameState.fullmoveNumber - 1) % 5 === 0) {
-          // Collect empty, not burned squares
-          const candidates: string[] = [];
-          for (let r = 1; r <= 8; r++) {
-            for (let f = 0; f < 8; f++) {
-              const sq = String.fromCharCode('a'.charCodeAt(0) + f) + r;
-              if (!newGameState.board[sq] && !newGameState.burnedSquares.includes(sq)) {
-                candidates.push(sq);
-              }
-            }
-          }
-          if (candidates.length > 0) {
-            // Deterministic selection based on fullmoveNumber to keep rebuilds stable
-            const idx = (newGameState.fullmoveNumber * 31) % candidates.length;
-            const burnedSq = candidates[idx];
-            newGameState.burnedSquares.push(burnedSq);
-          }
-        }
         break;
       case 'standard':
         // Standard rules don't need special handling
@@ -692,6 +673,31 @@ function applyAllSpecialRules(gameState: any, rules: string[], fromSquare: strin
   }
 
   return newGameState;
+}
+
+// Trigger a meteor strike at the end of a full move if due
+function maybeTriggerMeteor(gameState: any, rules?: string[]) {
+  if (!Array.isArray(rules) || !rules.includes('meteor-shower')) return;
+  if (!gameState.burnedSquares) gameState.burnedSquares = [];
+  // Update counter to reflect current fullmoveNumber
+  gameState.meteorCounter = gameState.fullmoveNumber;
+  // Strike after every 5 full moves (i.e., after Black's move when fullmoveNumber just incremented)
+  if (gameState.fullmoveNumber > 1 && (gameState.fullmoveNumber - 1) % 5 === 0) {
+    const candidates: string[] = [];
+    for (let r = 1; r <= 8; r++) {
+      for (let f = 0; f < 8; f++) {
+        const sq = String.fromCharCode('a'.charCodeAt(0) + f) + r;
+        if (!gameState.board[sq] && !gameState.burnedSquares.includes(sq)) {
+          candidates.push(sq);
+        }
+      }
+    }
+    if (candidates.length > 0) {
+      const idx = (gameState.fullmoveNumber * 31) % candidates.length;
+      const burnedSq = candidates[idx];
+      gameState.burnedSquares.push(burnedSq);
+    }
+  }
 }
 
 function applyBlinkRule(gameState: any, fromSquare: string, toSquare: string, piece: any): any {
@@ -995,9 +1001,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // counters
       if (piece.type === 'pawn' || mv.captured) state.halfmoveClock = 0; else state.halfmoveClock++;
-      if (currentTurn === 'black') state.fullmoveNumber++;
 
-      // special rules application
+      // special rules application (no meteor strike here)
       state = applyAllSpecialRules(state as any, rulesArray as any, mv.from, mv.to, piece) as any;
 
       // turn
@@ -1006,6 +1011,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         currentTurn = currentTurn === 'white' ? 'black' : 'white';
         state.currentTurn = currentTurn;
+      }
+
+      // End-of-turn bookkeeping similar to live path
+      if (state.currentTurn === 'white') {
+        state.fullmoveNumber++;
+        maybeTriggerMeteor(state, rulesArray as any);
+      } else {
+        if (Array.isArray(rulesArray) && (rulesArray as any).includes('meteor-shower')) {
+          state.meteorCounter = state.fullmoveNumber;
+        }
       }
     }
 
@@ -1387,13 +1402,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameState.halfmoveClock++;
       }
       
-      if (game.currentTurn === 'black') {
-        gameState.fullmoveNumber++; // Increment after black's move
-      }
-      
-      // Apply all special rules in a centralized manner
+      // Apply all special rules (without meteor strike here; we trigger meteors at end-of-turn below)
       gameState = applyAllSpecialRules(gameState, game.rules as any, moveData.from, moveData.to, piece);
-      
+
       // Determine next turn (some rules like double-knight may override turn logic)
       let nextTurn: 'white' | 'black';
       if (Array.isArray(game.rules) && game.rules.includes('double-knight')) {
@@ -1403,6 +1414,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Standard rules - toggle turn normally
         nextTurn = game.currentTurn === 'white' ? 'black' : 'white';
         gameState.currentTurn = nextTurn;
+      }
+
+      // End-of-turn bookkeeping: if Black's move completed and handed turn to White, increment fullmoveNumber
+      if (nextTurn === 'white') {
+        gameState.fullmoveNumber++;
+        // Trigger meteor strike (if due) after a full move completes
+        maybeTriggerMeteor(gameState, game.rules as any);
+      } else {
+        // Keep meteorCounter in sync even mid-move
+        if (Array.isArray(game.rules) && (game.rules as any).includes('meteor-shower')) {
+          gameState.meteorCounter = gameState.fullmoveNumber;
+        }
       }
       
       // Check for check, checkmate, and stalemate
