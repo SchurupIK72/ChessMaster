@@ -658,14 +658,12 @@ function applyAllSpecialRules(gameState: any, rules: string[], fromSquare: strin
         newGameState = applyPawnWallRule(newGameState, fromSquare, toSquare, piece);
         break;
       case 'meteor-shower':
-        // After every 5 FULL moves (i.e., on black's move when fullmoveNumber increments)
-        if (!newGameState.burnedSquares) newGameState.burnedSquares = [];
-        // Keep a UI counter equal to fullmoveNumber for convenience
-        newGameState.meteorCounter = newGameState.fullmoveNumber;
-  // Trigger when completed full moves is a multiple of 5.
-  // Since fullmoveNumber increments after Black's move and denotes the next move number,
-  // completed full moves = fullmoveNumber - 1. Condition: (fullmoveNumber - 1) % 5 === 0.
-  if (newGameState.fullmoveNumber > 1 && (newGameState.fullmoveNumber - 1) % 5 === 0) {
+  // After every 5 FULL moves: only evaluate on Black's move (the moment fullmoveNumber increments)
+  if (!newGameState.burnedSquares) newGameState.burnedSquares = [];
+  // Keep a UI counter equal to fullmoveNumber for convenience
+  newGameState.meteorCounter = newGameState.fullmoveNumber;
+  // Only trigger on Black's move to avoid duplicate firing on the subsequent White move
+  if (piece?.color === 'black' && newGameState.fullmoveNumber > 1 && (newGameState.fullmoveNumber - 1) % 5 === 0) {
           // Collect empty, not burned squares
           const candidates: string[] = [];
           for (let r = 1; r <= 8; r++) {
