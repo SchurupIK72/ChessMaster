@@ -1013,8 +1013,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         state.currentTurn = currentTurn;
       }
 
-      // End-of-turn bookkeeping similar to live path
-      if (state.currentTurn === 'white') {
+  // End-of-turn bookkeeping similar to live path:
+  // increment only when previous player was black and turn handed to white
+  if (currentTurn === 'black' && state.currentTurn === 'white') {
         state.fullmoveNumber++;
         maybeTriggerMeteor(state, rulesArray as any);
       } else {
@@ -1416,8 +1417,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameState.currentTurn = nextTurn;
       }
 
-      // End-of-turn bookkeeping: if Black's move completed and handed turn to White, increment fullmoveNumber
-      if (nextTurn === 'white') {
+  // End-of-turn bookkeeping: increment only when previous player was black AND turn handed to white
+  if (game.currentTurn === 'black' && nextTurn === 'white') {
         gameState.fullmoveNumber++;
         // Trigger meteor strike (if due) after a full move completes
         maybeTriggerMeteor(gameState, game.rules as any);
