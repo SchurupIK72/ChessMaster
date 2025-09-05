@@ -85,9 +85,15 @@ export class ChessLogic {
     }
 
     // Filter out moves that would leave the king in check
-    const validMoves = moves.filter(move => {
+    let validMoves = moves.filter(move => {
       return !this.wouldBeInCheck(gameState, fromSquare, move, piece.color, gameRules);
     });
+
+    // Meteor-shower: cannot move onto burned squares
+    if (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) {
+      const burned = (gameState as any).burnedSquares || [];
+      validMoves = validMoves.filter((sq) => !burned.includes(sq));
+    }
 
     return validMoves;
   }
@@ -390,6 +396,10 @@ export class ChessLogic {
             pathClear = false;
             break;
           }
+          if ((gameState as any).burnedSquares && (gameState as any).burnedSquares.includes(sq)) {
+            pathClear = false;
+            break;
+          }
           if (this.isSquareUnderAttack(gameState, sq, piece.color, gameRules)) {
             safeSquares = false;
             break;
@@ -415,6 +425,10 @@ export class ChessLogic {
         for (const file of pathFiles) {
           const sq = `${file}${backRank}`;
           if (gameState.board[sq]) {
+            pathClear = false;
+            break;
+          }
+          if ((gameState as any).burnedSquares && (gameState as any).burnedSquares.includes(sq)) {
             pathClear = false;
             break;
           }
@@ -493,6 +507,10 @@ export class ChessLogic {
 
     while (newFileIndex >= 0 && newFileIndex < 8 && newRankNum >= 1 && newRankNum <= 8) {
       const newSquare = `${String.fromCharCode(newFileIndex + 'a'.charCodeAt(0))}${newRankNum}`;
+      // Meteor-shower: burned squares block sliding movement
+      if ((gameState as any).burnedSquares && (gameState as any).burnedSquares.includes(newSquare)) {
+        break;
+      }
       const target = gameState.board[newSquare];
 
       if (!target) {
@@ -530,6 +548,10 @@ export class ChessLogic {
 
     while (newFileIndex >= 0 && newFileIndex < 8 && newRankNum >= 1 && newRankNum <= 8) {
       const newSquare = `${String.fromCharCode(newFileIndex + 'a'.charCodeAt(0))}${newRankNum}`;
+      // Meteor-shower: burned squares block even xray movement
+      if ((gameState as any).burnedSquares && (gameState as any).burnedSquares.includes(newSquare)) {
+        break;
+      }
       const target = gameState.board[newSquare];
 
       if (!target) {
@@ -607,15 +629,15 @@ export class ChessLogic {
     // Get moves without checking if they leave the king in check
     switch (piece.type) {
       case 'pawn':
-        return this.getPawnMoves(gameState, fromSquare, piece, gameRules);
+  return this.getPawnMoves(gameState, fromSquare, piece, gameRules);
       case 'rook':
         return this.getRookMoves(gameState, fromSquare, piece);
       case 'knight':
         return this.getKnightMoves(gameState, fromSquare, piece);
       case 'bishop':
-        return this.getBishopMoves(gameState, fromSquare, piece, gameRules);
+  return this.getBishopMoves(gameState, fromSquare, piece, gameRules);
       case 'queen':
-        return this.getQueenMoves(gameState, fromSquare, piece, gameRules);
+  return this.getQueenMoves(gameState, fromSquare, piece, gameRules);
       case 'king':
         // For king, we need to get basic moves without castling to avoid infinite recursion
         const moves: string[] = [];

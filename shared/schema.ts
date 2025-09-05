@@ -109,6 +109,10 @@ export type ChessGameState = {
   isCheck: boolean;
   isCheckmate: boolean;
   isStalemate: boolean;
+  // Meteor shower rule — list of permanently burned squares (cannot be occupied or crossed)
+  burnedSquares?: string[];
+  // Counter of half-moves since last meteor strike (increments each move when rule is active)
+  meteorCounter?: number;
   // For double knight rule
   doubleKnightMove?: {
     knightSquare: string;
@@ -125,5 +129,5 @@ export type ChessGameState = {
   };
 };
 
-export type GameRules = 'standard' | 'double-knight' | 'pawn-rotation' | 'xray-bishop' | 'pawn-wall' | 'blink' | 'fog-of-war';
+export type GameRules = 'standard' | 'double-knight' | 'pawn-rotation' | 'xray-bishop' | 'pawn-wall' | 'blink' | 'fog-of-war' | 'meteor-shower';
 export type GameRulesArray = GameRules[];

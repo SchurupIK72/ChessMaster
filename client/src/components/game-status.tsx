@@ -18,6 +18,7 @@ const ruleDescriptions: Record<string, { name: string; description: string; stat
   'pawn-wall': { name: 'Стена пешек', description: 'Двойные ряды пешек на 2-3 и 6-7 линиях', status: 'active' },
   'blink': { name: 'Блинк', description: 'Король может телепортироваться раз за игру на любую пустую клетку', status: 'active' },
   'fog-of-war': { name: 'Туман войны', description: 'Первые 5 ходов видна только своя половина доски; история ходов скрыта', status: 'active' },
+  'meteor-shower': { name: 'Метеоритный дождь', description: 'Каждые 5 ходов случайная пустая клетка сгорает и становится недоступной', status: 'active' },
 };
 
 export default function GameStatus({ game, elapsedTime, onChangeRules }: GameStatusProps) {
@@ -84,6 +85,30 @@ export default function GameStatus({ game, elapsedTime, onChangeRules }: GameSta
                           </div>
                         </div>
                         <div className="w-3 h-3 bg-green-600 rounded-full" />
+                      </div>
+                    </div>
+                  );
+                }
+                // Special handling for Meteor Shower to show burned squares and next strike
+                if (ruleKey === 'meteor-shower' && rule) {
+                  const burned = gameState?.burnedSquares || [];
+                  const meteorCounter = gameState?.meteorCounter ?? 1; // mirrors fullmoveNumber
+                  // Strikes after 5 full moves: when (fullmoveNumber - 1) % 5 === 0
+                  const completed = Math.max(0, meteorCounter - 1);
+                  const mod = completed % 5;
+                  const movesUntilNext = (5 - mod) % 5 || 5;
+                  return (
+                    <div key={ruleKey} className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-orange-800">{rule.name}</p>
+                          <p className="text-sm text-orange-700">{rule.description}</p>
+                          <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                            <span className="px-2 py-1 rounded bg-orange-100 text-orange-800">Сгоревшие клетки: {burned.length}</span>
+                              <span className="px-2 py-1 rounded bg-orange-100 text-orange-800">До следующего метеора (полных ходов): <span className="font-semibold">{movesUntilNext}</span></span>
+                          </div>
+                        </div>
+                        <div className="w-3 h-3 bg-orange-600 rounded-full" />
                       </div>
                     </div>
                   );

@@ -90,6 +90,11 @@ function isValidCastlingMove(
   }
   for (const sq of betweenSquares) {
     if (gameState.board[sq]) return false;
+    // Cannot castle through burned squares in meteor-shower mode
+    if (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) {
+      const burned: string[] = gameState.burnedSquares || [];
+      if (burned.includes(sq)) return false;
+    }
   }
 
   // King cannot be in check, pass through check, or end in check
@@ -97,6 +102,10 @@ function isValidCastlingMove(
                                         : [`e${backRank}`, `d${backRank}`, `c${backRank}`];
   for (const sq of passThroughSquares) {
     if (isSquareUnderAttack(gameState, sq, color, gameRules)) return false;
+    if (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) {
+      const burned: string[] = gameState.burnedSquares || [];
+      if (burned.includes(sq)) return false;
+    }
   }
 
   return true;
@@ -214,7 +223,17 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
       // One square forward
       const oneForward = `${fromFile}${fromRankNum + direction}`;
       if (fromRankNum + direction >= 1 && fromRankNum + direction <= 8 && !gameState.board[oneForward]) {
-        moves.push(oneForward);
+        // Meteor-shower: cannot step onto burned squares
+        if (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) {
+          const burned: string[] = gameState.burnedSquares || [];
+          if (burned.includes(oneForward)) {
+            // cannot move forward onto burned square
+          } else {
+            moves.push(oneForward);
+          }
+        } else {
+          moves.push(oneForward);
+        }
         
         // Two squares forward from starting position (only if pawn hasn't moved)
         let canDoubleMoveForward = fromRankNum === startRank;
@@ -233,7 +252,15 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
         if (canDoubleMoveForward) {
           const twoForward = `${fromFile}${fromRankNum + 2 * direction}`;
           if (!gameState.board[twoForward]) {
-            moves.push(twoForward);
+            // Meteor-shower: intermediate and target must not be burned
+            if (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) {
+              const burned: string[] = gameState.burnedSquares || [];
+              if (!burned.includes(oneForward) && !burned.includes(twoForward)) {
+                moves.push(twoForward);
+              }
+            } else {
+              moves.push(twoForward);
+            }
           }
         }
       }
@@ -268,7 +295,10 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
             const targetPiece = gameState.board[horizontalSquare];
             
             if (!targetPiece) {
-              moves.push(horizontalSquare);
+              // Meteor-shower: cannot move onto burned squares
+              if (!(Array.isArray(gameRules) && gameRules.includes('meteor-shower') && (gameState.burnedSquares || []).includes(horizontalSquare))) {
+                moves.push(horizontalSquare);
+              }
               
               // Allow 2-square horizontal move (always available in PawnRotation mode)
               const newFile2 = String.fromCharCode(fromFileIndex + 2 * dx + 'a'.charCodeAt(0));
@@ -276,7 +306,11 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
                 const horizontalSquare2 = `${newFile2}${fromRankNum}`;
                 const targetPiece2 = gameState.board[horizontalSquare2];
                 if (!targetPiece2) {
-                  moves.push(horizontalSquare2);
+                  // Meteor-shower: intermediate and target must not be burned
+                  const burned: string[] = (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) ? (gameState.burnedSquares || []) : [];
+                  if (!(burned.includes(horizontalSquare) || burned.includes(horizontalSquare2))) {
+                    moves.push(horizontalSquare2);
+                  }
                 }
               }
             }
@@ -310,6 +344,11 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
           if (newFile < 0 || newFile >= 8 || newRank < 1 || newRank > 8) break;
           
           const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
+          // Meteor-shower: burned squares are impassable
+          if (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) {
+            const burned: string[] = gameState.burnedSquares || [];
+            if (burned.includes(newSquare)) break;
+          }
           const targetPiece = gameState.board[newSquare];
           
           if (!targetPiece) {
@@ -336,6 +375,11 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
           if (newFile < 0 || newFile >= 8 || newRank < 1 || newRank > 8) break;
           
           const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
+          // Meteor-shower: burned squares are impassable
+          if (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) {
+            const burned: string[] = gameState.burnedSquares || [];
+            if (burned.includes(newSquare)) break;
+          }
           const targetPiece = gameState.board[newSquare];
           
           if (!targetPiece) {
@@ -378,6 +422,11 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
           if (newFile < 0 || newFile >= 8 || newRank < 1 || newRank > 8) break;
           
           const newSquare = `${String.fromCharCode(newFile + 'a'.charCodeAt(0))}${newRank}`;
+          // Meteor-shower: burned squares are impassable
+          if (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) {
+            const burned: string[] = gameState.burnedSquares || [];
+            if (burned.includes(newSquare)) break;
+          }
           const targetPiece = gameState.board[newSquare];
           
           if (!targetPiece) {
@@ -451,11 +500,21 @@ function getPossibleMoves(gameState: any, fromSquare: string, piece: any, gameRu
       }
       break;
   }
-  
-  return moves;
+  // Filter out moves that land on burned squares (meteor-shower)
+  let result = moves;
+  if (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) {
+    const burned: string[] = gameState.burnedSquares || [];
+    result = moves.filter((sq) => !burned.includes(sq));
+  }
+  return result;
 }
 
 function isMoveLegal(gameState: any, fromSquare: string, toSquare: string, color: 'white' | 'black', gameRules?: string[]): boolean {
+  // Meteor-shower: cannot move to burned squares
+  if (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) {
+    const burned: string[] = gameState.burnedSquares || [];
+    if (burned.includes(toSquare)) return false;
+  }
   // Double knight rule: special logic for first move
   if (Array.isArray(gameRules) && gameRules.includes('double-knight')) {
     // Первый ход конём
@@ -597,6 +656,33 @@ function applyAllSpecialRules(gameState: any, rules: string[], fromSquare: strin
         break;
       case 'pawn-wall':
         newGameState = applyPawnWallRule(newGameState, fromSquare, toSquare, piece);
+        break;
+      case 'meteor-shower':
+        // After every 5 FULL moves (i.e., on black's move when fullmoveNumber increments)
+        if (!newGameState.burnedSquares) newGameState.burnedSquares = [];
+        // Keep a UI counter equal to fullmoveNumber for convenience
+        newGameState.meteorCounter = newGameState.fullmoveNumber;
+  // Trigger when completed full moves is a multiple of 5.
+  // Since fullmoveNumber increments after Black's move and denotes the next move number,
+  // completed full moves = fullmoveNumber - 1. Condition: (fullmoveNumber - 1) % 5 === 0.
+  if (newGameState.fullmoveNumber > 1 && (newGameState.fullmoveNumber - 1) % 5 === 0) {
+          // Collect empty, not burned squares
+          const candidates: string[] = [];
+          for (let r = 1; r <= 8; r++) {
+            for (let f = 0; f < 8; f++) {
+              const sq = String.fromCharCode('a'.charCodeAt(0) + f) + r;
+              if (!newGameState.board[sq] && !newGameState.burnedSquares.includes(sq)) {
+                candidates.push(sq);
+              }
+            }
+          }
+          if (candidates.length > 0) {
+            // Deterministic selection based on fullmoveNumber to keep rebuilds stable
+            const idx = (newGameState.fullmoveNumber * 31) % candidates.length;
+            const burnedSq = candidates[idx];
+            newGameState.burnedSquares.push(burnedSq);
+          }
+        }
         break;
       case 'standard':
         // Standard rules don't need special handling
@@ -769,6 +855,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       isCheck: false,
       isCheckmate: false,
       isStalemate: false,
+  burnedSquares: [],
+  meteorCounter: 0,
       doubleKnightMove: null,
       pawnRotationMoves: {},
       blinkUsed: { white: false, black: false }

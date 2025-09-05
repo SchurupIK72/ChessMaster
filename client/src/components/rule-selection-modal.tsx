@@ -56,6 +56,13 @@ const availableRules = [
     badges: ['Секретность', 'Адаптивность'],
     badgeColors: ['bg-slate-100 text-slate-800', 'bg-amber-100 text-amber-800'],
   },
+  {
+    id: 'meteor-shower' as GameRules,
+    name: 'Метеоритный Дождь',
+    description: 'Каждые 5 ходов случайная пустая клетка сгорает и блокируется до конца игры',
+    badges: ['Хаос', 'Опасность'],
+    badgeColors: ['bg-orange-100 text-orange-800', 'bg-red-100 text-red-800'],
+  },
 ];
 
 export default function RuleSelectionModal({ open, onOpenChange, onRuleSelect }: RuleSelectionModalProps) {

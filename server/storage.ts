@@ -244,7 +244,8 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    return {
+    // Return complete initial state
+    const state: ChessGameState = {
       board: initialBoard,
       currentTurn: 'white',
       castlingRights: {
@@ -259,13 +260,18 @@ export class DatabaseStorage implements IStorage {
       isCheck: false,
       isCheckmate: false,
       isStalemate: false,
+      burnedSquares: [],
+      meteorCounter: 0,
       doubleKnightMove: null,
       pawnRotationMoves: {},
       blinkUsed: {
         white: false,
         black: false,
       },
-    };
+    } as any;
+
+    // If meteor rule not active, fields are harmless; keep defaults
+    return state;
   }
 
   async offerDraw(id: number, player: 'white' | 'black'): Promise<Game> {
