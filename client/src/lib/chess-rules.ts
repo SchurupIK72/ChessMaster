@@ -88,41 +88,44 @@ export class ChessRules {
 
 
   static getInitialPosition(rules: GameRulesArray): { [square: string]: any } {
-    // Base chess starting position
-    const position: { [square: string]: any } = {
-      'a8': { type: 'rook', color: 'black' },
-      'b8': { type: 'knight', color: 'black' },
-      'c8': { type: 'bishop', color: 'black' },
-      'd8': { type: 'queen', color: 'black' },
-      'e8': { type: 'king', color: 'black' },
-      'f8': { type: 'bishop', color: 'black' },
-      'g8': { type: 'knight', color: 'black' },
-      'h8': { type: 'rook', color: 'black' },
-      'a7': { type: 'pawn', color: 'black' },
-      'b7': { type: 'pawn', color: 'black' },
-      'c7': { type: 'pawn', color: 'black' },
-      'd7': { type: 'pawn', color: 'black' },
-      'e7': { type: 'pawn', color: 'black' },
-      'f7': { type: 'pawn', color: 'black' },
-      'g7': { type: 'pawn', color: 'black' },
-      'h7': { type: 'pawn', color: 'black' },
-      'a2': { type: 'pawn', color: 'white' },
-      'b2': { type: 'pawn', color: 'white' },
-      'c2': { type: 'pawn', color: 'white' },
-      'd2': { type: 'pawn', color: 'white' },
-      'e2': { type: 'pawn', color: 'white' },
-      'f2': { type: 'pawn', color: 'white' },
-      'g2': { type: 'pawn', color: 'white' },
-      'h2': { type: 'pawn', color: 'white' },
-      'a1': { type: 'rook', color: 'white' },
-      'b1': { type: 'knight', color: 'white' },
-      'c1': { type: 'bishop', color: 'white' },
-      'd1': { type: 'queen', color: 'white' },
-      'e1': { type: 'king', color: 'white' },
-      'f1': { type: 'bishop', color: 'white' },
-      'g1': { type: 'knight', color: 'white' },
-      'h1': { type: 'rook', color: 'white' },
+    const position: { [square: string]: any } = {};
+    const files = ['a','b','c','d','e','f','g','h'];
+
+    const useFischer = rules.includes('fischer-random');
+    const generateFischerBackRank = (): Array<'rook'|'knight'|'bishop'|'queen'|'king'> => {
+      const even = [0,2,4,6];
+      const odd = [1,3,5,7];
+      const pick = (arr: number[]) => arr.splice(Math.floor(Math.random()*arr.length),1)[0];
+      const pos: any[] = new Array(8).fill(null);
+      const remaining = [0,1,2,3,4,5,6,7];
+      const b1 = pick(even);
+      remaining.splice(remaining.indexOf(b1),1);
+      pos[b1] = 'bishop';
+      const b2 = pick(odd);
+      remaining.splice(remaining.indexOf(b2),1);
+      pos[b2] = 'bishop';
+      const q = pick(remaining);
+      pos[q] = 'queen';
+      const n1 = pick(remaining);
+      pos[n1] = 'knight';
+      const n2 = pick(remaining);
+      pos[n2] = 'knight';
+      remaining.sort((a,b)=>a-b);
+      const [rL,k,rR] = remaining;
+      pos[rL] = 'rook'; pos[k] = 'king'; pos[rR] = 'rook';
+      return pos as any;
     };
+
+    const backRank = useFischer
+      ? generateFischerBackRank()
+      : ['rook','knight','bishop','queen','king','bishop','knight','rook'];
+
+    files.forEach((f,i)=>{
+      position[`${f}1`] = { type: backRank[i], color: 'white' };
+      position[`${f}8`] = { type: backRank[i], color: 'black' };
+      position[`${f}2`] = { type: 'pawn', color: 'white' };
+      position[`${f}7`] = { type: 'pawn', color: 'black' };
+    });
 
     // Add pawn wall modification
     if (rules.includes('pawn-wall')) {
@@ -147,6 +150,6 @@ export class ChessRules {
       position['h6'] = { type: 'pawn', color: 'black' };
     }
 
-    return position;
+  return position;
   }
 }

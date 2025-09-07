@@ -15,6 +15,13 @@ interface RuleSelectionModalProps {
 
 const availableRules = [
   {
+    id: 'fischer-random' as GameRules,
+    name: 'Шахматы Фишера (Chess960)',
+    description: 'Случайная расстановка фигур на 1-й и 8-й горизонталях при сохранении правил (слоны на разном цвете, король между ладьями)',
+    badges: ['Старт', 'Случайность'],
+    badgeColors: ['bg-emerald-100 text-emerald-800', 'bg-amber-100 text-amber-800'],
+  },
+  {
     id: 'double-knight' as GameRules,
     name: 'Двойной Конь',
     description: 'После хода конем нужно сделать второй ход тем же конем',

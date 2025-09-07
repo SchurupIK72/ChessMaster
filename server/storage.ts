@@ -201,59 +201,90 @@ export class DatabaseStorage implements IStorage {
 
   private getInitialGameState(rules: GameRulesArray): ChessGameState {
     const initialBoard: { [square: string]: ChessPiece | null } = {};
-    
-    // Standard initial position
-    const standardSetup: { [key: string]: ChessPiece } = {
-      'a1': { type: 'rook', color: 'white' },
-      'b1': { type: 'knight', color: 'white' },
-      'c1': { type: 'bishop', color: 'white' },
-      'd1': { type: 'queen', color: 'white' },
-      'e1': { type: 'king', color: 'white' },
-      'f1': { type: 'bishop', color: 'white' },
-      'g1': { type: 'knight', color: 'white' },
-      'h1': { type: 'rook', color: 'white' },
-      'a8': { type: 'rook', color: 'black' },
-      'b8': { type: 'knight', color: 'black' },
-      'c8': { type: 'bishop', color: 'black' },
-      'd8': { type: 'queen', color: 'black' },
-      'e8': { type: 'king', color: 'black' },
-      'f8': { type: 'bishop', color: 'black' },
-      'g8': { type: 'knight', color: 'black' },
-      'h8': { type: 'rook', color: 'black' },
+
+    const files: string[] = ['a','b','c','d','e','f','g','h'];
+
+    // Helper: generate Fischer Random (Chess960) back rank order
+    const generateFischerBackRank = (): ChessPiece['type'][] => {
+      // indices 0..7 for files a..h
+      const evenSquares = [0,2,4,6];
+      const oddSquares = [1,3,5,7];
+      const pick = (arr: number[]) => {
+        const i = Math.floor(Math.random() * arr.length);
+        return arr.splice(i, 1)[0];
+      };
+
+      const positions: (ChessPiece['type'] | null)[] = new Array(8).fill(null);
+      const remaining: number[] = [0,1,2,3,4,5,6,7];
+
+      // Place bishops on opposite colors
+      const b1 = pick(evenSquares.slice()); // pick from copy to choose index, then remove from remaining
+      // remove b1 from remaining
+      remaining.splice(remaining.indexOf(b1), 1);
+      positions[b1] = 'bishop';
+      const oddPool = oddSquares.slice();
+      const b2 = pick(oddPool);
+      remaining.splice(remaining.indexOf(b2), 1);
+      positions[b2] = 'bishop';
+
+      // Place queen on random remaining
+      const qIndex = remaining.splice(Math.floor(Math.random() * remaining.length), 1)[0];
+      positions[qIndex] = 'queen';
+
+      // Place two knights on two random remaining
+      const nIndex1 = remaining.splice(Math.floor(Math.random() * remaining.length), 1)[0];
+      positions[nIndex1] = 'knight';
+      const nIndex2 = remaining.splice(Math.floor(Math.random() * remaining.length), 1)[0];
+      positions[nIndex2] = 'knight';
+
+      // Remaining three squares are for R, K, R with K in the middle
+      remaining.sort((a,b)=>a-b);
+      const [rLeft, kIdx, rRight] = remaining; // kIdx is middle after sort
+      positions[rLeft] = 'rook';
+      positions[kIdx] = 'king';
+      positions[rRight] = 'rook';
+
+      return positions as ChessPiece['type'][];
     };
 
-    // Add pawns
-    for (let file = 'a'; file <= 'h'; file = String.fromCharCode(file.charCodeAt(0) + 1)) {
-      standardSetup[`${file}2`] = { type: 'pawn', color: 'white' };
-      standardSetup[`${file}7`] = { type: 'pawn', color: 'black' };
+    const useFischer = rules.includes('fischer-random');
+
+    // Build pieces for rank 1 and 8
+    let backRankTypes: ChessPiece['type'][];
+    if (useFischer) {
+      backRankTypes = generateFischerBackRank();
+    } else {
+      backRankTypes = ['rook','knight','bishop','queen','king','bishop','knight','rook'];
     }
 
-    // Apply pawn wall rule if enabled
+    // Place back ranks
+    files.forEach((file, idx) => {
+      const t = backRankTypes[idx];
+      initialBoard[`${file}1`] = { type: t, color: 'white' };
+      initialBoard[`${file}8`] = { type: t, color: 'black' };
+    });
+
+    // Pawns
+    files.forEach(file => {
+      initialBoard[`${file}2`] = { type: 'pawn', color: 'white' };
+      initialBoard[`${file}7`] = { type: 'pawn', color: 'black' };
+    });
+
+    // Pawn wall extra rows
     if (rules.includes('pawn-wall')) {
-      for (let file = 'a'; file <= 'h'; file = String.fromCharCode(file.charCodeAt(0) + 1)) {
-        standardSetup[`${file}3`] = { type: 'pawn', color: 'white' };
-        standardSetup[`${file}6`] = { type: 'pawn', color: 'black' };
-      }
-    }
-
-    // Initialize all squares
-    for (let rank = 1; rank <= 8; rank++) {
-      for (let file = 'a'; file <= 'h'; file = String.fromCharCode(file.charCodeAt(0) + 1)) {
-        const square = `${file}${rank}`;
-        initialBoard[square] = standardSetup[square] || null;
-      }
+      files.forEach(file => {
+        initialBoard[`${file}3`] = { type: 'pawn', color: 'white' };
+        initialBoard[`${file}6`] = { type: 'pawn', color: 'black' };
+      });
     }
 
     // Return complete initial state
     const state: ChessGameState = {
       board: initialBoard,
       currentTurn: 'white',
-      castlingRights: {
-        whiteKingside: true,
-        whiteQueenside: true,
-        blackKingside: true,
-        blackQueenside: true,
-      },
+      castlingRights: useFischer
+        ? { whiteKingside: false, whiteQueenside: false, blackKingside: false, blackQueenside: false }
+        : { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true },
       enPassantTarget: null,
       halfmoveClock: 0,
       fullmoveNumber: 1,

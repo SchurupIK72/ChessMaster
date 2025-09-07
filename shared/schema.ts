@@ -129,5 +129,5 @@ export type ChessGameState = {
   };
 };
 
-export type GameRules = 'standard' | 'double-knight' | 'pawn-rotation' | 'xray-bishop' | 'pawn-wall' | 'blink' | 'fog-of-war' | 'meteor-shower';
+export type GameRules = 'standard' | 'double-knight' | 'pawn-rotation' | 'xray-bishop' | 'pawn-wall' | 'blink' | 'fog-of-war' | 'meteor-shower' | 'fischer-random';
 export type GameRulesArray = GameRules[];
