@@ -257,7 +257,7 @@ export class DatabaseStorage implements IStorage {
       backRankTypes = ['rook','knight','bishop','queen','king','bishop','knight','rook'];
     }
 
-    // Place back ranks
+  // Place back ranks
     files.forEach((file, idx) => {
       const t = backRankTypes[idx];
       initialBoard[`${file}1`] = { type: t, color: 'white' };
@@ -278,13 +278,40 @@ export class DatabaseStorage implements IStorage {
       });
     }
 
+    // Compute castling rook mapping for Chess960
+    let castlingRooks: ChessGameState['castlingRooks'] | undefined = undefined;
+    let rights = { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true } as ChessGameState['castlingRights'];
+    if (useFischer) {
+      const whiteKingIdx = backRankTypes.findIndex(t => t === 'king');
+      const whiteLeftRookIdx = [...backRankTypes].slice(0, whiteKingIdx).lastIndexOf('rook');
+      const whiteRightRookIdx = [...backRankTypes].slice(whiteKingIdx + 1).indexOf('rook');
+      const wQueenRook = whiteLeftRookIdx >= 0 ? `${files[whiteLeftRookIdx]}1` : null;
+      const wKingRook = whiteRightRookIdx >= 0 ? `${files[whiteKingIdx + 1 + whiteRightRookIdx]}1` : null;
+
+      const blackKingIdx = backRankTypes.findIndex(t => t === 'king');
+      const blackLeftRookIdx = [...backRankTypes].slice(0, blackKingIdx).lastIndexOf('rook');
+      const blackRightRookIdx = [...backRankTypes].slice(blackKingIdx + 1).indexOf('rook');
+      const bQueenRook = blackLeftRookIdx >= 0 ? `${files[blackLeftRookIdx]}8` : null;
+      const bKingRook = blackRightRookIdx >= 0 ? `${files[blackKingIdx + 1 + blackRightRookIdx]}8` : null;
+
+      castlingRooks = {
+        white: { kingSide: wKingRook, queenSide: wQueenRook },
+        black: { kingSide: bKingRook, queenSide: bQueenRook },
+      };
+      rights = {
+        whiteKingside: !!wKingRook,
+        whiteQueenside: !!wQueenRook,
+        blackKingside: !!bKingRook,
+        blackQueenside: !!bQueenRook,
+      };
+    }
+
     // Return complete initial state
     const state: ChessGameState = {
       board: initialBoard,
       currentTurn: 'white',
-      castlingRights: useFischer
-        ? { whiteKingside: false, whiteQueenside: false, blackKingside: false, blackQueenside: false }
-        : { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true },
+      castlingRights: useFischer ? rights : { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true },
+      castlingRooks,
       enPassantTarget: null,
       halfmoveClock: 0,
       fullmoveNumber: 1,

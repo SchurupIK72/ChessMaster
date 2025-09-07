@@ -45,7 +45,7 @@ function isSquareUnderAttack(gameState: any, square: string, color: 'white' | 'b
   return false;
 }
 
-// Robust castling validator: requires rights, clear path, rook present, and no pass-through check
+// Robust castling validator (Standard + Chess960): requires rights, clear path, rook present, and no pass-through check
 function isValidCastlingMove(
   gameState: any,
   piece: any,
@@ -57,8 +57,13 @@ function isValidCastlingMove(
 
   const color: 'white' | 'black' = piece.color;
   const backRank = color === 'white' ? '1' : '8';
-  // King must start on e-file back rank
-  if (fromSquare !== `e${backRank}`) return false;
+  const isFischer = Array.isArray(gameRules) && gameRules.includes('fischer-random');
+  // King must start on back rank (any file in Chess960, e-file in standard)
+  if (!isFischer) {
+    if (fromSquare !== `e${backRank}`) return false;
+  } else {
+    if (fromSquare[1] !== backRank) return false;
+  }
 
   const toFile = toSquare[0];
   const toRank = toSquare[1];
@@ -75,22 +80,52 @@ function isValidCastlingMove(
     : (isKingSide ? 'blackKingside' : 'blackQueenside')) as
     'whiteKingside' | 'whiteQueenside' | 'blackKingside' | 'blackQueenside';
   if (!gameState.castlingRights || !gameState.castlingRights[rightsKey]) return false;
-
-  const rookSquare = (isKingSide ? `h${backRank}` : `a${backRank}`);
+  // Determine rook square (Chess960-aware)
+  let rookSquare = (isKingSide ? `h${backRank}` : `a${backRank}`);
+  if (isFischer && gameState.castlingRooks) {
+    const side = isKingSide ? 'kingSide' : 'queenSide';
+    const mapped = gameState.castlingRooks[color]?.[side];
+    if (!mapped) return false;
+    rookSquare = mapped;
+  }
   const rook = gameState.board[rookSquare];
   if (!rook || rook.type !== 'rook' || rook.color !== color) return false;
 
-  // Path between king and rook must be empty
-  const betweenSquares: string[] = [];
-  if (isKingSide) {
-    betweenSquares.push(`f${backRank}`, `g${backRank}`);
-  } else {
-    // For queenside, squares between rook and king must be empty: b, c, d
-    betweenSquares.push(`b${backRank}`, `c${backRank}`, `d${backRank}`);
+  // Helper to iterate squares horizontally from A to B (exclusive of from, inclusive of to)
+  const fileIdx = (f: string) => f.charCodeAt(0) - 'a'.charCodeAt(0);
+  const chFromFile = fromSquare[0];
+  const chToFile = toSquare[0];
+  const step = fileIdx(chToFile) > fileIdx(chFromFile) ? 1 : -1;
+  const kingPath: string[] = [];
+  for (let x = fileIdx(chFromFile) + step; x !== fileIdx(chToFile) + step; x += step) {
+    const f = String.fromCharCode('a'.charCodeAt(0) + x);
+    const sq = `${f}${backRank}`;
+    kingPath.push(sq);
+    if (f === chToFile) break;
   }
-  for (const sq of betweenSquares) {
-    if (gameState.board[sq]) return false;
-    // Cannot castle through burned squares in meteor-shower mode
+  // Squares the king passes through include its final square and intermediates; starting square handled in attack check below
+  // King path must be empty, except it may pass the rook square in Chess960
+  for (const sq of kingPath) {
+    if (sq !== rookSquare && gameState.board[sq]) return false;
+    if (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) {
+      const burned: string[] = gameState.burnedSquares || [];
+      if (burned.includes(sq)) return false;
+    }
+  }
+
+  // Rook path emptiness (from rookSquare to its final square: f-file for kingside, d-file for queenside)
+  const rookTargetFile = isKingSide ? 'f' : 'd';
+  const rookStep = fileIdx(rookTargetFile) > fileIdx(rookSquare[0]) ? 1 : -1;
+  const rookPath: string[] = [];
+  for (let x = fileIdx(rookSquare[0]) + rookStep; x !== fileIdx(rookTargetFile) + rookStep; x += rookStep) {
+    const f = String.fromCharCode('a'.charCodeAt(0) + x);
+    const sq = `${f}${backRank}`;
+    rookPath.push(sq);
+    if (f === rookTargetFile) break;
+  }
+  for (const sq of rookPath) {
+    // Allow king's starting square to be on rook path; allow rook's own square (already excluded as we start after it)
+    if (sq !== fromSquare && gameState.board[sq]) return false;
     if (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) {
       const burned: string[] = gameState.burnedSquares || [];
       if (burned.includes(sq)) return false;
@@ -98,8 +133,16 @@ function isValidCastlingMove(
   }
 
   // King cannot be in check, pass through check, or end in check
-  const passThroughSquares = isKingSide ? [`e${backRank}`, `f${backRank}`, `g${backRank}`]
-                                        : [`e${backRank}`, `d${backRank}`, `c${backRank}`];
+  // Build pass-through squares dynamically from king start to target (including start and final)
+  const passThroughSquares: string[] = [];
+  const startFIdx = fileIdx(chFromFile);
+  const endFIdx = fileIdx(chToFile);
+  const kStep = endFIdx > startFIdx ? 1 : -1;
+  for (let x = startFIdx; x !== endFIdx + kStep; x += kStep) {
+    const f = String.fromCharCode('a'.charCodeAt(0) + x);
+    passThroughSquares.push(`${f}${backRank}`);
+    if (f === chToFile) break;
+  }
   for (const sq of passThroughSquares) {
     if (isSquareUnderAttack(gameState, sq, color, gameRules)) return false;
     if (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) {
@@ -985,19 +1028,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         if (isCastling) {
-          if (toFile === 'g') {
-            const rank = mv.to[1];
-            const rookFrom = `h${rank}`;
-            const rookTo = `f${rank}`;
-            state.board[rookTo] = state.board[rookFrom];
-            delete (state.board as any)[rookFrom];
-          } else if (toFile === 'c') {
-            const rank = mv.to[1];
-            const rookFrom = `a${rank}`;
-            const rookTo = `d${rank}`;
-            state.board[rookTo] = state.board[rookFrom];
-            delete (state.board as any)[rookFrom];
+          const rank = mv.to[1];
+          const isKingSide = toFile === 'g';
+          const rookTo = `${isKingSide ? 'f' : 'd'}${rank}`;
+          let rookFrom = `${isKingSide ? 'h' : 'a'}${rank}`;
+          const isFischer = Array.isArray(rulesArray) && (rulesArray as any).includes('fischer-random');
+          if (isFischer && state.castlingRooks) {
+            const side = isKingSide ? 'kingSide' : 'queenSide';
+            const mapped = state.castlingRooks[piece.color]?.[side];
+            if (mapped) rookFrom = mapped;
           }
+          state.board[rookTo] = state.board[rookFrom];
+          delete (state.board as any)[rookFrom];
         } else if (isBlinkTeleport) {
           if (!state.blinkUsed) state.blinkUsed = { white: false, black: false };
           state.blinkUsed[piece.color] = true;
@@ -1018,10 +1060,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           state.castlingRights.blackQueenside = false;
         }
       } else if (piece.type === 'rook') {
-        if (mv.from === 'a1') state.castlingRights.whiteQueenside = false;
-        else if (mv.from === 'h1') state.castlingRights.whiteKingside = false;
-        else if (mv.from === 'a8') state.castlingRights.blackQueenside = false;
-        else if (mv.from === 'h8') state.castlingRights.blackKingside = false;
+        const cr = state.castlingRooks;
+        if (cr) {
+          if (mv.from === cr.white?.queenSide) state.castlingRights.whiteQueenside = false;
+          if (mv.from === cr.white?.kingSide) state.castlingRights.whiteKingside = false;
+          if (mv.from === cr.black?.queenSide) state.castlingRights.blackQueenside = false;
+          if (mv.from === cr.black?.kingSide) state.castlingRights.blackKingside = false;
+        } else {
+          if (mv.from === 'a1') state.castlingRights.whiteQueenside = false;
+          else if (mv.from === 'h1') state.castlingRights.whiteKingside = false;
+          else if (mv.from === 'a8') state.castlingRights.blackQueenside = false;
+          else if (mv.from === 'h8') state.castlingRights.blackKingside = false;
+        }
       }
 
       // pawn specifics: en passant target and promotion and pawn-rotation tracking
@@ -1344,22 +1394,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
   if (isCastling) {
-          // Move the rook as well
-          if (toFile === 'g') {
-            // Kingside castling
-            const rank = moveData.to[1];
-            const rookFrom = `h${rank}`;
-            const rookTo = `f${rank}`;
-            gameState.board[rookTo] = gameState.board[rookFrom];
-            delete gameState.board[rookFrom];
-          } else if (toFile === 'c') {
-            // Queenside castling
-            const rank = moveData.to[1];
-            const rookFrom = `a${rank}`;
-            const rookTo = `d${rank}`;
-            gameState.board[rookTo] = gameState.board[rookFrom];
-            delete gameState.board[rookFrom];
+          // Move the rook as well (Chess960-aware)
+          const rank = moveData.to[1];
+          const isKingSide = toFile === 'g';
+          const rookTo = `${isKingSide ? 'f' : 'd'}${rank}`;
+          let rookFrom = `${isKingSide ? 'h' : 'a'}${rank}`;
+          const isFischer = Array.isArray(game.rules) && (game.rules as any).includes('fischer-random');
+          if (isFischer && gameState.castlingRooks) {
+            const side = isKingSide ? 'kingSide' : 'queenSide';
+            const mapped = gameState.castlingRooks[piece.color]?.[side];
+            if (mapped) rookFrom = mapped;
           }
+          gameState.board[rookTo] = gameState.board[rookFrom];
+          delete (gameState.board as any)[rookFrom];
         } else if (isBlinkTeleport && !isCastling) {
           // Mark Blink as used for this color (but not for castling)
           if (!gameState.blinkUsed) {
@@ -1384,15 +1431,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gameState.castlingRights.blackQueenside = false;
         }
       } else if (piece && piece.type === 'rook') {
-        // Check which rook moved and disable appropriate castling
-        if (moveData.from === 'a1') {
-          gameState.castlingRights.whiteQueenside = false;
-        } else if (moveData.from === 'h1') {
-          gameState.castlingRights.whiteKingside = false;
-        } else if (moveData.from === 'a8') {
-          gameState.castlingRights.blackQueenside = false;
-        } else if (moveData.from === 'h8') {
-          gameState.castlingRights.blackKingside = false;
+        // Disable appropriate castling rights based on which rook moved (Chess960-aware)
+        const cr = gameState.castlingRooks;
+        if (cr) {
+          const sideWhiteK = cr.white?.kingSide;
+          const sideWhiteQ = cr.white?.queenSide;
+          const sideBlackK = cr.black?.kingSide;
+          const sideBlackQ = cr.black?.queenSide;
+          if (moveData.from === sideWhiteQ) gameState.castlingRights.whiteQueenside = false;
+          if (moveData.from === sideWhiteK) gameState.castlingRights.whiteKingside = false;
+          if (moveData.from === sideBlackQ) gameState.castlingRights.blackQueenside = false;
+          if (moveData.from === sideBlackK) gameState.castlingRights.blackKingside = false;
+        } else {
+          // Fallback to standard squares
+          if (moveData.from === 'a1') gameState.castlingRights.whiteQueenside = false;
+          else if (moveData.from === 'h1') gameState.castlingRights.whiteKingside = false;
+          else if (moveData.from === 'a8') gameState.castlingRights.blackQueenside = false;
+          else if (moveData.from === 'h8') gameState.castlingRights.blackKingside = false;
+        }
+      } else if (targetPiece && targetPiece.type === 'rook') {
+        // If a rook was captured on its original castling square, disable that side's rights (Chess960-aware)
+        const capturedColor: 'white' | 'black' = targetPiece.color;
+        const cr = gameState.castlingRooks;
+        if (cr) {
+          if (moveData.to === cr[capturedColor]?.queenSide) {
+            if (capturedColor === 'white') gameState.castlingRights.whiteQueenside = false; else gameState.castlingRights.blackQueenside = false;
+          }
+          if (moveData.to === cr[capturedColor]?.kingSide) {
+            if (capturedColor === 'white') gameState.castlingRights.whiteKingside = false; else gameState.castlingRights.blackKingside = false;
+          }
+        } else {
+          if (capturedColor === 'white') {
+            if (moveData.to === 'a1') gameState.castlingRights.whiteQueenside = false;
+            if (moveData.to === 'h1') gameState.castlingRights.whiteKingside = false;
+          } else {
+            if (moveData.to === 'a8') gameState.castlingRights.blackQueenside = false;
+            if (moveData.to === 'h8') gameState.castlingRights.blackKingside = false;
+          }
         }
       }
       

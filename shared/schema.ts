@@ -103,6 +103,11 @@ export type ChessGameState = {
     blackKingside: boolean;
     blackQueenside: boolean;
   };
+  // For Chess960: starting rook squares used for castling (so we can find correct rook)
+  castlingRooks?: {
+    white: { kingSide: string | null; queenSide: string | null };
+    black: { kingSide: string | null; queenSide: string | null };
+  };
   enPassantTarget: string | null;
   halfmoveClock: number;
   fullmoveNumber: number;

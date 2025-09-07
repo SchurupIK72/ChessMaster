@@ -20,6 +20,7 @@ const ruleDescriptions: Record<string, { name: string; description: string; stat
   'blink': { name: 'Блинк', description: 'Король может телепортироваться раз за игру на любую пустую клетку', status: 'active' },
   'fog-of-war': { name: 'Туман войны', description: 'Первые 5 ходов видна только своя половина доски; история ходов скрыта', status: 'active' },
   'meteor-shower': { name: 'Метеоритный дождь', description: 'Каждые 5 ходов случайная пустая клетка сгорает и становится недоступной', status: 'active' },
+  'fischer-random': { name: 'Шахматы Фишера (Chess960)', description: 'Случайная расстановка на 1-й и 8-й горизонталях (разноцветные слоны, король между ладьями)', status: 'active' },
 };
 
 export default function GameStatus({ game, elapsedTime, onChangeRules, moves = [] }: GameStatusProps) {
