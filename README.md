@@ -98,22 +98,68 @@ DATABASE_URL=postgresql://user:password@localhost:5432/chess_db
 
 ## API Endpoints
 
+Ниже — фактические роуты из бэкенда (`server/routes.ts`). Параметры и тела запросов приведены кратко.
+
 ### Игры
-- `POST /api/games` - создать игру
-- `GET /api/games/:id` - получить игру
-- `POST /api/games/join/:shareId` - присоединиться к игре
-- `POST /api/games/:id/moves` - сделать ход
-- `POST /api/games/:id/undo` - отменить последний ход
-- `PATCH /api/games/:id/status` - обновить статус
+- POST /api/games — создать игру
+	- body: { rules?: GameRules[] }
+	- Примечание: сервер сам создаёт временного игрока (white) и shareId.
+- GET /api/games/:id — получить игру по id
+- GET /api/games/share/:shareId — получить игру по коду приглашения
+- POST /api/join-game — присоединиться к игре по shareId
+	- body: { shareId: string }
+	- Примечание: сервер создаёт временного игрока и пытается занять свободный слот (white/black).
+- POST /api/games/join/:shareId — присоединиться к игре по shareId (альтернативный маршрут)
+	- body: пусто (сервер сам генерирует playerId)
 
-### Предложения ничьей
-- `POST /api/games/:id/offer-draw` - предложить ничью
-- `POST /api/games/:id/accept-draw` - принять ничью
-- `POST /api/games/:id/decline-draw` - отклонить ничью
+### Поток обновлений (SSE)
+- GET /api/games/:id/stream — Server-Sent Events для игры
+	- события: move, undo, status, draw; payload содержит тип и полезную нагрузку (например, последний ход).
 
-### Пользователи
-- `POST /api/users` - создать пользователя
-- `GET /api/users/:id` - получить пользователя
+### Ходы и история
+- POST /api/games/:id/moves — сделать ход
+	- body (InsertMove): {
+		player: 'white' | 'black',
+		moveNumber: number,
+		from: 'e2',
+		to: 'e4',
+		piece: string,   // например 'white-pawn'; при промоции: 'white-queen'
+		captured?: string,
+		special?: string,
+		fen: string
+	}
+	- Примечания:
+		- Валидация учитывает спец-правила (double-knight, blink, pawn-rotation, xray-bishop, meteor-shower, castling/Chess960).
+		- En passant (вкл. горизонтальный в pawn-rotation), рокировка (вкл. Chess960), промоция поддержаны.
+- GET /api/games/:id/moves — получить историю ходов (массив Move)
+- POST /api/games/:id/undo — отменить последний ход; пересобирает состояние с нуля
+	- response: { success: boolean, gameState, currentTurn }
+
+### Статус, захваченные фигуры
+- PATCH /api/games/:id/status — обновить статус игры
+	- body: { status: 'waiting'|'active'|'completed'|'draw'|'resigned', winner?: 'white'|'black'|'draw' }
+- PATCH /api/games/:id/captured — обновить список захваченных фигур
+	- body: { capturedPieces: { white: string[], black: string[] } }
+
+### Ничья
+- POST /api/games/:id/offer-draw — предложить ничью
+	- body: { player: 'white' | 'black' }
+- POST /api/games/:id/accept-draw — принять ничью
+- POST /api/games/:id/decline-draw — отклонить ничью
+
+### Аутентификация
+- POST /api/auth/register — регистрация
+	- body: { username: string, password: string, email: string, phone: string }
+	- password: минимум 6 символов, только a-zA-Z0-9 (валидируется Zod)
+- POST /api/auth/login — вход
+	- body: { username: string, password: string }
+- GET /api/auth/session — получить текущую сессию (401 если нет)
+- POST /api/auth/logout — выход
+- POST /api/auth/guest — гостевой пользователь (без сессии); при необходимости создаётся новый
+
+### Правила (rules)
+Поддерживаемые значения: 'standard', 'double-knight', 'pawn-rotation', 'xray-bishop', 'pawn-wall', 'blink', 'fog-of-war', 'meteor-shower', 'fischer-random'.
+Некоторые правила влияют на стартовую позицию (pawn-wall, fischer-random), другие — на валидацию ходов.
 
 ## Разработка
 

@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertGameSchema, insertMoveSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
-import { ChessGameState, Game } from "@shared/schema";
+import { ChessGameState, Game, ChessPiece } from "@shared/schema";
+import { generateFischerBackRankFromSeed } from "./chess960";
 
 // Simple chess logic for server-side checkmate detection
 function isKingInCheck(gameState: any, color: 'white' | 'black', gameRules?: string[]): boolean {
@@ -910,55 +911,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Re-create initial state the same way storage.createGame does
     // We'll start from a fresh initial position using DatabaseStorage private logic replicated here
     const rulesArray = Array.isArray(game.rules) ? game.rules : game.rules ? [game.rules] : ["standard"]; // fallback
-
-    // Minimal initial position builder (mirrors storage.getInitialGameState)
-    const initialBoard: { [square: string]: any } = {};
-    const standardSetup: { [key: string]: any } = {
-      'a1': { type: 'rook', color: 'white' },
-      'b1': { type: 'knight', color: 'white' },
-      'c1': { type: 'bishop', color: 'white' },
-      'd1': { type: 'queen', color: 'white' },
-      'e1': { type: 'king', color: 'white' },
-      'f1': { type: 'bishop', color: 'white' },
-      'g1': { type: 'knight', color: 'white' },
-      'h1': { type: 'rook', color: 'white' },
-      'a8': { type: 'rook', color: 'black' },
-      'b8': { type: 'knight', color: 'black' },
-      'c8': { type: 'bishop', color: 'black' },
-      'd8': { type: 'queen', color: 'black' },
-      'e8': { type: 'king', color: 'black' },
-      'f8': { type: 'bishop', color: 'black' },
-      'g8': { type: 'knight', color: 'black' },
-      'h8': { type: 'rook', color: 'black' },
-    };
-    for (let file = 'a'.charCodeAt(0); file <= 'h'.charCodeAt(0); file++) {
-      const f = String.fromCharCode(file);
-      (standardSetup as any)[`${f}2`] = { type: 'pawn', color: 'white' };
-      (standardSetup as any)[`${f}7`] = { type: 'pawn', color: 'black' };
+    const initialBoard: { [square: string]: ChessPiece | null } = {};
+    const files = ['a','b','c','d','e','f','g','h'];
+    const useFischer = rulesArray.includes('fischer-random');
+    let backRankTypes: ChessPiece['type'][];
+    if (useFischer) {
+      const seedKey = game.shareId || 'default-seed';
+      backRankTypes = generateFischerBackRankFromSeed(seedKey) as ChessPiece['type'][];
+    } else {
+      backRankTypes = ['rook','knight','bishop','queen','king','bishop','knight','rook'];
     }
+    // Back ranks
+    files.forEach((file, idx) => {
+      const t = backRankTypes[idx];
+      initialBoard[`${file}1`] = { type: t, color: 'white' } as any;
+      initialBoard[`${file}8`] = { type: t, color: 'black' } as any;
+    });
+    // Pawns
+    files.forEach((f)=>{
+      initialBoard[`${f}2`] = { type: 'pawn', color: 'white' } as any;
+      initialBoard[`${f}7`] = { type: 'pawn', color: 'black' } as any;
+    });
+    // Pawn wall
     if (rulesArray.includes('pawn-wall')) {
-      for (let file = 'a'.charCodeAt(0); file <= 'h'.charCodeAt(0); file++) {
-        const f = String.fromCharCode(file);
-        (standardSetup as any)[`${f}3`] = { type: 'pawn', color: 'white' };
-        (standardSetup as any)[`${f}6`] = { type: 'pawn', color: 'black' };
-      }
+      files.forEach((f)=>{
+        initialBoard[`${f}3`] = { type: 'pawn', color: 'white' } as any;
+        initialBoard[`${f}6`] = { type: 'pawn', color: 'black' } as any;
+      });
     }
-    for (let rank = 1; rank <= 8; rank++) {
-      for (let file = 'a'.charCodeAt(0); file <= 'h'.charCodeAt(0); file++) {
-        const f = String.fromCharCode(file);
-        const sq = `${f}${rank}`;
-        initialBoard[sq] = (standardSetup as any)[sq] || null;
-      }
+    // Castling rook map and rights
+    let castlingRooks: ChessGameState['castlingRooks'] | undefined = undefined;
+    let rights = { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true } as ChessGameState['castlingRights'];
+    if (useFischer) {
+      const whiteKingIdx = backRankTypes.findIndex(t => t === 'king');
+      const whiteLeftRookIdx = [...backRankTypes].slice(0, whiteKingIdx).lastIndexOf('rook');
+      const whiteRightRookRel = [...backRankTypes].slice(whiteKingIdx + 1).indexOf('rook');
+      const wQueenRook = whiteLeftRookIdx >= 0 ? `${files[whiteLeftRookIdx]}1` : null;
+      const wKingRook = whiteRightRookRel >= 0 ? `${files[whiteKingIdx + 1 + whiteRightRookRel]}1` : null;
+
+      const blackKingIdx = backRankTypes.findIndex(t => t === 'king');
+      const blackLeftRookIdx = [...backRankTypes].slice(0, blackKingIdx).lastIndexOf('rook');
+      const blackRightRookRel = [...backRankTypes].slice(blackKingIdx + 1).indexOf('rook');
+      const bQueenRook = blackLeftRookIdx >= 0 ? `${files[blackLeftRookIdx]}8` : null;
+      const bKingRook = blackRightRookRel >= 0 ? `${files[blackKingIdx + 1 + blackRightRookRel]}8` : null;
+
+      castlingRooks = {
+        white: { kingSide: wKingRook, queenSide: wQueenRook },
+        black: { kingSide: bKingRook, queenSide: bQueenRook },
+      };
+      rights = {
+        whiteKingside: !!wKingRook,
+        whiteQueenside: !!wQueenRook,
+        blackKingside: !!bKingRook,
+        blackQueenside: !!bQueenRook,
+      };
     }
     let state: ChessGameState = {
       board: initialBoard,
       currentTurn: 'white',
-      castlingRights: {
-        whiteKingside: true,
-        whiteQueenside: true,
-        blackKingside: true,
-        blackQueenside: true,
-      },
+      castlingRights: useFischer ? rights : { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true },
+      castlingRooks,
       enPassantTarget: null,
       halfmoveClock: 0,
       fullmoveNumber: 1,

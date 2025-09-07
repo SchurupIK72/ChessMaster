@@ -1,4 +1,5 @@
 import { users, games, moves, type User, type InsertUser, type Game, type InsertGame, type Move, type InsertMove, type ChessGameState, type ChessPiece, type GameRules, type GameRulesArray } from "@shared/schema";
+import { generateFischerBackRankFromSeed } from "./chess960";
 import { db } from "./db";
 import { eq, or } from "drizzle-orm";
 
@@ -60,7 +61,7 @@ export class DatabaseStorage implements IStorage {
     const rulesArray = Array.isArray(insertGame.rules) ? insertGame.rules : 
                       insertGame.rules ? [insertGame.rules] : ['standard'];
     
-    const initialGameState: ChessGameState = this.getInitialGameState(rulesArray as GameRulesArray);
+  const initialGameState: ChessGameState = this.getInitialGameState(rulesArray as GameRulesArray, insertGame.shareId || undefined);
     
     const [game] = await db
       .insert(games)
@@ -199,60 +200,19 @@ export class DatabaseStorage implements IStorage {
     return game;
   }
 
-  private getInitialGameState(rules: GameRulesArray): ChessGameState {
+  private getInitialGameState(rules: GameRulesArray, seed?: string): ChessGameState {
     const initialBoard: { [square: string]: ChessPiece | null } = {};
 
     const files: string[] = ['a','b','c','d','e','f','g','h'];
 
     // Helper: generate Fischer Random (Chess960) back rank order
-    const generateFischerBackRank = (): ChessPiece['type'][] => {
-      // indices 0..7 for files a..h
-      const evenSquares = [0,2,4,6];
-      const oddSquares = [1,3,5,7];
-      const pick = (arr: number[]) => {
-        const i = Math.floor(Math.random() * arr.length);
-        return arr.splice(i, 1)[0];
-      };
-
-      const positions: (ChessPiece['type'] | null)[] = new Array(8).fill(null);
-      const remaining: number[] = [0,1,2,3,4,5,6,7];
-
-      // Place bishops on opposite colors
-      const b1 = pick(evenSquares.slice()); // pick from copy to choose index, then remove from remaining
-      // remove b1 from remaining
-      remaining.splice(remaining.indexOf(b1), 1);
-      positions[b1] = 'bishop';
-      const oddPool = oddSquares.slice();
-      const b2 = pick(oddPool);
-      remaining.splice(remaining.indexOf(b2), 1);
-      positions[b2] = 'bishop';
-
-      // Place queen on random remaining
-      const qIndex = remaining.splice(Math.floor(Math.random() * remaining.length), 1)[0];
-      positions[qIndex] = 'queen';
-
-      // Place two knights on two random remaining
-      const nIndex1 = remaining.splice(Math.floor(Math.random() * remaining.length), 1)[0];
-      positions[nIndex1] = 'knight';
-      const nIndex2 = remaining.splice(Math.floor(Math.random() * remaining.length), 1)[0];
-      positions[nIndex2] = 'knight';
-
-      // Remaining three squares are for R, K, R with K in the middle
-      remaining.sort((a,b)=>a-b);
-      const [rLeft, kIdx, rRight] = remaining; // kIdx is middle after sort
-      positions[rLeft] = 'rook';
-      positions[kIdx] = 'king';
-      positions[rRight] = 'rook';
-
-      return positions as ChessPiece['type'][];
-    };
-
-    const useFischer = rules.includes('fischer-random');
+  const useFischer = rules.includes('fischer-random');
 
     // Build pieces for rank 1 and 8
     let backRankTypes: ChessPiece['type'][];
     if (useFischer) {
-      backRankTypes = generateFischerBackRank();
+      const seedKey = seed || "default-seed";
+      backRankTypes = generateFischerBackRankFromSeed(seedKey) as ChessPiece['type'][];
     } else {
       backRankTypes = ['rook','knight','bishop','queen','king','bishop','knight','rook'];
     }
