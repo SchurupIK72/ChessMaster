@@ -921,8 +921,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       blinkUsed: { white: false, black: false }
     };
 
-    // Replay moves through existing logic in this file
-    let currentTurn: 'white' | 'black' = 'white';
+  // Replay moves through existing logic in this file
+  // We'll track prev/next turns explicitly to mirror the live path logic
+  let currentTurn: 'white' | 'black' = 'white';
     for (const mv of movesList) {
       const piece = state.board[mv.from];
       if (!piece) continue;
@@ -1060,17 +1061,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // special rules application (no meteor strike here)
       state = applyAllSpecialRules(state as any, rulesArray as any, mv.from, mv.to, piece) as any;
 
-      // turn
+      // Determine next turn just like the live move route does
+      const prevTurn = state.currentTurn as 'white' | 'black';
+      let nextTurn: 'white' | 'black';
       if (Array.isArray(rulesArray) && rulesArray.includes('double-knight')) {
-        currentTurn = (state.currentTurn as any);
+        // applyAllSpecialRules already adjusted currentTurn for double-knight
+        nextTurn = state.currentTurn as 'white' | 'black';
       } else {
-        currentTurn = currentTurn === 'white' ? 'black' : 'white';
-        state.currentTurn = currentTurn;
+        // Standard toggle
+        nextTurn = prevTurn === 'white' ? 'black' : 'white';
+        state.currentTurn = nextTurn;
       }
+      currentTurn = nextTurn;
 
   // End-of-turn bookkeeping similar to live path:
   // increment only when previous player was black and turn handed to white
-  if (currentTurn === 'black' && state.currentTurn === 'white') {
+  if (prevTurn === 'black' && nextTurn === 'white') {
         state.fullmoveNumber++;
         maybeTriggerMeteor(state, rulesArray as any);
       } else {
