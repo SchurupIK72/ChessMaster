@@ -53,6 +53,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(data),
       });
       
@@ -86,6 +87,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(data),
       });
       
@@ -127,6 +129,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
       });
       
       if (!response.ok) {

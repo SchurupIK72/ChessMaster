@@ -1634,7 +1634,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Create session
-      (req as any).session = { userId: user.id };
+      const sess: any = (req as any).session;
+      if (sess) {
+        sess.userId = user.id;
+      }
       
       res.status(201).json({ 
         message: 'Регистрация успешна',
@@ -1670,8 +1673,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Неверный никнейм или пароль' });
       }
 
-      // Create a very simple session
-      (req as any).session = { userId: user.id };
+      // Persist session
+      const sess: any = (req as any).session;
+      if (sess) {
+        sess.userId = user.id;
+      }
       
       res.json({ 
         message: 'Авторизация успешна',
@@ -1684,20 +1690,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get('/api/auth/session', async (req, res) => {
-    const session = (req as any).session;
-    if (!session?.userId) {
+    const sess: any = (req as any).session;
+    if (!sess?.userId) {
       return res.status(401).json({ message: 'Не авторизован' });
     }
     
     try {
-      const user = await storage.getUser(session.userId);
+      const user = await storage.getUser(sess.userId);
       if (!user) {
         return res.status(401).json({ message: 'Пользователь не найден' });
       }
       
-      res.json({ 
-        user: { id: user.id, username: user.username, email: user.email }
-      });
+  res.json({ user: { id: user.id, username: user.username, email: user.email } });
     } catch (error) {
       console.error('Session error:', error);
       res.status(500).json({ message: 'Ошибка сессии' });
@@ -1705,8 +1709,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/auth/logout', (req, res) => {
-    (req as any).session = null;
-    res.json({ message: 'Выход выполнен' });
+    const sess: any = (req as any).session;
+    if (sess && typeof sess.destroy === 'function') {
+      sess.destroy(() => res.json({ message: 'Выход выполнен' }));
+    } else {
+      res.json({ message: 'Выход выполнен' });
+    }
   });
 
   // Guest user route for anonymous players - simplified without sessions
