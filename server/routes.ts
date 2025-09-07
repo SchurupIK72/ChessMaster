@@ -123,6 +123,10 @@ function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, p
   
   const dx = toFileIndex - fromFileIndex;
   const dy = toRankNum - fromRankNum;
+  // In meteor-shower mode, burned squares block line-of-sight for attacks
+  const burned: string[] = (Array.isArray(gameRules) && gameRules.includes('meteor-shower'))
+    ? (gameState.burnedSquares || [])
+    : [];
   
   switch (piece.type) {
     case 'pawn':
@@ -139,6 +143,8 @@ function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, p
         
         while (checkX !== toFileIndex || checkY !== toRankNum) {
           const checkSquare = String.fromCharCode(checkX + 'a'.charCodeAt(0)) + checkY;
+          // Burned squares block attacks in meteor-shower mode
+          if (burned.length && burned.includes(checkSquare)) return false;
           if (gameState.board[checkSquare]) return false;
           checkX += stepX;
           checkY += stepY;
@@ -158,6 +164,8 @@ function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, p
         
         while (checkX !== toFileIndex || checkY !== toRankNum) {
           const checkSquare = String.fromCharCode(checkX + 'a'.charCodeAt(0)) + checkY;
+          // Burned squares block attacks completely
+          if (burned.length && burned.includes(checkSquare)) return false;
           if (gameState.board[checkSquare]) {
             piecesEncountered++;
           }
@@ -178,7 +186,7 @@ function canAttackSquare(gameState: any, fromSquare: string, toSquare: string, p
     
     case 'queen':
       return (dx === 0 || dy === 0 || Math.abs(dx) === Math.abs(dy)) && 
-             canAttackSquare(gameState, fromSquare, toSquare, { ...piece, type: dx === 0 || dy === 0 ? 'rook' : 'bishop' });
+             canAttackSquare(gameState, fromSquare, toSquare, { ...piece, type: dx === 0 || dy === 0 ? 'rook' : 'bishop' }, gameRules);
     
     case 'knight':
       return (Math.abs(dx) === 2 && Math.abs(dy) === 1) || (Math.abs(dx) === 1 && Math.abs(dy) === 2);
