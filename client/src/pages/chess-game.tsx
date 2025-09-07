@@ -105,23 +105,51 @@ export default function ChessGame() {
     return null;
   };
 
-  // Query for current game with automatic refresh
+  // Query for current game (no polling; we'll use SSE to refresh)
   const { data: game, isLoading: gameLoading } = useQuery<Game>({
     queryKey: ["/api/games", gameId],
     queryFn: () => fetch(`/api/games/${gameId}`).then(res => res.json()),
     enabled: !!gameId,
-    refetchInterval: 500, // Refresh every 0.5 seconds
-    refetchIntervalInBackground: true, // Continue refreshing when window is not focused
   });
 
-  // Query for game moves with automatic refresh
+  // Query for game moves (no polling; updated via SSE)
   const { data: moves = [] } = useQuery<Move[]>({
     queryKey: ["/api/games", gameId, "moves"],
     queryFn: () => fetch(`/api/games/${gameId}/moves`).then(res => res.json()),
     enabled: !!gameId,
-    refetchInterval: 500, // Refresh every 0.5 seconds
-    refetchIntervalInBackground: true, // Continue refreshing when window is not focused
   });
+
+  // Live updates via Server-Sent Events (SSE)
+  useEffect(() => {
+    if (!gameId) return;
+    // Close previous source if any
+    let closed = false;
+    const src = new EventSource(`/api/games/${gameId}/stream`);
+
+    const invalidate = () => {
+      if (!closed) {
+        queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
+        queryClient.invalidateQueries({ queryKey: ["/api/games", gameId, "moves"] });
+      }
+    };
+
+    src.addEventListener('connected', () => {
+      // Initial sync
+      invalidate();
+    });
+    src.addEventListener('move', invalidate);
+    src.addEventListener('undo', invalidate);
+    src.addEventListener('status', invalidate);
+    src.addEventListener('draw', invalidate);
+    src.onerror = () => {
+      // transient network errors will auto-reconnect; optional local retry handling can be added
+    };
+
+    return () => {
+      closed = true;
+      try { src.close(); } catch {}
+    };
+  }, [gameId]);
 
   // Create new game mutation
   const createGameMutation = useMutation({

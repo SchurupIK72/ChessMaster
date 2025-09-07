@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertGameSchema, insertMoveSchema, insertUserSchema } from "@shared/schema";
@@ -799,6 +799,61 @@ function applyDoubleKnightRule(gameState: any, fromSquare: string, toSquare: str
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // --- Simple SSE hub per game ---
+  const sseClients: Map<number, Set<Response>> = new Map();
+
+  function addSseClient(gameId: number, res: Response) {
+    if (!sseClients.has(gameId)) sseClients.set(gameId, new Set());
+    sseClients.get(gameId)!.add(res);
+  }
+
+  function removeSseClient(gameId: number, res: Response) {
+    const set = sseClients.get(gameId);
+    if (!set) return;
+    set.delete(res);
+    if (set.size === 0) sseClients.delete(gameId);
+  }
+
+  function broadcast(gameId: number, event: string, payload: any) {
+    const set = sseClients.get(gameId);
+    if (!set || set.size === 0) return;
+    const data = `event: ${event}\n` + `data: ${JSON.stringify(payload)}\n\n`;
+    set.forEach((res) => {
+      try { res.write(data); } catch {}
+    });
+  }
+
+  // SSE stream for game updates
+  app.get("/api/games/:id/stream", async (req, res) => {
+    const gameId = parseInt(req.params.id);
+    if (!Number.isFinite(gameId)) {
+      res.status(400).end();
+      return;
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders?.();
+
+    // Register client
+    addSseClient(gameId, res);
+
+    // Initial hello
+    res.write(`event: connected\n` + `data: {"ok":true}\n\n`);
+
+    // Keep-alive ping
+    const ping = setInterval(() => {
+      try { res.write(": ping\n\n"); } catch {}
+    }, 30000);
+
+    req.on("close", () => {
+      clearInterval(ping);
+      removeSseClient(gameId, res);
+      try { res.end(); } catch {}
+    });
+  });
+
   // Helper: rebuild game state from initial rules and move list
   async function rebuildGameStateFromMoves(game: Game, movesList: any[]): Promise<ChessGameState> {
     // Re-create initial state the same way storage.createGame does
@@ -1472,9 +1527,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (shouldAddMove) {
         await storage.addMove(moveData);
       }
-      // Возвращаем весь массив ходов, чтобы клиент всегда получал актуальную историю
+  // Возвращаем весь массив ходов, чтобы клиент всегда получал актуальную историю
       const allMoves = await storage.getGameMoves(gameId);
-      res.json(allMoves[allMoves.length - 1]);
+  // Notify subscribers
+  broadcast(gameId, 'move', { type: 'move', gameId, move: allMoves[allMoves.length - 1] });
+  res.json(allMoves[allMoves.length - 1]);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1510,7 +1567,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update current turn explicitly from rebuilt
       await storage.updateGameTurn(gameId, rebuilt.currentTurn);
 
-      res.json({ success: true, gameState: rebuilt, currentTurn: rebuilt.currentTurn });
+  // Notify subscribers
+  broadcast(gameId, 'undo', { type: 'undo', gameId });
+  res.json({ success: true, gameState: rebuilt, currentTurn: rebuilt.currentTurn });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1522,6 +1581,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gameId = parseInt(req.params.id);
       const { status, winner } = req.body;
       const game = await storage.updateGameStatus(gameId, status, winner);
+  broadcast(gameId, 'status', { type: 'status', gameId, status: game.status, winner: game.winner });
       res.json(game);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1696,7 +1756,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Draw already offered by this player" });
       }
       
-      const updatedGame = await storage.offerDraw(gameId, player);
+  const updatedGame = await storage.offerDraw(gameId, player);
+  broadcast(gameId, 'draw', { type: 'draw-offer', gameId, by: player });
       res.json(updatedGame);
     } catch (error) {
       console.error('Error offering draw:', error);
@@ -1717,7 +1778,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No draw offer to accept" });
       }
       
-      const updatedGame = await storage.acceptDraw(gameId);
+  const updatedGame = await storage.acceptDraw(gameId);
+  broadcast(gameId, 'draw', { type: 'draw-accept', gameId });
       res.json(updatedGame);
     } catch (error) {
       console.error('Error accepting draw:', error);
@@ -1738,7 +1800,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No draw offer to decline" });
       }
       
-      const updatedGame = await storage.declineDraw(gameId);
+  const updatedGame = await storage.declineDraw(gameId);
+  broadcast(gameId, 'draw', { type: 'draw-decline', gameId });
       res.json(updatedGame);
     } catch (error) {
       console.error('Error declining draw:', error);
