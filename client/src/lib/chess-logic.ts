@@ -375,74 +375,81 @@ export class ChessLogic {
     // Check for Blink rule first
     const hasBlinkRule = Array.isArray(gameRules) && gameRules.includes('blink');
     const blinkUsed = gameState.blinkUsed?.[piece.color];
-    
-    // Castling (available in Blink mode until Blink is used)
-    // Запрещаем рокировку из-под шаха
+
+    // Castling (Standard + Chess960). King must not be in check initially.
     if (!this.isKingInCheck(gameState, piece.color, gameRules)) {
-      const backRank = piece.color === 'white' ? 1 : 8;
-      // Kingside castling
-      const kingsideRight = piece.color === 'white' ? 'whiteKingside' : 'blackKingside';
-      if (gameState.castlingRights[kingsideRight]) {
-        const rookSquare = piece.color === 'white' ? 'h1' : 'h8';
+      const color: 'white' | 'black' = piece.color as any;
+      const backRank = color === 'white' ? '1' : '8';
+      const isFischer = Array.isArray(gameRules) && gameRules.includes('fischer-random');
+      const burned: string[] = (Array.isArray(gameRules) && gameRules.includes('meteor-shower')) ? ((gameState as any).burnedSquares || []) : [];
+      const fileIdx = (f: string) => f.charCodeAt(0) - 'a'.charCodeAt(0);
+
+      type RightsKey = 'whiteKingside'|'whiteQueenside'|'blackKingside'|'blackQueenside';
+      const rights: Record<'king'|'queen', RightsKey> = color === 'white'
+        ? { king: 'whiteKingside', queen: 'whiteQueenside' }
+        : { king: 'blackKingside', queen: 'blackQueenside' };
+
+      const tryAddCastling = (side: 'king'|'queen') => {
+        const rightsKey = rights[side];
+        if (!gameState.castlingRights || !gameState.castlingRights[rightsKey]) return;
+
+        const toFile = side === 'king' ? 'g' : 'c';
+        const toSquare = `${toFile}${backRank}`;
+        // Determine rook square (Chess960-aware)
+        let rookSquare = side === 'king' ? `h${backRank}` : `a${backRank}`;
+        if (isFischer && (gameState as any).castlingRooks) {
+          const mapped = (gameState as any).castlingRooks[color]?.[side === 'king' ? 'kingSide' : 'queenSide'] || null;
+          if (!mapped) return;
+          rookSquare = mapped;
+        }
         const rook = gameState.board[rookSquare];
-        let pathClear = true;
-        let safeSquares = true;
-        // Проверяем все клетки между королём и ладьёй (f и g для белых, f8 и g8 для черных)
-        const pathFiles = piece.color === 'white' ? ['f', 'g'] : ['f', 'g'];
-        for (const file of pathFiles) {
-          const sq = `${file}${backRank}`;
-          if (gameState.board[sq]) {
-            pathClear = false;
-            break;
-          }
-          if ((gameState as any).burnedSquares && (gameState as any).burnedSquares.includes(sq)) {
-            pathClear = false;
-            break;
-          }
-          if (this.isSquareUnderAttack(gameState, sq, piece.color, gameRules)) {
-            safeSquares = false;
-            break;
-          }
+        if (!rook || rook.type !== 'rook' || rook.color !== color) return;
+
+        // King path from current file to destination file along back rank
+        const fromFile = fromSquare[0];
+        const startF = fileIdx(fromFile);
+        const endF = fileIdx(toFile);
+        const step = endF > startF ? 1 : -1;
+        const passThrough: string[] = [];
+        const kingPathCheck: string[] = [];
+        for (let x = startF + step; x !== endF + step; x += step) {
+          const f = String.fromCharCode('a'.charCodeAt(0) + x);
+          const sq = `${f}${backRank}`;
+          passThrough.push(sq);
+          kingPathCheck.push(sq);
+          if (f === toFile) break;
         }
-        // Проверяем, что король не под шахом, не проходит через битые поля, и не попадает на битое поле
-        const kingTarget = `g${backRank}`;
-        if (pathClear && safeSquares && rook && rook.type === 'rook' && rook.color === piece.color &&
-            !this.isSquareUnderAttack(gameState, kingTarget, piece.color, gameRules) &&
-            !this.isSquareUnderAttack(gameState, fromSquare, piece.color, gameRules)) {
-          moves.push(kingTarget);
+        // King path must be empty (except rookSquare in Chess960) and not burned
+        for (const sq of kingPathCheck) {
+          if (sq !== rookSquare && gameState.board[sq]) return;
+          if (burned.length && burned.includes(sq)) return;
         }
-      }
-      // Queenside castling
-      const queensideRight = piece.color === 'white' ? 'whiteQueenside' : 'blackQueenside';
-      if (gameState.castlingRights[queensideRight]) {
-        const rookSquare = piece.color === 'white' ? 'a1' : 'a8';
-        const rook = gameState.board[rookSquare];
-        let pathClear = true;
-        let safeSquares = true;
-        // Проверяем все клетки между королём и ладьёй (b, c, d для белых, b8, c8, d8 для черных)
-        const pathFiles = piece.color === 'white' ? ['b', 'c', 'd'] : ['b', 'c', 'd'];
-        for (const file of pathFiles) {
-          const sq = `${file}${backRank}`;
-          if (gameState.board[sq]) {
-            pathClear = false;
-            break;
-          }
-          if ((gameState as any).burnedSquares && (gameState as any).burnedSquares.includes(sq)) {
-            pathClear = false;
-            break;
-          }
-          if (this.isSquareUnderAttack(gameState, sq, piece.color, gameRules)) {
-            safeSquares = false;
-            break;
-          }
+
+        // Rook path from rookSquare to rook target (f or d)
+        const rookTargetFile = side === 'king' ? 'f' : 'd';
+        const rStart = fileIdx(rookSquare[0]);
+        const rEnd = fileIdx(rookTargetFile);
+        const rStep = rEnd > rStart ? 1 : -1;
+        for (let x = rStart + rStep; x !== rEnd + rStep; x += rStep) {
+          const f = String.fromCharCode('a'.charCodeAt(0) + x);
+          const sq = `${f}${backRank}`;
+          // Allow the king's starting square to be occupied (the king moves away during castling)
+          if (sq !== fromSquare && gameState.board[sq]) return;
+          if (burned.length && burned.includes(sq)) return;
+          if (f === rookTargetFile) break;
         }
-        const kingTarget = `c${backRank}`;
-        if (pathClear && safeSquares && rook && rook.type === 'rook' && rook.color === piece.color &&
-            !this.isSquareUnderAttack(gameState, kingTarget, piece.color, gameRules) &&
-            !this.isSquareUnderAttack(gameState, fromSquare, piece.color, gameRules)) {
-          moves.push(kingTarget);
+
+        // King cannot pass through or land in check
+        for (const sq of [fromSquare, ...passThrough]) {
+          if (this.isSquareUnderAttack(gameState, sq, color, gameRules)) return;
+          if (burned.length && burned.includes(sq)) return;
         }
-      }
+
+        if (!moves.includes(toSquare)) moves.push(toSquare);
+      };
+
+      tryAddCastling('king');
+      tryAddCastling('queen');
     }
 
     // Blink move (teleport)
@@ -452,32 +459,20 @@ export class ChessLogic {
       gameRulesType: typeof gameRules,
       gameRulesContent: gameRules
     });
-    
 
-    
     // Add Blink teleportation moves if available
     if (hasBlinkRule) {
-      const blinkUsed = gameState.blinkUsed?.[piece.color];
-      console.log('Blink mode detected', { gameRules, blinkUsed });
-      
-      if (!blinkUsed) {
+      const blinkAlreadyUsed = gameState.blinkUsed?.[piece.color];
+      console.log('Blink mode detected', { gameRules, blinkUsed: blinkAlreadyUsed });
+      if (!blinkAlreadyUsed) {
         // King can teleport to any empty square (not adjacent squares, those are already added)
         for (let fileIdx = 0; fileIdx < 8; fileIdx++) {
           for (let rankIdx = 1; rankIdx <= 8; rankIdx++) {
             const targetSquare = `${String.fromCharCode(fileIdx + 'a'.charCodeAt(0))}${rankIdx}`;
-            
-            // Skip current position
             if (targetSquare === fromSquare) continue;
-            
-            // Skip if already added as standard move
             if (moves.includes(targetSquare)) continue;
-            
             const target = gameState.board[targetSquare];
-            if (!target) {
-              moves.push(targetSquare);
-            } else {
-              console.log(`Blink blocked to ${targetSquare}: occupied by ${target.color === piece.color ? 'own' : 'enemy'} ${target.type}`);
-            }
+            if (!target) moves.push(targetSquare);
           }
         }
       }

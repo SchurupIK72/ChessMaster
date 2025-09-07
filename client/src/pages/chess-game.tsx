@@ -585,14 +585,16 @@ export default function ChessGame() {
           const isQueenSide = cr?.[color]?.queenSide && cr[color].queenSide === rookSquare;
           if (isKingSide || isQueenSide) {
             const dest = `${isKingSide ? 'g' : 'c'}${backRank}`;
-            makeMoveMutation.mutate({
-              from: selectedSquare,
-              to: dest,
-              piece: `${fromPiece.color}-${fromPiece.type}`,
-            });
-            setSelectedSquare(null);
-            setValidMoves([]);
-            return;
+            if (validMoves.includes(dest)) {
+              makeMoveMutation.mutate({
+                from: selectedSquare,
+                to: dest,
+                piece: `${fromPiece.color}-${fromPiece.type}`,
+              });
+              setSelectedSquare(null);
+              setValidMoves([]);
+              return;
+            }
           }
         }
 
