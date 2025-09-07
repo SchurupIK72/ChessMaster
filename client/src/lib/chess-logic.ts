@@ -346,7 +346,6 @@ export class ChessLogic {
   }
 
   private getKingMoves(gameState: ChessGameState, fromSquare: string, piece: ChessPiece, gameRules?: string[]): string[] {
-    console.log('getKingMoves called with gameRules:', gameRules);
     const moves: string[] = [];
     const file = fromSquare[0];
     const rank = fromSquare[1];
