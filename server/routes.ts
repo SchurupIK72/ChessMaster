@@ -1058,11 +1058,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // counters
       if (piece.type === 'pawn' || mv.captured) state.halfmoveClock = 0; else state.halfmoveClock++;
 
-      // special rules application (no meteor strike here)
-      state = applyAllSpecialRules(state as any, rulesArray as any, mv.from, mv.to, piece) as any;
+  // Determine previous turn BEFORE rules adjust it (important for double-knight)
+  const prevTurn = state.currentTurn as 'white' | 'black';
 
-      // Determine next turn just like the live move route does
-      const prevTurn = state.currentTurn as 'white' | 'black';
+  // special rules application (no meteor strike here)
+  state = applyAllSpecialRules(state as any, rulesArray as any, mv.from, mv.to, piece) as any;
+
+  // Determine next turn just like the live move route does
       let nextTurn: 'white' | 'black';
       if (Array.isArray(rulesArray) && rulesArray.includes('double-knight')) {
         // applyAllSpecialRules already adjusted currentTurn for double-knight

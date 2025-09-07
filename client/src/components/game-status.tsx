@@ -1,4 +1,4 @@
-import { Game } from "@shared/schema";
+import { Game, Move } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ interface GameStatusProps {
   game: Game;
   elapsedTime: string;
   onChangeRules: () => void;
+  moves?: Move[]; // used to compute meteor timing similar to Fog of War
 }
 
 const ruleDescriptions: Record<string, { name: string; description: string; status: 'active' | 'inactive' }> = {
@@ -21,10 +22,36 @@ const ruleDescriptions: Record<string, { name: string; description: string; stat
   'meteor-shower': { name: 'Метеоритный дождь', description: 'Каждые 5 ходов случайная пустая клетка сгорает и становится недоступной', status: 'active' },
 };
 
-export default function GameStatus({ game, elapsedTime, onChangeRules }: GameStatusProps) {
+export default function GameStatus({ game, elapsedTime, onChangeRules, moves = [] }: GameStatusProps) {
   const activeRules = Array.isArray(game.rules) ? game.rules : [game.rules];
   const isStandardOnly = activeRules.length === 1 && activeRules[0] === 'standard';
   const gameState = game.gameState as any;
+
+  // Compute completed full moves from move history, pairing Double-Knight two-step as one turn
+  const computeCompletedFullMoves = (rules: any, movesList: Move[]): number => {
+    const rulesArr = (rules as any) || [];
+    const hasDoubleKnight = Array.isArray(rulesArr) && rulesArr.includes('double-knight');
+    let playerTurns = 0; // count of player turns (white move = 1, black move = 1)
+    let i = 0;
+    while (i < movesList.length) {
+      const m1 = movesList[i];
+      let consume = 1;
+      if (
+        hasDoubleKnight &&
+        i + 1 < movesList.length &&
+        movesList[i + 1].player === m1.player &&
+        typeof m1.piece === 'string' && m1.piece.endsWith('-knight') &&
+        typeof movesList[i + 1].piece === 'string' && movesList[i + 1].piece.endsWith('-knight') &&
+        m1.to && movesList[i + 1].from && m1.to === movesList[i + 1].from
+      ) {
+        // Two-step knight move counts as a single player turn
+        consume = 2;
+      }
+      playerTurns += 1;
+      i += consume;
+    }
+    return Math.floor(playerTurns / 2); // convert to full moves
+  };
 
   // Count remaining pieces
   const countPieces = () => {
@@ -92,9 +119,8 @@ export default function GameStatus({ game, elapsedTime, onChangeRules }: GameSta
                 // Special handling for Meteor Shower to show burned squares and next strike
                 if (ruleKey === 'meteor-shower' && rule) {
                   const burned = gameState?.burnedSquares || [];
-                  const meteorCounter = gameState?.meteorCounter ?? 1; // mirrors fullmoveNumber
-                  // Strikes after 5 full moves: when (fullmoveNumber - 1) % 5 === 0
-                  const completed = Math.max(0, meteorCounter - 1);
+                  // Prefer calculating from move history (undo-safe, like Fog of War)
+                  const completed = computeCompletedFullMoves(activeRules, moves);
                   const mod = completed % 5;
                   const movesUntilNext = (5 - mod) % 5 || 5;
                   return (

@@ -983,6 +983,7 @@ export default function ChessGame() {
               game={game!}
               elapsedTime={elapsedTime}
               onChangeRules={() => setShowRuleModal(true)}
+              moves={moves}
             />
           </div>
 
