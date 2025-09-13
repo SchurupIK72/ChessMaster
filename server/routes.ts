@@ -1290,6 +1290,322 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update the board state by making the move
       let gameState = game.gameState as any;
+      const isVoid = Array.isArray(game.rules) && (game.rules as any).includes('void');
+      if (isVoid) {
+        // Void mode: handle transfer or sub-move on a specific board, then return
+        if (!gameState.voidMode || !gameState.voidBoards) {
+          return res.status(400).json({ message: 'Void mode not initialized' });
+        }
+
+        const color = game.currentTurn as 'white' | 'black';
+        const body: any = (req as any).body || {};
+        const broadcastAndReturn = async (saved: any) => {
+          broadcast(gameId, 'move', { type: 'move', gameId, move: saved });
+          return res.json(saved);
+        };
+
+        // Helper: finalize player's full turn
+        const finalizeVoidTurn = async () => {
+          if (!gameState.voidMeta) gameState.voidMeta = { pending: null, tokens: { white: 0, black: 0 }, playerTurnCount: { white: 0, black: 0 } };
+          gameState.voidMeta.playerTurnCount[color] = (gameState.voidMeta.playerTurnCount[color] || 0) + 1;
+          if (gameState.voidMeta.playerTurnCount[color] % 10 === 0) {
+            gameState.voidMeta.tokens[color] = (gameState.voidMeta.tokens[color] || 0) + 1;
+          }
+          const nextTurn: 'white' | 'black' = color === 'white' ? 'black' : 'white';
+          // Per-board end-of-turn updates
+          for (let idx = 0; idx < gameState.voidBoards.length; idx++) {
+            const b = gameState.voidBoards[idx];
+            // Increment fullmoveNumber when black finishes
+            if (color === 'black') {
+              b.fullmoveNumber = (b.fullmoveNumber || 1) + 1;
+              maybeTriggerMeteor(b, game.rules as any);
+            } else {
+              // keep meteor counter in sync if rule active
+              if (Array.isArray(game.rules) && (game.rules as any).includes('meteor-shower')) {
+                b.meteorCounter = b.fullmoveNumber;
+              }
+            }
+            // Switch board turn to next player
+            b.currentTurn = nextTurn;
+            // Recompute quick flags for next player
+            const isChk = isKingInCheck(b, nextTurn, game.rules as any);
+            const hasMoves = hasLegalMoves(b, nextTurn, game.rules as any);
+            b.isCheck = isChk; b.isCheckmate = isChk && !hasMoves; b.isStalemate = !isChk && !hasMoves;
+            if (!gameState.voidMeta.boardDone) gameState.voidMeta.boardDone = [ { isCheck:false,isCheckmate:false,isStalemate:false }, { isCheck:false,isCheckmate:false,isStalemate:false } ];
+            gameState.voidMeta.boardDone[idx] = { isCheck: b.isCheck, isCheckmate: b.isCheckmate, isStalemate: b.isStalemate };
+          }
+          gameState.currentTurn = nextTurn;
+          await storage.updateGameTurn(gameId, nextTurn);
+        };
+
+        // Transfer token usage
+        if (body.voidTransfer) {
+          const { fromBoardId, fromSquare, toBoardId, toSquare, promoted } = body.voidTransfer as { fromBoardId: 0|1; fromSquare: string; toBoardId: 0|1; toSquare: string; promoted?: 'queen'|'rook'|'bishop'|'knight' };
+          if (fromBoardId === toBoardId) return res.status(400).json({ message: 'Transfer must be between different boards' });
+          if (!gameState.voidMeta) gameState.voidMeta = { pending: null, tokens: { white: 0, black: 0 }, playerTurnCount: { white: 0, black: 0 } };
+          const tokens = gameState.voidMeta.tokens?.[color] ?? 0;
+          if (tokens <= 0) return res.status(400).json({ message: 'No transfer tokens available' });
+
+          const fromBoard = gameState.voidBoards[fromBoardId];
+          const toBoard = gameState.voidBoards[toBoardId];
+          const piece = fromBoard.board[fromSquare];
+          if (!piece || piece.color !== color) return res.status(400).json({ message: 'Invalid piece for transfer' });
+          if (toBoard.board[toSquare]) return res.status(400).json({ message: 'Target square is not empty' });
+
+          // Validate king safety on source board
+          const srcClone = JSON.parse(JSON.stringify(fromBoard));
+          delete srcClone.board[fromSquare];
+          if (isKingInCheck(srcClone, color, game.rules as any)) {
+            return res.status(400).json({ message: 'Transfer would leave your king in check on source board' });
+          }
+
+          // Apply transfer
+          delete fromBoard.board[fromSquare];
+          toBoard.board[toSquare] = piece;
+          // Promotion if pawn lands on last rank
+          if (piece.type === 'pawn') {
+            const rank = parseInt(toSquare[1]);
+            const shouldPromote = (piece.color === 'white' && rank === 8) || (piece.color === 'black' && rank === 1);
+            if (shouldPromote) {
+              const newType = promoted || 'queen';
+              toBoard.board[toSquare] = { type: newType, color: piece.color } as any;
+            }
+          }
+
+          // Spend token and clear pending
+          gameState.voidMeta.tokens[color] = (gameState.voidMeta.tokens[color] || 0) - 1;
+          gameState.voidMeta.pending = null;
+
+          // Update quick status flags per board
+          const updateFlags = (b: any, idx: number) => {
+            const nextT = b.currentTurn;
+            const isChk = isKingInCheck(b, nextT, game.rules as any);
+            const hasMoves = hasLegalMoves(b, nextT, game.rules as any);
+            b.isCheck = isChk; b.isCheckmate = isChk && !hasMoves; b.isStalemate = !isChk && !hasMoves;
+            if (!gameState.voidMeta.boardDone) gameState.voidMeta.boardDone = [ { isCheck:false,isCheckmate:false,isStalemate:false }, { isCheck:false,isCheckmate:false,isStalemate:false } ];
+            gameState.voidMeta.boardDone[idx] = { isCheck: b.isCheck, isCheckmate: b.isCheckmate, isStalemate: b.isStalemate };
+          };
+          updateFlags(fromBoard, fromBoardId);
+          updateFlags(toBoard, toBoardId);
+
+          await storage.updateGameState(gameId, gameState);
+          await finalizeVoidTurn();
+
+          const saved = await storage.addMove({
+            gameId,
+            moveNumber: moveData.moveNumber,
+            player: color,
+            from: fromSquare,
+            to: toSquare,
+            piece: `${piece.color}-${piece.type}`,
+            captured: undefined,
+            special: `void-transfer:${fromBoardId}->${toBoardId}`,
+            fen: moveData.fen,
+          } as any);
+          return broadcastAndReturn(saved);
+        }
+
+        // Sub-move on a board
+        const boardId = body.boardId as 0|1;
+        if (boardId !== 0 && boardId !== 1) return res.status(400).json({ message: 'boardId is required in Void mode' });
+        const active = gameState.voidBoards[boardId];
+        // If it's the second sub-move and player attempts to move on the same board while the other has legal moves, reject
+        if (gameState.voidMeta?.pending && gameState.voidMeta.pending.color === color && gameState.voidMeta.pending.movedBoards.includes(boardId)) {
+          const otherId = (boardId === 0 ? 1 : 0) as 0|1;
+          const other = gameState.voidBoards[otherId];
+          const otherHasMoves = hasLegalMoves(other, color, game.rules as any);
+          if (otherHasMoves) {
+            return res.status(400).json({ message: 'Second sub-move must be on the other board (auto-pass only if no legal moves there)' });
+          }
+        }
+        const piece = active.board[moveData.from];
+        const targetPiece = active.board[moveData.to];
+        let serverCaptured: string | undefined = undefined;
+        if (!piece || piece.color !== color) return res.status(400).json({ message: 'Invalid piece or wrong turn' });
+        // Validate move legality on this board
+        if (!isMoveLegal(active, moveData.from, moveData.to, color, game.rules as any)) {
+          return res.status(400).json({ message: 'Illegal move for this board' });
+        }
+        if (Array.isArray(game.rules) && game.rules.includes('double-knight') && active.doubleKnightMove && targetPiece && targetPiece.type === 'king') {
+          return res.status(400).json({ message: 'Cannot capture king during double knight sequence' });
+        }
+        if (piece && targetPiece && piece.color === targetPiece.color) return res.status(400).json({ message: 'Cannot capture your own pieces' });
+
+        // En passant logic on active board
+        const currentEnPassantTarget = active.enPassantTarget;
+        if (piece && piece.type === 'pawn' && moveData.to === currentEnPassantTarget) {
+          const targetFile = moveData.to[0];
+          const targetRank = parseInt(moveData.to[1]);
+          const fromFile = moveData.from[0];
+          const fromRank = parseInt(moveData.from[1]);
+          if (fromRank !== targetRank) {
+            const captureRank = piece.color === 'white' ? '5' : '4';
+            const captureSquare = targetFile + captureRank;
+            const cap = active.board[captureSquare];
+            if (cap) serverCaptured = `${cap.color}-${cap.type}`;
+            delete active.board[captureSquare];
+          } else {
+            const leftSquare = String.fromCharCode(fromFile.charCodeAt(0) - 1) + fromRank;
+            const rightSquare = String.fromCharCode(fromFile.charCodeAt(0) + 1) + fromRank;
+            let captureSquare: string | null = null;
+            if (active.board[leftSquare] && active.board[leftSquare]!.color !== piece.color) captureSquare = leftSquare;
+            else if (active.board[rightSquare] && active.board[rightSquare]!.color !== piece.color) captureSquare = rightSquare;
+            if (captureSquare) {
+              const cap = active.board[captureSquare];
+              if (cap) serverCaptured = `${cap.color}-${cap.type}`;
+              delete active.board[captureSquare];
+            }
+          }
+        }
+        active.enPassantTarget = null;
+
+        // Castling + Blink checks on active
+        let isCastling = false;
+        let isBlinkTeleport = false;
+        let pendingCastlingRookFrom: string | null = null;
+        let pendingCastlingRookTo: string | null = null;
+        if (piece && piece.type === 'king') {
+          const fromFile = moveData.from[0];
+          const toFile = moveData.to[0];
+          const fromRank = moveData.from[1];
+          const toRank = moveData.to[1];
+          if (isValidCastlingMove(active, piece, moveData.from, moveData.to, game.rules as any)) {
+            isCastling = true;
+          }
+          if (!isCastling && game.rules && Array.isArray(game.rules) && game.rules.includes('blink')) {
+            const blinkUsed = active.blinkUsed || { white: false, black: false };
+            if (!blinkUsed[piece.color]) {
+              const fromFileIndex = fromFile.charCodeAt(0) - 'a'.charCodeAt(0);
+              const toFileIndex = toFile.charCodeAt(0) - 'a'.charCodeAt(0);
+              const fromRankNum = parseInt(fromRank);
+              const toRankNum = parseInt(toRank);
+              const fileDistance = Math.abs(toFileIndex - fromFileIndex);
+              const rankDistance = Math.abs(toRankNum - fromRankNum);
+              const maxDistance = Math.max(fileDistance, rankDistance);
+              if (maxDistance > 1) isBlinkTeleport = true;
+            }
+          }
+          if (isCastling) {
+            const rank = moveData.to[1];
+            const isKingSide = toFile === 'g';
+            pendingCastlingRookTo = `${isKingSide ? 'f' : 'd'}${rank}`;
+            let rookFrom = `${isKingSide ? 'h' : 'a'}${rank}`;
+            const isFischer = Array.isArray(game.rules) && (game.rules as any).includes('fischer-random');
+            if (isFischer && active.castlingRooks) {
+              const side = isKingSide ? 'kingSide' : 'queenSide';
+              const mapped = active.castlingRooks[piece.color]?.[side];
+              if (mapped) rookFrom = mapped;
+            }
+            pendingCastlingRookFrom = rookFrom;
+            serverCaptured = undefined;
+          } else if (isBlinkTeleport && !isCastling) {
+            if (!active.blinkUsed) active.blinkUsed = { white: false, black: false };
+            active.blinkUsed[piece.color] = true;
+          }
+        }
+
+        if (!serverCaptured && targetPiece && targetPiece.color !== piece.color) {
+          serverCaptured = `${targetPiece.color}-${targetPiece.type}`;
+        }
+        if (!(isCastling && moveData.from === moveData.to)) {
+          active.board[moveData.to] = piece;
+          delete active.board[moveData.from];
+        }
+        if (isCastling && pendingCastlingRookFrom && pendingCastlingRookTo) {
+          active.board[pendingCastlingRookTo] = active.board[pendingCastlingRookFrom];
+          delete (active.board as any)[pendingCastlingRookFrom];
+        }
+
+        if (piece && piece.type === 'king') {
+          if (piece.color === 'white') { active.castlingRights.whiteKingside = false; active.castlingRights.whiteQueenside = false; }
+          else { active.castlingRights.blackKingside = false; active.castlingRights.blackQueenside = false; }
+        } else if (piece && piece.type === 'rook') {
+          const cr = active.castlingRooks;
+          if (cr) {
+            if (moveData.from === cr.white?.queenSide) active.castlingRights.whiteQueenside = false;
+            if (moveData.from === cr.white?.kingSide) active.castlingRights.whiteKingside = false;
+            if (moveData.from === cr.black?.queenSide) active.castlingRights.blackQueenside = false;
+            if (moveData.from === cr.black?.kingSide) active.castlingRights.blackKingside = false;
+          } else {
+            if (moveData.from === 'a1') active.castlingRights.whiteQueenside = false;
+            else if (moveData.from === 'h1') active.castlingRights.whiteKingside = false;
+            else if (moveData.from === 'a8') active.castlingRights.blackQueenside = false;
+            else if (moveData.from === 'h8') active.castlingRights.blackKingside = false;
+          }
+        } else if (targetPiece && targetPiece.type === 'rook') {
+          const capturedColor: 'white' | 'black' = targetPiece.color;
+          const cr = active.castlingRooks;
+          if (cr) {
+            if (moveData.to === cr[capturedColor]?.queenSide) { if (capturedColor === 'white') active.castlingRights.whiteQueenside = false; else active.castlingRights.blackQueenside = false; }
+            if (moveData.to === cr[capturedColor]?.kingSide) { if (capturedColor === 'white') active.castlingRights.whiteKingside = false; else active.castlingRights.blackKingside = false; }
+          } else {
+            if (capturedColor === 'white') {
+              if (moveData.to === 'a1') active.castlingRights.whiteQueenside = false;
+              if (moveData.to === 'h1') active.castlingRights.whiteKingside = false;
+            } else {
+              if (moveData.to === 'a8') active.castlingRights.blackQueenside = false;
+              if (moveData.to === 'h8') active.castlingRights.blackKingside = false;
+            }
+          }
+        }
+
+        if (piece && piece.type === 'pawn') {
+          const fromRank = parseInt(moveData.from[1]);
+          const toRank = parseInt(moveData.to[1]);
+          const fromFile = moveData.from[0];
+          const toFile = moveData.to[0];
+          if (Array.isArray(game.rules) && game.rules.includes('pawn-rotation')) {
+            if (!active.pawnRotationMoves) active.pawnRotationMoves = {};
+            const standardOriginalRank = piece.color === 'white' ? 2 : 7;
+            const standardOriginalSquare = `${fromFile}${standardOriginalRank}`;
+            if (Array.isArray(game.rules) && game.rules.includes('pawn-wall')) {
+              const pawnWallStartRank = piece.color === 'white' ? 3 : 6;
+              const wallOriginalSquare = `${fromFile}${pawnWallStartRank}`;
+              if (fromRank === standardOriginalRank) active.pawnRotationMoves[standardOriginalSquare] = true;
+              else if (fromRank === pawnWallStartRank) active.pawnRotationMoves[wallOriginalSquare] = true;
+            } else {
+              active.pawnRotationMoves[standardOriginalSquare] = true;
+            }
+          }
+          if (Math.abs(toRank - fromRank) === 2) {
+            const enPassantRank = piece.color === 'white' ? fromRank + 1 : fromRank - 1;
+            active.enPassantTarget = moveData.to[0] + enPassantRank;
+          }
+          if (Array.isArray(game.rules) && game.rules.includes('pawn-rotation')) {
+            const fromFileIndex = fromFile.charCodeAt(0) - 'a'.charCodeAt(0);
+            const toFileIndex = toFile.charCodeAt(0) - 'a'.charCodeAt(0);
+            if (Math.abs(toFileIndex - fromFileIndex) === 2 && fromRank === toRank) {
+              const enPassantFileIndex = fromFileIndex + (toFileIndex - fromFileIndex) / 2;
+              const enPassantFile = String.fromCharCode(enPassantFileIndex + 'a'.charCodeAt(0));
+              active.enPassantTarget = enPassantFile + fromRank;
+            }
+          }
+          const shouldPromote = (piece.color === 'white' && toRank === 8) || (piece.color === 'black' && toRank === 1);
+          if (shouldPromote) {
+            const [_, promotedPieceType] = moveData.piece.split('-');
+            active.board[moveData.to] = { type: promotedPieceType as any, color: piece.color };
+          }
+        }
+
+        if (piece?.type === 'pawn' || serverCaptured) active.halfmoveClock = 0; else active.halfmoveClock++;
+
+        // Rule applications per board
+        const updatedBoard = applyAllSpecialRules(active, game.rules as any, moveData.from, moveData.to, piece);
+        gameState.voidBoards[boardId] = updatedBoard;
+
+        // Pending management
+        if (!gameState.voidMeta) gameState.voidMeta = { pending: null, tokens: { white: 0, black: 0 }, playerTurnCount: { white: 0, black: 0 } };
+        if (!gameState.voidMeta.pending) {
+          gameState.voidMeta.pending = { color, movedBoards: [boardId] };
+        } else if (gameState.voidMeta.pending.color === color && !gameState.voidMeta.pending.movedBoards.includes(boardId)) {
+          gameState.voidMeta.pending = null;
+          await finalizeVoidTurn();
+        }
+
+        await storage.updateGameState(gameId, gameState);
+        const saved = await storage.addMove({ ...moveData, captured: serverCaptured, special: `void:board=${boardId}` } as any);
+        return broadcastAndReturn(saved);
+      }
   const piece = gameState.board[moveData.from];
   const targetPiece = gameState.board[moveData.to];
   let serverCaptured: string | undefined = undefined; // authoritative captured field computed on server

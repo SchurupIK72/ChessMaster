@@ -15,6 +15,13 @@ interface RuleSelectionModalProps {
 
 const availableRules = [
   {
+    id: 'void' as GameRules,
+    name: 'Void (Две доски)',
+    description: 'Игра идёт на двух независимых досках. За ход — два под-хода (по доске). Каждые 10 полноходов — токен переноса фигуры между досками.',
+    badges: ['Две доски', 'Перенос'],
+    badgeColors: ['bg-indigo-100 text-indigo-800', 'bg-amber-100 text-amber-800'],
+  },
+  {
     id: 'fischer-random' as GameRules,
     name: 'Шахматы Фишера (Chess960)',
     description: 'Случайная расстановка фигур на 1-й и 8-й горизонталях при сохранении правил (слоны на разном цвете, король между ладьями)',

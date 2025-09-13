@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ChessPiece, ChessGameState, GameRules, GameRulesArray, Game, Move } from "@shared/schema";
 import { ChessLogic } from "@/lib/chess-logic";
 import { getLegalCastlingDestinationFromRookClick } from "@/lib/castling";
-import { Sword, Crown, Plus, Settings, Users, Share2, LogOut } from "lucide-react";
+import { Sword, Crown, Plus, Settings, Users, Share2, LogOut, SplitSquareVertical } from "lucide-react";
 
 export default function ChessGame() {
   // Звук хода
@@ -53,6 +53,14 @@ export default function ChessGame() {
   const { toast } = useToast();
 
   const chessLogic = new ChessLogic();
+  // Computed later once `game` is available
+  const [voidSelected, setVoidSelected] = useState<{ [key: number]: string | null }>({});
+  const [voidValidMoves, setVoidValidMoves] = useState<{ [key: number]: string[] }>({});
+  const [transferMode, setTransferMode] = useState(false);
+  const [transferFrom, setTransferFrom] = useState<{ boardId: 0 | 1; square: string } | null>(null);
+  const [pendingTransferPromotion, setPendingTransferPromotion] = useState<
+    { fromBoardId: 0 | 1; fromSquare: string; toBoardId: 0 | 1; toSquare: string; color: 'white' | 'black' } | null
+  >(null);
 
   // Helper: compute whether Fog of War is currently active considering Double Knight pairing
   const computeFogActive = (rules: any, movesList: Move[]): boolean => {
@@ -151,6 +159,9 @@ export default function ChessGame() {
       try { src.close(); } catch {}
     };
   }, [gameId]);
+
+  // Derived flags
+  const isVoidMode = Array.isArray((game as any)?.rules) && ((game as any)?.rules as any[]).includes('void');
 
   // Create new game mutation
   const createGameMutation = useMutation({
@@ -263,9 +274,9 @@ export default function ChessGame() {
 
   // Make move mutation
   const makeMoveMutation = useMutation({
-    mutationFn: async ({ from, to, piece, captured }: { from: string; to: string; piece: string; captured?: string }) => {
+    mutationFn: async ({ from, to, piece, captured, boardId, voidTransfer, promoted }: { from: string; to: string; piece: string; captured?: string; boardId?: 0|1; voidTransfer?: any; promoted?: 'queen'|'rook'|'bishop'|'knight' }) => {
       if (!game) throw new Error("No active game");
-      const response = await apiRequest("POST", `/api/games/${gameId}/moves`, {
+      const payload: any = {
         moveNumber: Math.floor(moves.length / 2) + 1,
         player: game.currentTurn,
         from,
@@ -273,7 +284,10 @@ export default function ChessGame() {
         piece,
         captured,
         fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // This would be calculated properly
-      });
+      };
+      if (typeof boardId !== 'undefined') payload.boardId = boardId;
+      if (voidTransfer) payload.voidTransfer = { ...voidTransfer, promoted };
+      const response = await apiRequest("POST", `/api/games/${gameId}/moves`, payload);
       return response.json();
     },
     onSuccess: () => {
@@ -299,6 +313,145 @@ export default function ChessGame() {
       });
     },
   });
+
+  // Void: per-board square click handler
+  const handleVoidSquareClick = (boardId: 0 | 1, square: string) => {
+    if (!game || !game.gameState || !isVoidMode || !Array.isArray((game.gameState as any).voidBoards)) return;
+    const boards = (game.gameState as any).voidBoards as ChessGameState[];
+    const active = boards[boardId] as any as ChessGameState;
+    const piece = active.board[square];
+
+    const playerColor = getCurrentPlayerColor();
+    const myTurn = playerColor === game.currentTurn;
+
+    // Transfer selection mode
+    if (transferMode) {
+      if (!transferFrom) {
+        // Choose source piece
+        if (piece && myTurn && piece.color === playerColor) {
+          setTransferFrom({ boardId, square });
+        }
+        return;
+      } else {
+        // Choose destination on the other board
+        if (boardId === transferFrom.boardId) {
+          // Must select destination on the other board
+          return;
+        }
+        const destBoard = boards[boardId] as any as ChessGameState;
+        if (destBoard.board[square]) return; // must be empty
+        const srcPiece = (boards[transferFrom.boardId] as any as ChessGameState).board[transferFrom.square]! as ChessPiece;
+        // If transferring pawn to last rank, prompt promotion
+        const rank = parseInt(square[1]);
+        const shouldPromote = srcPiece.type === 'pawn' && ((srcPiece.color === 'white' && rank === 8) || (srcPiece.color === 'black' && rank === 1));
+        const basePayload = {
+          fromBoardId: transferFrom.boardId,
+          fromSquare: transferFrom.square,
+          toBoardId: boardId,
+          toSquare: square,
+        };
+        if (shouldPromote) {
+          setPendingTransferPromotion({ ...basePayload, color: srcPiece.color });
+          setShowPromotionModal(true);
+        } else {
+          makeMoveMutation.mutate({
+            from: transferFrom.square,
+            to: square,
+            piece: `${srcPiece.color}-${srcPiece.type}`,
+            boardId: undefined,
+            voidTransfer: basePayload,
+          });
+          setTransferMode(false);
+          setTransferFrom(null);
+        }
+        return;
+      }
+    }
+
+    // Normal per-board move selection
+    const sel = voidSelected[boardId] || null;
+    const vm = voidValidMoves[boardId] || [];
+    if (sel) {
+      if (sel === square) {
+        setVoidSelected({ ...voidSelected, [boardId]: null });
+        setVoidValidMoves({ ...voidValidMoves, [boardId]: [] });
+        return;
+      }
+      if (vm.includes(square)) {
+        const fromPiece = active.board[sel]! as ChessPiece;
+        const toPiece = active.board[square] as ChessPiece | null;
+        if (toPiece && fromPiece && toPiece.color === fromPiece.color) {
+          setVoidSelected({ ...voidSelected, [boardId]: null });
+          setVoidValidMoves({ ...voidValidMoves, [boardId]: [] });
+          return;
+        }
+        if (fromPiece) {
+          if (!myTurn || fromPiece.color !== playerColor) {
+            toast({ title: 'Не ваш ход', description: 'Дождитесь своей очереди', variant: 'destructive', duration: 2000 });
+            setVoidSelected({ ...voidSelected, [boardId]: null });
+            setVoidValidMoves({ ...voidValidMoves, [boardId]: [] });
+            return;
+          }
+          // Promotion check on this board
+          if (fromPiece.type === 'pawn') {
+            const toRank = parseInt(square[1]);
+            const shouldPromote = (fromPiece.color === 'white' && toRank === 8) || (fromPiece.color === 'black' && toRank === 1);
+            if (shouldPromote) {
+              setPromotionMove({ from: sel, to: square, piece: fromPiece });
+              setShowPromotionModal(true);
+              // stash selected board for promotion completion
+              (window as any).__voidPromotionBoardId = boardId;
+              return;
+            }
+          }
+          // En passant capture detection on this board
+          let captured = toPiece ? `${toPiece.color}-${toPiece.type}` : undefined;
+          if (fromPiece.type === 'pawn' && square === active.enPassantTarget && !toPiece) {
+            const targetFile = square[0];
+            const targetRank = parseInt(square[1]);
+            const fromFile = sel[0];
+            const fromRank = parseInt(sel[1]);
+            if (fromRank !== targetRank) {
+              const captureRank = fromPiece.color === 'white' ? '5' : '4';
+              const captureSquare = targetFile + captureRank;
+              const capturedPawn = active.board[captureSquare] as ChessPiece | null;
+              if (capturedPawn) captured = `${capturedPawn.color}-${capturedPawn.type}`;
+            } else {
+              const leftSquare = String.fromCharCode(fromFile.charCodeAt(0) - 1) + fromRank;
+              const rightSquare = String.fromCharCode(fromFile.charCodeAt(0) + 1) + fromRank;
+              const leftPawn = active.board[leftSquare] as ChessPiece | null;
+              const rightPawn = active.board[rightSquare] as ChessPiece | null;
+              const capturedPawn = leftPawn && leftPawn.color !== fromPiece.color ? leftPawn : rightPawn && rightPawn.color !== fromPiece.color ? rightPawn : null;
+              if (capturedPawn) captured = `${capturedPawn.color}-${capturedPawn.type}`;
+            }
+          }
+          makeMoveMutation.mutate({
+            from: sel,
+            to: square,
+            piece: `${fromPiece.color}-${fromPiece.type}`,
+            captured,
+            boardId,
+          });
+        }
+      }
+      // clear selection if not a valid move
+      setVoidSelected({ ...voidSelected, [boardId]: null });
+      setVoidValidMoves({ ...voidValidMoves, [boardId]: [] });
+    } else {
+      // Select piece
+      if (piece && myTurn && piece.color === playerColor) {
+        setVoidSelected({ ...voidSelected, [boardId]: square });
+        const movesList = chessLogic.getValidMoves(active as any, square, game?.rules as any);
+        setVoidValidMoves({ ...voidValidMoves, [boardId]: movesList });
+      } else {
+        setVoidSelected({ ...voidSelected, [boardId]: null });
+        setVoidValidMoves({ ...voidValidMoves, [boardId]: [] });
+        if (piece && piece.color !== playerColor && playerColor) {
+          toast({ title: 'Неверный ход', description: 'Вы можете ходить только своими фигурами', variant: 'destructive', duration: 2000 });
+        }
+      }
+    }
+  };
 
   // Undo last move mutation
   const undoMoveMutation = useMutation({
@@ -789,7 +942,24 @@ export default function ChessGame() {
 
   const handlePawnPromotion = (pieceType: 'queen' | 'rook' | 'bishop' | 'knight') => {
     if (!promotionMove || !game) return;
-    
+    // Handle pending transfer promotion first
+    if (pendingTransferPromotion) {
+      const { fromBoardId, fromSquare, toBoardId, toSquare, color } = pendingTransferPromotion;
+      makeMoveMutation.mutate({
+        from: fromSquare,
+        to: toSquare,
+        piece: `${color}-pawn`,
+        voidTransfer: { fromBoardId, fromSquare, toBoardId, toSquare },
+        promoted: pieceType,
+      });
+      setPendingTransferPromotion(null);
+      setTransferMode(false);
+      setTransferFrom(null);
+      setShowPromotionModal(false);
+      setPromotionMove(null);
+      return;
+    }
+
     const currentGameState = game.gameState as ChessGameState;
     const targetPiece = currentGameState?.board?.[promotionMove.to];
     
@@ -807,12 +977,16 @@ export default function ChessGame() {
       }
     }
       
+    // If promotion originated from Void board, use stored board id
+    const voidBoardId = (window as any).__voidPromotionBoardId as 0 | 1 | undefined;
     makeMoveMutation.mutate({
       from: promotionMove.from,
       to: promotionMove.to,
-      piece: `${promotionMove.piece.color}-${pieceType}`, // Use selected piece type
+      piece: `${promotionMove.piece.color}-${pieceType}`,
       captured,
+      boardId: typeof voidBoardId !== 'undefined' ? voidBoardId : undefined,
     });
+    (window as any).__voidPromotionBoardId = undefined;
     
     setShowPromotionModal(false);
     setPromotionMove(null);
@@ -1022,20 +1196,79 @@ export default function ChessGame() {
             />
           </div>
 
-          {/* Sword Board */}
+          {/* Center Column: Board(s) */}
           <div className="lg:col-span-6 flex flex-col items-center">
-            <ChessBoard
-                gameState={game!.gameState as ChessGameState}
-                selectedSquare={selectedSquare}
-                validMoves={validMoves}
-                onSquareClick={handleSquareClick}
-                currentTurn={game!.currentTurn as 'white' | 'black'}
-                flipped={getCurrentPlayerColor() === 'black'}
-                viewerColor={getCurrentPlayerColor()}
-                rules={(game!.rules as any) || []}
-                fogActiveOverride={fogActive}
-                lastMoveSquares={lastMoveSquares}
-              />
+            {!isVoidMode && (
+              <>
+                <ChessBoard
+                  gameState={game!.gameState as ChessGameState}
+                  selectedSquare={selectedSquare}
+                  validMoves={validMoves}
+                  onSquareClick={handleSquareClick}
+                  currentTurn={game!.currentTurn as 'white' | 'black'}
+                  flipped={getCurrentPlayerColor() === 'black'}
+                  viewerColor={getCurrentPlayerColor()}
+                  rules={(game!.rules as any) || []}
+                  fogActiveOverride={fogActive}
+                  lastMoveSquares={lastMoveSquares}
+                />
+              </>
+            )}
+            {isVoidMode && Array.isArray((game!.gameState as any).voidBoards) && (
+              <div className="w-full flex flex-col gap-6">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <SplitSquareVertical className="h-5 w-5" />
+                    <span className="font-semibold">Void Mode</span>
+                  </div>
+                  <div className="text-sm text-slate-600">
+                    {(() => {
+                      const meta = (game!.gameState as any).voidMeta || { tokens: { white: 0, black: 0 }, pending: null };
+                      const color = getCurrentPlayerColor();
+                      const myTokens = color ? (meta.tokens[color] || 0) : 0;
+                      const canTransfer = color && color === game!.currentTurn && myTokens > 0 && !meta.pending;
+                      return (
+                        <div className="flex items-center gap-3">
+                          <span>Токены переноса: <b>{myTokens}</b></span>
+                          <Button size="sm" variant={canTransfer ? "default" : "outline"} disabled={!canTransfer} onClick={() => setTransferMode(v => !v)}>
+                            Перенос {transferMode ? 'ON' : 'OFF'}
+                          </Button>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+                {/* Board A */}
+                <ChessBoard
+                  gameState={(game!.gameState as any).voidBoards[0] as ChessGameState}
+                  selectedSquare={voidSelected[0] || null}
+                  validMoves={voidValidMoves[0] || []}
+                  onSquareClick={(sq) => handleVoidSquareClick(0, sq)}
+                  currentTurn={game!.currentTurn as 'white' | 'black'}
+                  flipped={getCurrentPlayerColor() === 'black'}
+                  viewerColor={getCurrentPlayerColor()}
+                  rules={(game!.rules as any) || []}
+                  fogActiveOverride={fogActive}
+                  lastMoveSquares={lastMoveSquares}
+                />
+                {/* Board B */}
+                <ChessBoard
+                  gameState={(game!.gameState as any).voidBoards[1] as ChessGameState}
+                  selectedSquare={voidSelected[1] || null}
+                  validMoves={voidValidMoves[1] || []}
+                  onSquareClick={(sq) => handleVoidSquareClick(1, sq)}
+                  currentTurn={game!.currentTurn as 'white' | 'black'}
+                  flipped={getCurrentPlayerColor() === 'black'}
+                  viewerColor={getCurrentPlayerColor()}
+                  rules={(game!.rules as any) || []}
+                  fogActiveOverride={fogActive}
+                  lastMoveSquares={lastMoveSquares}
+                />
+                {transferMode && (
+                  <div className="mt-2 text-center text-sm text-blue-700">Выберите фигуру для переноса, затем пустую клетку на другой доске</div>
+                )}
+              </div>
+            )}
 
             {/* Game Controls */}
             <div className="flex items-center space-x-4 mt-6">

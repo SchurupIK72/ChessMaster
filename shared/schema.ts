@@ -94,7 +94,18 @@ export type ChessSquare = {
   square: string; // e.g., 'e4'
 };
 
-export type ChessGameState = {
+export type VoidMeta = {
+  // Track whether a player's full turn is halfway done (one sub-move made on a board)
+  pending?: { color: 'white' | 'black'; movedBoards: number[] } | null;
+  // Transfer tokens per color
+  tokens: { white: number; black: number };
+  // Count of completed full turns per color (used to award tokens every 10 turns)
+  playerTurnCount: { white: number; black: number };
+  // Optional per-board summary of terminal statuses for quick render
+  boardDone?: Array<{ isCheck: boolean; isCheckmate: boolean; isStalemate: boolean }>;
+};
+
+export type BaseBoardState = {
   board: { [square: string]: ChessPiece | null };
   currentTurn: 'white' | 'black';
   castlingRights: {
@@ -134,5 +145,14 @@ export type ChessGameState = {
   };
 };
 
-export type GameRules = 'standard' | 'double-knight' | 'pawn-rotation' | 'xray-bishop' | 'pawn-wall' | 'blink' | 'fog-of-war' | 'meteor-shower' | 'fischer-random';
+export type ChessGameState = BaseBoardState & {
+  // Void mode: two independent boards and bookkeeping
+  voidMode?: boolean;
+  // When void mode is active, contains the two independent board states (non-recursive base)
+  voidBoards?: [BaseBoardState, BaseBoardState];
+  // Per-void-mode metadata: tokens, pending sub-turn, etc.
+  voidMeta?: VoidMeta;
+};
+
+export type GameRules = 'standard' | 'double-knight' | 'pawn-rotation' | 'xray-bishop' | 'pawn-wall' | 'blink' | 'fog-of-war' | 'meteor-shower' | 'fischer-random' | 'void';
 export type GameRulesArray = GameRules[];

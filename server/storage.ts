@@ -201,95 +201,133 @@ export class DatabaseStorage implements IStorage {
   }
 
   private getInitialGameState(rules: GameRulesArray, seed?: string): ChessGameState {
-    const initialBoard: { [square: string]: ChessPiece | null } = {};
-
     const files: string[] = ['a','b','c','d','e','f','g','h'];
 
-    // Helper: generate Fischer Random (Chess960) back rank order
-  const useFischer = rules.includes('fischer-random');
+    const buildBaseState = (effectiveRules: GameRulesArray, effSeed?: string): ChessGameState => {
+      const initialBoard: { [square: string]: ChessPiece | null } = {};
+      // Helper: generate Fischer Random (Chess960) back rank order
+      const useFischer = effectiveRules.includes('fischer-random');
 
-    // Build pieces for rank 1 and 8
-    let backRankTypes: ChessPiece['type'][];
-    if (useFischer) {
-      const seedKey = seed || "default-seed";
-      backRankTypes = generateFischerBackRankFromSeed(seedKey) as ChessPiece['type'][];
-    } else {
-      backRankTypes = ['rook','knight','bishop','queen','king','bishop','knight','rook'];
-    }
+      // Build pieces for rank 1 and 8
+      let backRankTypes: ChessPiece['type'][];
+      if (useFischer) {
+        const seedKey = effSeed || seed || "default-seed";
+        backRankTypes = generateFischerBackRankFromSeed(seedKey) as ChessPiece['type'][];
+      } else {
+        backRankTypes = ['rook','knight','bishop','queen','king','bishop','knight','rook'];
+      }
 
-  // Place back ranks
-    files.forEach((file, idx) => {
-      const t = backRankTypes[idx];
-      initialBoard[`${file}1`] = { type: t, color: 'white' };
-      initialBoard[`${file}8`] = { type: t, color: 'black' };
-    });
-
-    // Pawns
-    files.forEach(file => {
-      initialBoard[`${file}2`] = { type: 'pawn', color: 'white' };
-      initialBoard[`${file}7`] = { type: 'pawn', color: 'black' };
-    });
-
-    // Pawn wall extra rows
-    if (rules.includes('pawn-wall')) {
-      files.forEach(file => {
-        initialBoard[`${file}3`] = { type: 'pawn', color: 'white' };
-        initialBoard[`${file}6`] = { type: 'pawn', color: 'black' };
+      // Place back ranks
+      files.forEach((file, idx) => {
+        const t = backRankTypes[idx];
+        initialBoard[`${file}1`] = { type: t, color: 'white' };
+        initialBoard[`${file}8`] = { type: t, color: 'black' };
       });
+
+      // Pawns
+      files.forEach(file => {
+        initialBoard[`${file}2`] = { type: 'pawn', color: 'white' };
+        initialBoard[`${file}7`] = { type: 'pawn', color: 'black' };
+      });
+
+      // Pawn wall extra rows
+      if (effectiveRules.includes('pawn-wall')) {
+        files.forEach(file => {
+          initialBoard[`${file}3`] = { type: 'pawn', color: 'white' };
+          initialBoard[`${file}6`] = { type: 'pawn', color: 'black' };
+        });
+      }
+
+      // Compute castling rook mapping for Chess960
+      let castlingRooks: ChessGameState['castlingRooks'] | undefined = undefined;
+      let rights = { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true } as ChessGameState['castlingRights'];
+      if (useFischer) {
+        const whiteKingIdx = backRankTypes.findIndex(t => t === 'king');
+        const whiteLeftRookIdx = [...backRankTypes].slice(0, whiteKingIdx).lastIndexOf('rook');
+        const whiteRightRookIdx = [...backRankTypes].slice(whiteKingIdx + 1).indexOf('rook');
+        const wQueenRook = whiteLeftRookIdx >= 0 ? `${files[whiteLeftRookIdx]}1` : null;
+        const wKingRook = whiteRightRookIdx >= 0 ? `${files[whiteKingIdx + 1 + whiteRightRookIdx]}1` : null;
+
+        const blackKingIdx = backRankTypes.findIndex(t => t === 'king');
+        const blackLeftRookIdx = [...backRankTypes].slice(0, blackKingIdx).lastIndexOf('rook');
+        const blackRightRookIdx = [...backRankTypes].slice(blackKingIdx + 1).indexOf('rook');
+        const bQueenRook = blackLeftRookIdx >= 0 ? `${files[blackLeftRookIdx]}8` : null;
+        const bKingRook = blackRightRookIdx >= 0 ? `${files[blackKingIdx + 1 + blackRightRookIdx]}8` : null;
+
+        castlingRooks = {
+          white: { kingSide: wKingRook, queenSide: wQueenRook },
+          black: { kingSide: bKingRook, queenSide: bQueenRook },
+        };
+        rights = {
+          whiteKingside: !!wKingRook,
+          whiteQueenside: !!wQueenRook,
+          blackKingside: !!bKingRook,
+          blackQueenside: !!bQueenRook,
+        };
+      }
+
+      const state: ChessGameState = {
+        board: initialBoard,
+        currentTurn: 'white',
+        castlingRights: useFischer ? rights : { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true },
+        castlingRooks,
+        enPassantTarget: null,
+        halfmoveClock: 0,
+        fullmoveNumber: 1,
+        isCheck: false,
+        isCheckmate: false,
+        isStalemate: false,
+        burnedSquares: [],
+        meteorCounter: 0,
+        doubleKnightMove: null,
+        pawnRotationMoves: {},
+        blinkUsed: {
+          white: false,
+          black: false,
+        },
+      } as any;
+      return state;
+    };
+
+    // If Void mode requested, build container with two boards
+    if (rules.includes('void')) {
+      const baseRules = rules.filter(r => r !== 'void') as GameRulesArray;
+      const board0 = buildBaseState(baseRules, (seed || 'default-seed') + ':0');
+      const board1 = buildBaseState(baseRules, (seed || 'default-seed') + ':1');
+
+      const container: ChessGameState = {
+        // Top-level board is unused in void; keep minimal valid structure to satisfy clients that may read it accidentally
+        board: {},
+        currentTurn: 'white',
+        castlingRights: { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true },
+        enPassantTarget: null,
+        halfmoveClock: 0,
+        fullmoveNumber: 1,
+        isCheck: false,
+        isCheckmate: false,
+        isStalemate: false,
+        burnedSquares: [],
+        meteorCounter: 0,
+        doubleKnightMove: null,
+        pawnRotationMoves: {},
+        blinkUsed: { white: false, black: false },
+        voidMode: true,
+        voidBoards: [board0, board1],
+        voidMeta: {
+          pending: null,
+          tokens: { white: 0, black: 0 },
+          playerTurnCount: { white: 0, black: 0 },
+          boardDone: [
+            { isCheck: false, isCheckmate: false, isStalemate: false },
+            { isCheck: false, isCheckmate: false, isStalemate: false },
+          ],
+        },
+      } as any;
+      return container;
     }
 
-    // Compute castling rook mapping for Chess960
-    let castlingRooks: ChessGameState['castlingRooks'] | undefined = undefined;
-    let rights = { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true } as ChessGameState['castlingRights'];
-    if (useFischer) {
-      const whiteKingIdx = backRankTypes.findIndex(t => t === 'king');
-      const whiteLeftRookIdx = [...backRankTypes].slice(0, whiteKingIdx).lastIndexOf('rook');
-      const whiteRightRookIdx = [...backRankTypes].slice(whiteKingIdx + 1).indexOf('rook');
-      const wQueenRook = whiteLeftRookIdx >= 0 ? `${files[whiteLeftRookIdx]}1` : null;
-      const wKingRook = whiteRightRookIdx >= 0 ? `${files[whiteKingIdx + 1 + whiteRightRookIdx]}1` : null;
-
-      const blackKingIdx = backRankTypes.findIndex(t => t === 'king');
-      const blackLeftRookIdx = [...backRankTypes].slice(0, blackKingIdx).lastIndexOf('rook');
-      const blackRightRookIdx = [...backRankTypes].slice(blackKingIdx + 1).indexOf('rook');
-      const bQueenRook = blackLeftRookIdx >= 0 ? `${files[blackLeftRookIdx]}8` : null;
-      const bKingRook = blackRightRookIdx >= 0 ? `${files[blackKingIdx + 1 + blackRightRookIdx]}8` : null;
-
-      castlingRooks = {
-        white: { kingSide: wKingRook, queenSide: wQueenRook },
-        black: { kingSide: bKingRook, queenSide: bQueenRook },
-      };
-      rights = {
-        whiteKingside: !!wKingRook,
-        whiteQueenside: !!wQueenRook,
-        blackKingside: !!bKingRook,
-        blackQueenside: !!bQueenRook,
-      };
-    }
-
-    // Return complete initial state
-    const state: ChessGameState = {
-      board: initialBoard,
-      currentTurn: 'white',
-      castlingRights: useFischer ? rights : { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true },
-      castlingRooks,
-      enPassantTarget: null,
-      halfmoveClock: 0,
-      fullmoveNumber: 1,
-      isCheck: false,
-      isCheckmate: false,
-      isStalemate: false,
-      burnedSquares: [],
-      meteorCounter: 0,
-      doubleKnightMove: null,
-      pawnRotationMoves: {},
-      blinkUsed: {
-        white: false,
-        black: false,
-      },
-    } as any;
-
-    // If meteor rule not active, fields are harmless; keep defaults
-    return state;
+    // Non-void classic/other-rules game
+    return buildBaseState(rules, seed);
   }
 
   async offerDraw(id: number, player: 'white' | 'black'): Promise<Game> {
