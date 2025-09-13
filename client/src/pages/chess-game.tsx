@@ -276,16 +276,20 @@ export default function ChessGame() {
       });
       return response.json();
     },
-    onSuccess: async () => {
-      // Воспроизвести звук хода
+    onSuccess: () => {
+      // Play move sound immediately
       if (moveAudio) {
         try { moveAudio.currentTime = 0; moveAudio.play(); } catch (e) {}
       }
-      // Immediately refetch the game state to get the updated turn
-      await queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/games", gameId, "moves"] });
+
+      // Instant UI response: clear selection and highlighted moves
       setSelectedSquare(null);
       setValidMoves([]);
+
+      // Fire-and-forget cache updates: rely on SSE to update moves; only invalidate the game
+      // (remove await to avoid blocking UI)
+      queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
+      // SSE 'move' event will trigger both game and moves invalidations via effect; no need to duplicate here
     },
     onError: (error: any) => {
       toast({
