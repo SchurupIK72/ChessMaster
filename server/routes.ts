@@ -1294,9 +1294,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const targetPiece = gameState.board[moveData.to];
   let serverCaptured: string | undefined = undefined; // authoritative captured field computed on server
       
-      // Basic validation: cannot capture own pieces
+      // Basic validation: cannot capture own pieces, except for Chess960 castling where king may not move (from==to)
       if (piece && targetPiece && piece.color === targetPiece.color) {
-        return res.status(400).json({ message: "Cannot capture your own pieces" });
+        const allowNoopCastling = (
+          piece.type === 'king' &&
+          moveData.from === moveData.to &&
+          isValidCastlingMove(gameState, piece, moveData.from, moveData.to, game.rules as any)
+        );
+        if (!allowNoopCastling) {
+          return res.status(400).json({ message: "Cannot capture your own pieces" });
+        }
       }
       
       // Validate piece exists and belongs to current player
@@ -1448,8 +1455,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!serverCaptured && targetPiece && targetPiece.color !== piece.color) {
         serverCaptured = `${targetPiece.color}-${targetPiece.type}`;
       }
-      gameState.board[moveData.to] = piece;
-      delete gameState.board[moveData.from];
+      // In Chess960, castling can have from==to when king starts on c/g; keep king in place
+      if (!(isCastling && moveData.from === moveData.to)) {
+        gameState.board[moveData.to] = piece;
+        delete gameState.board[moveData.from];
+      }
 
       // After moving the king, perform staged rook move for castling
       if (isCastling && pendingCastlingRookFrom && pendingCastlingRookTo) {
