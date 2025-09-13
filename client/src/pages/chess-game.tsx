@@ -325,7 +325,49 @@ export default function ChessGame() {
     const playerColor = getCurrentPlayerColor();
     const myTurn = playerColor === game.currentTurn;
 
-    // Transfer selection mode
+    // Auto-transfer: if a piece is selected on the other board and user clicks an empty square here,
+    // and transfer is allowed (have token, it's your turn, and no pending), perform transfer without needing toggle.
+    if (myTurn && playerColor) {
+      const meta = (game.gameState as any).voidMeta || { tokens: { white: 0, black: 0 }, pending: null };
+      const myTokens = meta.tokens?.[playerColor] ?? 0;
+      const canAutoTransfer = myTokens > 0 && !meta.pending; // transfer consumes full turn
+      const otherBoardId = (boardId === 0 ? 1 : 0) as 0 | 1;
+      const otherSel = voidSelected[otherBoardId] || null;
+      if (canAutoTransfer && otherSel && !piece) {
+        const srcPiece = (boards[otherBoardId] as any as ChessGameState).board[otherSel] as ChessPiece | null;
+        if (srcPiece && srcPiece.color === playerColor) {
+          // If transferring pawn to last rank, prompt promotion
+          const rank = parseInt(square[1]);
+          const shouldPromote = srcPiece.type === 'pawn' && ((srcPiece.color === 'white' && rank === 8) || (srcPiece.color === 'black' && rank === 1));
+          const basePayload = {
+            fromBoardId: otherBoardId,
+            fromSquare: otherSel,
+            toBoardId: boardId,
+            toSquare: square,
+          } as const;
+          if (shouldPromote) {
+            setPendingTransferPromotion({ ...basePayload, color: srcPiece.color });
+            setShowPromotionModal(true);
+          } else {
+            makeMoveMutation.mutate({
+              from: otherSel,
+              to: square,
+              piece: `${srcPiece.color}-${srcPiece.type}`,
+              boardId: undefined,
+              voidTransfer: basePayload,
+            });
+          }
+          // Clear selections on both boards and exit
+          setVoidSelected({ ...voidSelected, [otherBoardId]: null, [boardId]: null });
+          setVoidValidMoves({ ...voidValidMoves, [otherBoardId]: [], [boardId]: [] });
+          setTransferMode(false);
+          setTransferFrom(null);
+          return;
+        }
+      }
+    }
+
+    // Transfer selection mode (explicit toggle still supported)
     if (transferMode) {
       if (!transferFrom) {
         // Choose source piece
@@ -443,7 +485,24 @@ export default function ChessGame() {
       if (piece && myTurn && piece.color === playerColor) {
         setVoidSelected({ ...voidSelected, [boardId]: square });
         const movesList = chessLogic.getValidMoves(active as any, square, game?.rules as any);
-        setVoidValidMoves({ ...voidValidMoves, [boardId]: movesList });
+        // compute transfer destinations on the other board if token available and no pending
+        const meta = (game.gameState as any).voidMeta || { tokens: { white: 0, black: 0 }, pending: null };
+        const myTokens = meta.tokens?.[playerColor] ?? 0;
+        const canAutoTransfer = myTokens > 0 && !meta.pending;
+        const otherId = (boardId === 0 ? 1 : 0) as 0 | 1;
+        let otherMoves: string[] = [];
+        if (canAutoTransfer) {
+          const otherBoard = boards[otherId] as any as ChessGameState;
+          // all empty squares on the other board
+          const files = ['a','b','c','d','e','f','g','h'];
+          for (let r = 1; r <= 8; r++) {
+            for (const f of files) {
+              const sq = `${f}${r}`;
+              if (!otherBoard.board[sq]) otherMoves.push(sq);
+            }
+          }
+        }
+        setVoidValidMoves({ ...voidValidMoves, [boardId]: movesList, [otherId]: otherMoves });
       } else {
         setVoidSelected({ ...voidSelected, [boardId]: null });
         setVoidValidMoves({ ...voidValidMoves, [boardId]: [] });
