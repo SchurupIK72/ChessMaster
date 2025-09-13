@@ -1,4 +1,5 @@
 import type { ChessGameState } from "@shared/schema";
+import { ChessLogic } from "./chess-logic";
 
 /**
  * Maps a rook click (with the king selected) to the castling destination square in Chess960.
@@ -54,6 +55,25 @@ export function getLegalCastlingDestinationFromRookClick(
   validMoves: string[]
 ): string | null {
   const dest = getCastlingDestinationFromRookClick(gameState, kingSquare, rookSquare, rules);
-  if (dest && validMoves.includes(dest)) return dest;
+  if (!dest) return null;
+
+  // Determine which side (king or queen) based on destination file
+  const side: 'whiteKingside' | 'whiteQueenside' | 'blackKingside' | 'blackQueenside' | null = (() => {
+    const king = gameState.board[kingSquare];
+    if (!king || king.type !== 'king') return null;
+    const color = king.color as 'white' | 'black';
+    const isKingSide = dest[0] === 'g';
+    if (color === 'white') return isKingSide ? 'whiteKingside' : 'whiteQueenside';
+    return isKingSide ? 'blackKingside' : 'blackQueenside';
+  })();
+
+  // Require castling rights for that side; prevents triggering Blink to c/g when castling not allowed
+  if (!side || !gameState.castlingRights || !gameState.castlingRights[side]) return null;
+
+  // Verify that destination is a legal king move when Blink is disabled (so we're not matching a Blink square)
+  const rulesNoBlink = Array.isArray(rules) ? rules.filter(r => r !== 'blink') : [];
+  const logic = new ChessLogic();
+  const kingMovesNoBlink = logic.getValidMoves(gameState as any, kingSquare, rulesNoBlink);
+  if (kingMovesNoBlink.includes(dest)) return dest;
   return null;
 }

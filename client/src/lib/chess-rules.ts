@@ -29,7 +29,14 @@ export class ChessRules {
     
     // Check if this is a king move that uses blink ability
     if (piece?.type === 'king') {
-      const isBlinkMove = this.isBlinkMove(fromSquare, toSquare);
+      // Detect castling, including Chess960: king moves on its back rank to file c or g
+      const backRank = piece.color === 'white' ? '1' : '8';
+      const isSameRank = fromSquare[1] === toSquare[1];
+      const toFile = toSquare[0];
+      const isCastling = isSameRank && toSquare[1] === backRank && (toFile === 'c' || toFile === 'g');
+
+      // Blink is any king move beyond one square in any direction that is NOT castling
+      const isBlinkMove = this.isBlinkMove(fromSquare, toSquare) && !isCastling;
       if (isBlinkMove) {
         // Mark blink as used for this color
         newGameState.blinkUsed[piece.color] = true;

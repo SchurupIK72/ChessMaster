@@ -765,8 +765,13 @@ function applyBlinkRule(gameState: any, fromSquare: string, toSquare: string, pi
   const colDiff = Math.abs(toCol - fromCol);
   const rowDiff = Math.abs(toRow - fromRow);
   
-  // Check if this is castling (king moves 2 squares horizontally on the same rank)
-  const isCastling = (colDiff === 2 && rowDiff === 0);
+  // Check if this is castling.
+  // In standard chess, king moves 2 squares on same rank.
+  // In Chess960, king ends on file 'c' or 'g' of its back rank (same rank move).
+  const backRank = piece.color === 'white' ? '1' : '8';
+  const sameRank = fromSquare[1] === toSquare[1];
+  const toFile = toSquare[0];
+  const isCastling = (colDiff === 2 && rowDiff === 0) || (sameRank && toSquare[1] === backRank && (toFile === 'c' || toFile === 'g'));
   
   // Check if this is a blink move (beyond normal king range, but not castling)
   if ((colDiff > 1 || rowDiff > 1) && !isCastling) {
