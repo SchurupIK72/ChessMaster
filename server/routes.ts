@@ -1409,14 +1409,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const boardId = body.boardId as 0|1;
         if (boardId !== 0 && boardId !== 1) return res.status(400).json({ message: 'boardId is required in Void mode' });
         const active = gameState.voidBoards[boardId];
-        // If it's the second sub-move and player attempts to move on the same board while the other has legal moves, reject
+        // If a second sub-move is attempted on the same board, reject: second must be on the other board.
         if (gameState.voidMeta?.pending && gameState.voidMeta.pending.color === color && gameState.voidMeta.pending.movedBoards.includes(boardId)) {
-          const otherId = (boardId === 0 ? 1 : 0) as 0|1;
-          const other = gameState.voidBoards[otherId];
-          const otherHasMoves = hasLegalMoves(other, color, game.rules as any);
-          if (otherHasMoves) {
-            return res.status(400).json({ message: 'Second sub-move must be on the other board (auto-pass only if no legal moves there)' });
-          }
+          return res.status(400).json({ message: 'Second sub-move must be on the other board' });
         }
         const piece = active.board[moveData.from];
         const targetPiece = active.board[moveData.to];
@@ -1593,11 +1588,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const updatedBoard = applyAllSpecialRules(active, game.rules as any, moveData.from, moveData.to, piece);
         gameState.voidBoards[boardId] = updatedBoard;
 
-        // Pending management
+        // Pending management with auto-pass: if first sub-move and the other board has no legal moves, auto-complete turn.
         if (!gameState.voidMeta) gameState.voidMeta = { pending: null, tokens: { white: 0, black: 0 }, playerTurnCount: { white: 0, black: 0 } };
         if (!gameState.voidMeta.pending) {
-          gameState.voidMeta.pending = { color, movedBoards: [boardId] };
+          // First sub-move just made on boardId
+          const otherId = (boardId === 0 ? 1 : 0) as 0|1;
+          const other = gameState.voidBoards[otherId];
+          const otherHasMoves = hasLegalMoves(other, color, game.rules as any);
+          if (!otherHasMoves) {
+            // Auto-pass the other board and finish the turn immediately
+            gameState.voidMeta.pending = null;
+            await finalizeVoidTurn();
+          } else {
+            gameState.voidMeta.pending = { color, movedBoards: [boardId] };
+          }
         } else if (gameState.voidMeta.pending.color === color && !gameState.voidMeta.pending.movedBoards.includes(boardId)) {
+          // Second sub-move on the other board completes the turn
           gameState.voidMeta.pending = null;
           await finalizeVoidTurn();
         }
