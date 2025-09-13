@@ -916,9 +916,361 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Re-create initial state the same way storage.createGame does
     // We'll start from a fresh initial position using DatabaseStorage private logic replicated here
     const rulesArray = Array.isArray(game.rules) ? game.rules : game.rules ? [game.rules] : ["standard"]; // fallback
-    const initialBoard: { [square: string]: ChessPiece | null } = {};
+    const isVoid = rulesArray.includes('void');
+
+    // Helper to build a base board (single-board initial state)
+    const buildBaseState = (effectiveRules: string[], seedSuffix?: string) => {
+      const files = ['a','b','c','d','e','f','g','h'];
+      const useFischer = effectiveRules.includes('fischer-random');
+      const initialBoard: { [square: string]: ChessPiece | null } = {};
+      let backRankTypes: ChessPiece['type'][];
+      if (useFischer) {
+        const seedKey = (game.shareId || 'default-seed') + (seedSuffix || '');
+        backRankTypes = generateFischerBackRankFromSeed(seedKey) as ChessPiece['type'][];
+      } else {
+        backRankTypes = ['rook','knight','bishop','queen','king','bishop','knight','rook'];
+      }
+      files.forEach((file, idx) => {
+        const t = backRankTypes[idx];
+        initialBoard[`${file}1`] = { type: t, color: 'white' } as any;
+        initialBoard[`${file}8`] = { type: t, color: 'black' } as any;
+      });
+      files.forEach((f)=>{
+        initialBoard[`${f}2`] = { type: 'pawn', color: 'white' } as any;
+        initialBoard[`${f}7`] = { type: 'pawn', color: 'black' } as any;
+      });
+      if (effectiveRules.includes('pawn-wall')) {
+        files.forEach((f)=>{
+          initialBoard[`${f}3`] = { type: 'pawn', color: 'white' } as any;
+          initialBoard[`${f}6`] = { type: 'pawn', color: 'black' } as any;
+        });
+      }
+      // Castling rook map and rights
+      let castlingRooks: ChessGameState['castlingRooks'] | undefined = undefined;
+      let rights = { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true } as ChessGameState['castlingRights'];
+      if (useFischer) {
+        const whiteKingIdx = backRankTypes.findIndex(t => t === 'king');
+        const whiteLeftRookIdx = [...backRankTypes].slice(0, whiteKingIdx).lastIndexOf('rook');
+        const whiteRightRookRel = [...backRankTypes].slice(whiteKingIdx + 1).indexOf('rook');
+        const wQueenRook = whiteLeftRookIdx >= 0 ? `${files[whiteLeftRookIdx]}1` : null;
+        const wKingRook = whiteRightRookRel >= 0 ? `${files[whiteKingIdx + 1 + whiteRightRookRel]}1` : null;
+
+        const blackKingIdx = backRankTypes.findIndex(t => t === 'king');
+        const blackLeftRookIdx = [...backRankTypes].slice(0, blackKingIdx).lastIndexOf('rook');
+        const blackRightRookRel = [...backRankTypes].slice(blackKingIdx + 1).indexOf('rook');
+        const bQueenRook = blackLeftRookIdx >= 0 ? `${files[blackLeftRookIdx]}8` : null;
+        const bKingRook = blackRightRookRel >= 0 ? `${files[blackKingIdx + 1 + blackRightRookRel]}8` : null;
+
+        castlingRooks = {
+          white: { kingSide: wKingRook, queenSide: wQueenRook },
+          black: { kingSide: bKingRook, queenSide: bQueenRook },
+        };
+        rights = {
+          whiteKingside: !!wKingRook,
+          whiteQueenside: !!wQueenRook,
+          blackKingside: !!bKingRook,
+          blackQueenside: !!bQueenRook,
+        };
+      }
+      const base: ChessGameState = {
+        board: initialBoard,
+        currentTurn: 'white',
+        castlingRights: useFischer ? rights : { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true },
+        castlingRooks,
+        enPassantTarget: null,
+        halfmoveClock: 0,
+        fullmoveNumber: 1,
+        isCheck: false,
+        isCheckmate: false,
+        isStalemate: false,
+        burnedSquares: [],
+        meteorCounter: 0,
+        doubleKnightMove: null,
+        pawnRotationMoves: {},
+        blinkUsed: { white: false, black: false },
+      } as any;
+      return base;
+    };
+
+    if (isVoid) {
+      // Initialize two independent boards and meta container
+      const baseRules = rulesArray.filter(r => r !== 'void');
+      const board0 = buildBaseState(baseRules, ':0');
+      const board1 = buildBaseState(baseRules, ':1');
+      const state: ChessGameState = {
+        board: {},
+        currentTurn: 'white',
+        castlingRights: { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true },
+        enPassantTarget: null,
+        halfmoveClock: 0,
+        fullmoveNumber: 1,
+        isCheck: false,
+        isCheckmate: false,
+        isStalemate: false,
+        burnedSquares: [],
+        meteorCounter: 0,
+        doubleKnightMove: null,
+        pawnRotationMoves: {},
+        blinkUsed: { white: false, black: false },
+        voidMode: true,
+        voidBoards: [board0, board1],
+        voidMeta: {
+          pending: null,
+          tokens: { white: 0, black: 0 },
+          playerTurnCount: { white: 0, black: 0 },
+          boardDone: [ { isCheck:false,isCheckmate:false,isStalemate:false }, { isCheck:false,isCheckmate:false,isStalemate:false } ],
+        },
+      } as any;
+
+      const finalizeVoidTurn = (color: 'white'|'black') => {
+        const nextTurn: 'white'|'black' = color === 'white' ? 'black' : 'white';
+        state.voidMeta!.playerTurnCount[color] = (state.voidMeta!.playerTurnCount[color] || 0) + 1;
+        if (state.voidMeta!.playerTurnCount[color] % 10 === 0) {
+          state.voidMeta!.tokens[color] = (state.voidMeta!.tokens[color] || 0) + 1;
+        }
+        for (let idx = 0; idx < state.voidBoards!.length; idx++) {
+          const b = state.voidBoards![idx] as any;
+          if (color === 'black') {
+            b.fullmoveNumber = (b.fullmoveNumber || 1) + 1;
+            maybeTriggerMeteor(b, rulesArray as any);
+          } else {
+            if (Array.isArray(rulesArray) && (rulesArray as any).includes('meteor-shower')) {
+              b.meteorCounter = b.fullmoveNumber;
+            }
+          }
+          b.currentTurn = nextTurn;
+          const isChk = isKingInCheck(b, nextTurn, rulesArray as any);
+          const hasMoves = hasLegalMoves(b, nextTurn, rulesArray as any);
+          b.isCheck = isChk; b.isCheckmate = isChk && !hasMoves; b.isStalemate = !isChk && !hasMoves;
+          state.voidMeta!.boardDone![idx] = { isCheck: b.isCheck, isCheckmate: b.isCheckmate, isStalemate: b.isStalemate };
+        }
+        state.currentTurn = nextTurn;
+      };
+
+      for (const mv of movesList) {
+        // Distinguish transfer vs per-board sub-move
+        const special: string | undefined = (mv as any).special || undefined;
+        const color = mv.player as 'white'|'black';
+        if (special && special.startsWith('void-transfer')) {
+          // Parse boards
+          const m = special.match(/void-transfer:(\d+)->(\d+)/);
+          const fromBoardId = m ? (parseInt(m[1], 10) as 0|1) : 0;
+          const toBoardId = m ? (parseInt(m[2], 10) as 0|1) : 1;
+          const fromBoard = state.voidBoards![fromBoardId] as any;
+          const toBoard = state.voidBoards![toBoardId] as any;
+          const piece = fromBoard.board[mv.from];
+          if (piece) {
+            delete fromBoard.board[mv.from];
+            // final piece type is encoded in mv.piece (color-type)
+            const [, finalType] = (mv.piece as string).split('-');
+            toBoard.board[mv.to] = { type: finalType as any, color };
+          }
+          // spend token and clear pending
+          state.voidMeta!.tokens[color] = Math.max(0, (state.voidMeta!.tokens[color] || 0) - 1);
+          state.voidMeta!.pending = null;
+          // finalize full turn
+          finalizeVoidTurn(color);
+          continue;
+        }
+
+        // Regular sub-move on specific board: special contains 'void:board=N'
+        let boardId: 0|1 = 0;
+        const m2 = special ? special.match(/void:board=(\d+)/) : null;
+        if (m2) boardId = parseInt(m2[1], 10) as 0|1;
+        const active = state.voidBoards![boardId] as any;
+
+        const piece = active.board[mv.from];
+        const targetPiece = active.board[mv.to];
+        // En passant capture check
+        const currentEnPassantTarget = active.enPassantTarget;
+        if (piece && piece.type === 'pawn' && mv.to === currentEnPassantTarget) {
+          const targetFile = mv.to[0];
+          const targetRank = parseInt(mv.to[1]);
+          const fromFile = mv.from[0];
+          const fromRank = parseInt(mv.from[1]);
+          if (fromRank !== targetRank) {
+            const captureRank = piece.color === 'white' ? '5' : '4';
+            const captureSquare = targetFile + captureRank;
+            delete active.board[captureSquare];
+          } else {
+            const leftSquare = String.fromCharCode(fromFile.charCodeAt(0) - 1) + fromRank;
+            const rightSquare = String.fromCharCode(fromFile.charCodeAt(0) + 1) + fromRank;
+            if (active.board[leftSquare] && active.board[leftSquare]!.color !== piece.color) {
+              delete active.board[leftSquare];
+            } else if (active.board[rightSquare] && active.board[rightSquare]!.color !== piece.color) {
+              delete active.board[rightSquare];
+            }
+          }
+        }
+        active.enPassantTarget = null;
+
+        // Castling/Blink
+        let isCastling = false;
+        let isBlinkTeleport = false;
+        let pendingCastlingRookFrom: string | null = null;
+        let pendingCastlingRookTo: string | null = null;
+        if (piece && piece.type === 'king') {
+          const fromFile = mv.from[0];
+          const toFile = mv.to[0];
+          const fromRank = mv.from[1];
+          const toRank = mv.to[1];
+          if (isValidCastlingMove(active, piece, mv.from, mv.to, rulesArray as any)) {
+            isCastling = true;
+          }
+          if (!isCastling && Array.isArray(rulesArray) && rulesArray.includes('blink')) {
+            const blinkUsed = active.blinkUsed || { white: false, black: false };
+            if (!blinkUsed[piece.color]) {
+              const fromFileIndex = fromFile.charCodeAt(0) - 'a'.charCodeAt(0);
+              const toFileIndex = toFile.charCodeAt(0) - 'a'.charCodeAt(0);
+              const fromRankNum = parseInt(fromRank);
+              const toRankNum = parseInt(toRank);
+              const fileDistance = Math.abs(toFileIndex - fromFileIndex);
+              const rankDistance = Math.abs(toRankNum - fromRankNum);
+              const maxDistance = Math.max(fileDistance, rankDistance);
+              if (maxDistance > 1) isBlinkTeleport = true;
+            }
+          }
+          if (isCastling) {
+            const rank = mv.to[1];
+            const isKingSide = toFile === 'g';
+            pendingCastlingRookTo = `${isKingSide ? 'f' : 'd'}${rank}`;
+            let rookFrom = `${isKingSide ? 'h' : 'a'}${rank}`;
+            const isFischer = Array.isArray(rulesArray) && (rulesArray as any).includes('fischer-random');
+            if (isFischer && active.castlingRooks) {
+              const side = isKingSide ? 'kingSide' : 'queenSide';
+              const mapped = active.castlingRooks[piece.color]?.[side];
+              if (mapped) rookFrom = mapped;
+            }
+            pendingCastlingRookFrom = rookFrom;
+          } else if (isBlinkTeleport && !isCastling) {
+            if (!active.blinkUsed) active.blinkUsed = { white: false, black: false };
+            active.blinkUsed[piece.color] = true;
+          }
+        }
+
+        // Move piece (standard and captures)
+        if (!(isCastling && mv.from === mv.to)) {
+          active.board[mv.to] = piece;
+          delete active.board[mv.from];
+        }
+        if (isCastling && pendingCastlingRookFrom && pendingCastlingRookTo) {
+          active.board[pendingCastlingRookTo] = active.board[pendingCastlingRookFrom];
+          delete (active.board as any)[pendingCastlingRookFrom];
+        }
+
+        // Castling rights update
+        if (piece && piece.type === 'king') {
+          if (piece.color === 'white') { active.castlingRights.whiteKingside = false; active.castlingRights.whiteQueenside = false; }
+          else { active.castlingRights.blackKingside = false; active.castlingRights.blackQueenside = false; }
+        } else if (piece && piece.type === 'rook') {
+          const cr = active.castlingRooks;
+          if (cr) {
+            if (mv.from === cr.white?.queenSide) active.castlingRights.whiteQueenside = false;
+            if (mv.from === cr.white?.kingSide) active.castlingRights.whiteKingside = false;
+            if (mv.from === cr.black?.queenSide) active.castlingRights.blackQueenside = false;
+            if (mv.from === cr.black?.kingSide) active.castlingRights.blackKingside = false;
+          } else {
+            if (mv.from === 'a1') active.castlingRights.whiteQueenside = false;
+            else if (mv.from === 'h1') active.castlingRights.whiteKingside = false;
+            else if (mv.from === 'a8') active.castlingRights.blackQueenside = false;
+            else if (mv.from === 'h8') active.castlingRights.blackKingside = false;
+          }
+        } else if (targetPiece && targetPiece.type === 'rook') {
+          const capturedColor: 'white' | 'black' = targetPiece.color;
+          const cr = active.castlingRooks;
+          if (cr) {
+            if (mv.to === cr[capturedColor]?.queenSide) { if (capturedColor === 'white') active.castlingRights.whiteQueenside = false; else active.castlingRights.blackQueenside = false; }
+            if (mv.to === cr[capturedColor]?.kingSide) { if (capturedColor === 'white') active.castlingRights.whiteKingside = false; else active.castlingRights.blackKingside = false; }
+          } else {
+            if (capturedColor === 'white') {
+              if (mv.to === 'a1') active.castlingRights.whiteQueenside = false;
+              if (mv.to === 'h1') active.castlingRights.whiteKingside = false;
+            } else {
+              if (mv.to === 'a8') active.castlingRights.blackQueenside = false;
+              if (mv.to === 'h8') active.castlingRights.blackKingside = false;
+            }
+          }
+        }
+
+        // Pawn specifics
+        if (piece && piece.type === 'pawn') {
+          const fromRank = parseInt(mv.from[1]);
+          const toRank = parseInt(mv.to[1]);
+          const fromFile = mv.from[0];
+          const toFile = mv.to[0];
+          if (Array.isArray(rulesArray) && rulesArray.includes('pawn-rotation')) {
+            if (!active.pawnRotationMoves) active.pawnRotationMoves = {} as any;
+            const standardOriginalRank = piece.color === 'white' ? 2 : 7;
+            const standardOriginalSquare = `${fromFile}${standardOriginalRank}`;
+            if (Array.isArray(rulesArray) && rulesArray.includes('pawn-wall')) {
+              const pawnWallStartRank = piece.color === 'white' ? 3 : 6;
+              const wallOriginalSquare = `${fromFile}${pawnWallStartRank}`;
+              if (fromRank === standardOriginalRank) (active.pawnRotationMoves as any)[standardOriginalSquare] = true;
+              else if (fromRank === pawnWallStartRank) (active.pawnRotationMoves as any)[wallOriginalSquare] = true;
+            } else {
+              (active.pawnRotationMoves as any)[standardOriginalSquare] = true;
+            }
+          }
+          if (Math.abs(toRank - fromRank) === 2) {
+            const enPassantRank = piece.color === 'white' ? fromRank + 1 : fromRank - 1;
+            active.enPassantTarget = toFile + enPassantRank;
+          }
+          if (Array.isArray(rulesArray) && rulesArray.includes('pawn-rotation')) {
+            const fromFileIndex = fromFile.charCodeAt(0) - 'a'.charCodeAt(0);
+            const toFileIndex = toFile.charCodeAt(0) - 'a'.charCodeAt(0);
+            if (Math.abs(toFileIndex - fromFileIndex) === 2 && fromRank === toRank) {
+              const enPassantFileIndex = fromFileIndex + (toFileIndex - fromFileIndex) / 2;
+              const enPassantFile = String.fromCharCode(enPassantFileIndex + 'a'.charCodeAt(0));
+              active.enPassantTarget = enPassantFile + fromRank;
+            }
+          }
+          const shouldPromote = (piece.color === 'white' && toRank === 8) || (piece.color === 'black' && toRank === 1);
+          if (shouldPromote && mv.piece) {
+            const [, promotedPieceType] = (mv.piece as string).split('-');
+            active.board[mv.to] = { type: promotedPieceType as any, color: piece.color } as any;
+          }
+        }
+
+        // Halfmove clock
+        if (piece?.type === 'pawn' || targetPiece) active.halfmoveClock = 0; else active.halfmoveClock++;
+
+        // Apply special rules on that board
+        const updated = applyAllSpecialRules(active as any, rulesArray as any, mv.from, mv.to, piece as any) as any;
+        state.voidBoards![boardId] = updated;
+
+        // Pending and finalize
+        if (!state.voidMeta!.pending) {
+          const otherId = (boardId === 0 ? 1 : 0) as 0|1;
+          const other = state.voidBoards![otherId] as any;
+          const otherHasMoves = hasLegalMoves(other, color, rulesArray as any);
+          if (!otherHasMoves) {
+            state.voidMeta!.pending = null;
+            finalizeVoidTurn(color);
+          } else {
+            state.voidMeta!.pending = { color, movedBoards: [boardId] } as any;
+          }
+        } else if (state.voidMeta!.pending.color === color && !state.voidMeta!.pending.movedBoards.includes(boardId)) {
+          state.voidMeta!.pending = null;
+          finalizeVoidTurn(color);
+        }
+      }
+
+      // finalize boardDone flags for current turn
+      const nextTurn = state.currentTurn as 'white'|'black';
+      for (let idx = 0; idx < state.voidBoards!.length; idx++) {
+        const b = state.voidBoards![idx] as any;
+        const isChk = isKingInCheck(b, nextTurn, rulesArray as any);
+        const hasMoves = hasLegalMoves(b, nextTurn, rulesArray as any);
+        b.isCheck = isChk; b.isCheckmate = isChk && !hasMoves; b.isStalemate = !isChk && !hasMoves;
+        state.voidMeta!.boardDone![idx] = { isCheck: b.isCheck, isCheckmate: b.isCheckmate, isStalemate: b.isStalemate };
+      }
+      return state;
+    }
+
+    // Non-void rebuild path (original)
     const files = ['a','b','c','d','e','f','g','h'];
     const useFischer = rulesArray.includes('fischer-random');
+    const initialBoard: { [square: string]: ChessPiece | null } = {};
     let backRankTypes: ChessPiece['type'][];
     if (useFischer) {
       const seedKey = game.shareId || 'default-seed';
@@ -926,25 +1278,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } else {
       backRankTypes = ['rook','knight','bishop','queen','king','bishop','knight','rook'];
     }
-    // Back ranks
     files.forEach((file, idx) => {
       const t = backRankTypes[idx];
       initialBoard[`${file}1`] = { type: t, color: 'white' } as any;
       initialBoard[`${file}8`] = { type: t, color: 'black' } as any;
     });
-    // Pawns
     files.forEach((f)=>{
       initialBoard[`${f}2`] = { type: 'pawn', color: 'white' } as any;
       initialBoard[`${f}7`] = { type: 'pawn', color: 'black' } as any;
     });
-    // Pawn wall
     if (rulesArray.includes('pawn-wall')) {
       files.forEach((f)=>{
         initialBoard[`${f}3`] = { type: 'pawn', color: 'white' } as any;
         initialBoard[`${f}6`] = { type: 'pawn', color: 'black' } as any;
       });
     }
-    // Castling rook map and rights
     let castlingRooks: ChessGameState['castlingRooks'] | undefined = undefined;
     let rights = { whiteKingside: true, whiteQueenside: true, blackKingside: true, blackQueenside: true } as ChessGameState['castlingRights'];
     if (useFischer) {
@@ -982,16 +1330,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       isCheck: false,
       isCheckmate: false,
       isStalemate: false,
-  burnedSquares: [],
-  meteorCounter: 0,
+      burnedSquares: [],
+      meteorCounter: 0,
       doubleKnightMove: null,
       pawnRotationMoves: {},
       blinkUsed: { white: false, black: false }
     };
 
-  // Replay moves through existing logic in this file
-  // We'll track prev/next turns explicitly to mirror the live path logic
-  let currentTurn: 'white' | 'black' = 'white';
+    // Replay moves through existing logic in this file
+    // We'll track prev/next turns explicitly to mirror the live path logic
+    let currentTurn: 'white' | 'black' = 'white';
     for (const mv of movesList) {
       const piece = state.board[mv.from];
       if (!piece) continue;
@@ -1022,11 +1370,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       state.enPassantTarget = null;
 
       // Castling or blink used detection
-  let isCastling = false;
-  let isBlinkTeleport = false;
-  // For castling, stage rook move and perform after moving the king to avoid overwriting/deleting
-  let pendingCastlingRookFrom: string | null = null;
-  let pendingCastlingRookTo: string | null = null;
+      let isCastling = false;
+      let isBlinkTeleport = false;
+      // For castling, stage rook move and perform after moving the king to avoid overwriting/deleting
+      let pendingCastlingRookFrom: string | null = null;
+      let pendingCastlingRookTo: string | null = null;
       if (piece.type === 'king') {
         const fromFile = mv.from[0];
         const toFile = mv.to[0];
@@ -1136,13 +1484,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // counters
       if (piece.type === 'pawn' || mv.captured) state.halfmoveClock = 0; else state.halfmoveClock++;
 
-  // Determine previous turn BEFORE rules adjust it (important for double-knight)
-  const prevTurn = state.currentTurn as 'white' | 'black';
+      // Determine previous turn BEFORE rules adjust it (important for double-knight)
+      const prevTurn = state.currentTurn as 'white' | 'black';
 
-  // special rules application (no meteor strike here)
-  state = applyAllSpecialRules(state as any, rulesArray as any, mv.from, mv.to, piece) as any;
+      // special rules application (no meteor strike here)
+      state = applyAllSpecialRules(state as any, rulesArray as any, mv.from, mv.to, piece) as any;
 
-  // Determine next turn just like the live move route does
+      // Determine next turn just like the live move route does
       let nextTurn: 'white' | 'black';
       if (Array.isArray(rulesArray) && rulesArray.includes('double-knight')) {
         // applyAllSpecialRules already adjusted currentTurn for double-knight
@@ -1154,9 +1502,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       currentTurn = nextTurn;
 
-  // End-of-turn bookkeeping similar to live path:
-  // increment only when previous player was black and turn handed to white
-  if (prevTurn === 'black' && nextTurn === 'white') {
+      // End-of-turn bookkeeping similar to live path:
+      // increment only when previous player was black and turn handed to white
+      if (prevTurn === 'black' && nextTurn === 'white') {
         state.fullmoveNumber++;
         maybeTriggerMeteor(state, rulesArray as any);
       } else {
@@ -1363,12 +1711,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           delete fromBoard.board[fromSquare];
           toBoard.board[toSquare] = piece;
           // Promotion if pawn lands on last rank
+          let finalType: any = piece.type;
           if (piece.type === 'pawn') {
             const rank = parseInt(toSquare[1]);
             const shouldPromote = (piece.color === 'white' && rank === 8) || (piece.color === 'black' && rank === 1);
             if (shouldPromote) {
               const newType = promoted || 'queen';
               toBoard.board[toSquare] = { type: newType, color: piece.color } as any;
+              finalType = newType;
             }
           }
 
@@ -1397,7 +1747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             player: color,
             from: fromSquare,
             to: toSquare,
-            piece: `${piece.color}-${piece.type}`,
+            piece: `${piece.color}-${finalType}`,
             captured: undefined,
             special: `void-transfer:${fromBoardId}->${toBoardId}`,
             fen: moveData.fen,

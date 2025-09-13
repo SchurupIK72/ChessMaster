@@ -6,9 +6,10 @@ import { useRef, useEffect } from "react";
 
 interface MoveHistoryProps {
   moves: { moveNumber: number; white?: string; black?: string }[];
+  title?: string;
 }
 
-export default function MoveHistory({ moves }: MoveHistoryProps) {
+export default function MoveHistory({ moves, title }: MoveHistoryProps) {
   const handleExport = () => {
     // TODO: Implement PGN export
     console.log("Exporting game as PGN...");
@@ -28,7 +29,7 @@ export default function MoveHistory({ moves }: MoveHistoryProps) {
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
           <History className="h-5 w-5 mr-2 text-blue-600" />
-          Move History
+          {title || 'Move History'}
         </CardTitle>
       </CardHeader>
       <CardContent>

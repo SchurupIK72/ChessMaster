@@ -6,6 +6,7 @@ interface CapturedPiecesProps {
     white: string[];
     black: string[];
   };
+  title?: string;
 }
 
 const pieceSymbols: Record<string, string> = {
@@ -23,13 +24,13 @@ const pieceSymbols: Record<string, string> = {
   'black-pawn': '♟',
 };
 
-export default function CapturedPieces({ capturedPieces }: CapturedPiecesProps) {
+export default function CapturedPieces({ capturedPieces, title }: CapturedPiecesProps) {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
           <Sword className="h-5 w-5 mr-2 text-blue-600" />
-          Captured Pieces
+          {title || 'Captured Pieces'}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

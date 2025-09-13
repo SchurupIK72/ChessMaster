@@ -993,78 +993,86 @@ export default function ChessGame() {
   };
 
   const getCapturedPieces = () => {
-    if (!game || !moves.length) return { white: [], black: [] };
-    
-    const captured = { white: [] as string[], black: [] as string[] };
-    moves.forEach((move) => {
-      if (move.captured) {
-        const [color] = move.captured.split('-');
-        if (color === 'white') {
-          captured.black.push(move.captured);
-        } else {
-          captured.white.push(move.captured);
+    if (!game || !moves.length) return { white: [], black: [] } as any;
+    if (!isVoidMode) {
+      const captured = { white: [] as string[], black: [] as string[] };
+      moves.forEach((move) => {
+        if (move.captured) {
+          const [color] = move.captured.split('-');
+          if (color === 'white') captured.black.push(move.captured);
+          else captured.white.push(move.captured);
         }
+      });
+      return captured;
+    }
+    const b0 = { white: [] as string[], black: [] as string[] };
+    const b1 = { white: [] as string[], black: [] as string[] };
+    moves.forEach((move: any) => {
+      if (!move.captured) return;
+      const [color] = (move.captured as string).split('-');
+      const pushTo = color === 'white' ? (m: any) => m.black.push(move.captured) : (m: any) => m.white.push(move.captured);
+      const special = move.special as string | undefined;
+      if (special?.startsWith('void:board=')) {
+        const bid = parseInt(special.split('=')[1], 10) as 0 | 1;
+        if (bid === 0) pushTo(b0); else pushTo(b1);
       }
+      // transfers ignored, cannot capture
     });
-    
-    return captured;
+    return { board0: b0, board1: b1 } as any;
   };
 
   const formatMoveHistory = () => {
-  const formatted: { moveNumber: number; white?: string; black?: string }[] = [];
-  const isDoubleKnight = game?.rules?.includes('double-knight');
-    let i = 0;
-    let moveNumber = 1;
-    while (i < moves.length) {
-      let whiteMoveStr = undefined;
-      let blackMoveStr = undefined;
-
-      // Белые
-    if (moves[i] && moves[i].player === 'white') {
-        if (
-          isDoubleKnight &&
-          moves[i + 1] &&
-          moves[i + 1].player === 'white' &&
-      moves[i].piece?.includes('knight') &&
-      moves[i + 1].piece?.includes('knight') &&
-      moves[i].to && moves[i + 1].from && moves[i].to === moves[i + 1].from
-        ) {
-          // DoubleKnight: два хода подряд одним конём
-          whiteMoveStr = `${moves[i].from}-${moves[i].to}-${moves[i + 1].to}`;
-          i += 2;
-        } else {
-          whiteMoveStr = `${moves[i].from}-${moves[i].to}`;
-          i++;
+    const makeList = (sourceMoves: any[]) => {
+      const formatted: { moveNumber: number; white?: string; black?: string }[] = [];
+      const isDoubleKnight = game?.rules?.includes('double-knight');
+      let i = 0;
+      let moveNumber = 1;
+      while (i < sourceMoves.length) {
+        let whiteMoveStr: string | undefined = undefined;
+        let blackMoveStr: string | undefined = undefined;
+        if (sourceMoves[i] && sourceMoves[i].player === 'white') {
+          if (
+            isDoubleKnight &&
+            sourceMoves[i + 1] &&
+            sourceMoves[i + 1].player === 'white' &&
+            sourceMoves[i].piece?.includes('knight') &&
+            sourceMoves[i + 1].piece?.includes('knight') &&
+            sourceMoves[i].to && sourceMoves[i + 1].from && sourceMoves[i].to === sourceMoves[i + 1].from
+          ) {
+            whiteMoveStr = `${sourceMoves[i].from}-${sourceMoves[i].to}-${sourceMoves[i + 1].to}`;
+            i += 2;
+          } else {
+            whiteMoveStr = `${sourceMoves[i].from}-${sourceMoves[i].to}`;
+            i++;
+          }
+        }
+        if (i < sourceMoves.length && sourceMoves[i] && sourceMoves[i].player === 'black') {
+          if (
+            isDoubleKnight &&
+            sourceMoves[i + 1] &&
+            sourceMoves[i + 1].player === 'black' &&
+            sourceMoves[i].piece?.includes('knight') &&
+            sourceMoves[i + 1].piece?.includes('knight') &&
+            sourceMoves[i].to && sourceMoves[i + 1].from && sourceMoves[i].to === sourceMoves[i + 1].from
+          ) {
+            blackMoveStr = `${sourceMoves[i].from}-${sourceMoves[i].to}-${sourceMoves[i + 1].to}`;
+            i += 2;
+          } else {
+            blackMoveStr = `${sourceMoves[i].from}-${sourceMoves[i].to}`;
+            i++;
+          }
+        }
+        if (whiteMoveStr || blackMoveStr) {
+          formatted.push({ moveNumber, white: whiteMoveStr, black: blackMoveStr });
+          moveNumber++;
         }
       }
-
-      // Черные
-    if (i < moves.length && moves[i] && moves[i].player === 'black') {
-        if (
-          isDoubleKnight &&
-          moves[i + 1] &&
-          moves[i + 1].player === 'black' &&
-      moves[i].piece?.includes('knight') &&
-      moves[i + 1].piece?.includes('knight') &&
-      moves[i].to && moves[i + 1].from && moves[i].to === moves[i + 1].from
-        ) {
-          // DoubleKnight: два хода подряд одним конём
-          blackMoveStr = `${moves[i].from}-${moves[i].to}-${moves[i + 1].to}`;
-          i += 2;
-        } else {
-          blackMoveStr = `${moves[i].from}-${moves[i].to}`;
-          i++;
-        }
-      }
-
-      // Если оба пустые, значит ход был только один (например, белых), а черные ещё не сходили
-      // Не добавлять пустую строку
-      if (whiteMoveStr || blackMoveStr) {
-        formatted.push({ moveNumber, white: whiteMoveStr, black: blackMoveStr });
-        moveNumber++;
-      }
-    }
-    return formatted;
+      return formatted;
+    };
+    if (!isVoidMode) return makeList(moves as any);
+    const b0 = (moves as any[]).filter(m => (m.special as string | undefined)?.startsWith('void:board=0'));
+    const b1 = (moves as any[]).filter(m => (m.special as string | undefined)?.startsWith('void:board=1'));
+    return { board0: makeList(b0), board1: makeList(b1) } as any;
   };
 
   if (!gameId) {
@@ -1289,10 +1297,30 @@ export default function ChessGame() {
 
           {/* Right Sidebar */}
           <div className="lg:col-span-3 space-y-6">
-              {!fogActive && (
-                <MoveHistory moves={formatMoveHistory()} />
-              )}
-            <CapturedPieces capturedPieces={getCapturedPieces()} />
+            {!fogActive && (!isVoidMode ? (
+              <MoveHistory moves={formatMoveHistory() as any} />
+            ) : (
+              (() => {
+                const mh = formatMoveHistory() as any;
+                return (
+                  <div className="grid grid-cols-1 gap-4">
+                    <MoveHistory title="Board A — History" moves={mh.board0 || []} />
+                    <MoveHistory title="Board B — History" moves={mh.board1 || []} />
+                  </div>
+                );
+              })()
+            ))}
+            {(() => {
+              const caps = getCapturedPieces() as any;
+              return !isVoidMode ? (
+                <CapturedPieces capturedPieces={caps} />
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  <CapturedPieces title="Board A — Captured" capturedPieces={caps.board0 || { white: [], black: [] }} />
+                  <CapturedPieces title="Board B — Captured" capturedPieces={caps.board1 || { white: [], black: [] }} />
+                </div>
+              );
+            })()}
           </div>
         </div>
       </main>
