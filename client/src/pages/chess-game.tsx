@@ -11,6 +11,7 @@ import InviteModal from "@/components/invite-modal";
 import JoinGameModal from "@/components/join-game-modal";
 import GameStatus from "@/components/game-status";
 import MoveHistory from "@/components/move-history";
+import TransfersPanel, { type TransferEvent } from "@/components/transfers-panel";
 import CapturedPieces from "@/components/captured-pieces";
 import { Button } from "@/components/ui/button";
 import {
@@ -1075,6 +1076,30 @@ export default function ChessGame() {
     return { board0: makeList(b0), board1: makeList(b1) } as any;
   };
 
+  // Extract transfer events for Void mode
+  const transfers = (() => {
+    if (!isVoidMode || !Array.isArray(moves) || moves.length === 0) return [] as TransferEvent[];
+    const events: TransferEvent[] = [];
+    for (let i = 0; i < (moves as any[]).length; i++) {
+      const mv: any = (moves as any[])[i];
+      const special = mv?.special as string | undefined;
+      if (!special || !special.startsWith('void-transfer')) continue;
+      const m = special.match(/void-transfer:(\d+)->(\d+)/);
+      const fromBoardId = m ? (parseInt(m[1], 10) as 0 | 1) : 0;
+      const toBoardId = m ? (parseInt(m[2], 10) as 0 | 1) : 1;
+      events.push({
+        moveNumber: i + 1,
+        fromBoardId,
+        toBoardId,
+        from: mv.from,
+        to: mv.to,
+        player: (mv.player || mv.color) as 'white' | 'black',
+        piece: mv.piece,
+      });
+    }
+    return events;
+  })();
+
   if (!gameId) {
     return (
       <div className="min-h-screen bg-slate-50 font-inter">
@@ -1306,6 +1331,7 @@ export default function ChessGame() {
                   <div className="grid grid-cols-1 gap-4">
                     <MoveHistory title="Board A — History" moves={mh.board0 || []} />
                     <MoveHistory title="Board B — History" moves={mh.board1 || []} />
+                    <TransfersPanel events={transfers} />
                   </div>
                 );
               })()
