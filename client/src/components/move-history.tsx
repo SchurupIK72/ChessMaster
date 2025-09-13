@@ -1,11 +1,19 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { History, Download, ChevronRight, Play } from "lucide-react";
+import { History, Download, ChevronRight, Play, ArrowLeftRight } from "lucide-react";
 import { useRef, useEffect } from "react";
 
+interface MoveHistoryRow {
+  moveNumber: number;
+  white?: string;
+  black?: string;
+  whiteTransfer?: boolean;
+  blackTransfer?: boolean;
+}
+
 interface MoveHistoryProps {
-  moves: { moveNumber: number; white?: string; black?: string }[];
+  moves: MoveHistoryRow[];
   title?: string;
 }
 
@@ -57,15 +65,27 @@ export default function MoveHistory({ moves, title }: MoveHistoryProps) {
                         }`}>
                           {move.moveNumber}.
                         </span>
-                        <span className={`font-medium ${
+                        <span className={`font-medium flex items-center gap-1 ${
                           isCurrentMove ? 'text-blue-800' : 'text-slate-800'
                         }`}>
-                          {move.white || '...'}
+                          <span>{move.white || '...'}</span>
+                          {move.whiteTransfer && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-semibold">
+                              <ArrowLeftRight className="h-3 w-3" />
+                              <span className="hidden sm:inline">transfer</span>
+                            </span>
+                          )}
                         </span>
-                        <span className={`font-medium ${
+                        <span className={`font-medium flex items-center gap-1 ${
                           isCurrentMove ? 'text-blue-800' : move.black ? 'text-slate-800' : 'text-slate-400'
                         }`}>
-                          {move.black || '...'}
+                          <span>{move.black || '...'}</span>
+                          {move.blackTransfer && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-semibold">
+                              <ArrowLeftRight className="h-3 w-3" />
+                              <span className="hidden sm:inline">transfer</span>
+                            </span>
+                          )}
                         </span>
                       </div>
                       {isCurrentMove ? (

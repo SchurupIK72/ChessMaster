@@ -37,6 +37,7 @@ export default function ChessGame() {
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [validMoves, setValidMoves] = useState<string[]>([]);
   const [lastMoveSquares, setLastMoveSquares] = useState<{from: string, to: string} | null>(null);
+  const [voidLastMoveSquares, setVoidLastMoveSquares] = useState<{ [key: number]: { from: string; to: string } | null }>({});
   const [showGameTypeModal, setShowGameTypeModal] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -241,10 +242,35 @@ export default function ChessGame() {
     if (moves.length > 0) {
       const fogActiveNow = computeFogActive(game?.rules as any, moves);
       // Подсветка последнего хода
-      const lastMove = moves[moves.length - 1];
-      if (lastMove && lastMove.from && lastMove.to) {
-        setLastMoveSquares({ from: lastMove.from, to: lastMove.to });
+      if (!isVoidMode) {
+        const lastMove = moves[moves.length - 1];
+        if (lastMove && lastMove.from && lastMove.to) {
+          setLastMoveSquares({ from: lastMove.from, to: lastMove.to });
+        } else {
+          setLastMoveSquares(null);
+        }
+        setVoidLastMoveSquares({});
       } else {
+        // Per-board last action: considers sub-moves and transfers affecting each board separately
+        const getLastForBoard = (boardId: 0 | 1): { from: string; to: string } | null => {
+          for (let i = moves.length - 1; i >= 0; i--) {
+            const m: any = moves[i];
+            const special = m?.special as string | undefined;
+            if (!special) continue;
+            if (special.startsWith('void:board=')) {
+              const bid = parseInt(special.split('=')[1], 10) as 0 | 1;
+              if (bid === boardId && m.from && m.to) return { from: m.from, to: m.to };
+            } else if (special.startsWith('void-transfer')) {
+              const mt = special.match(/void-transfer:(\d+)->(\d+)/);
+              const fromBid = mt ? (parseInt(mt[1], 10) as 0 | 1) : 0;
+              const toBid = mt ? (parseInt(mt[2], 10) as 0 | 1) : 1;
+              if (fromBid === boardId && m.from) return { from: m.from, to: m.from };
+              if (toBid === boardId && m.to) return { from: m.to, to: m.to };
+            }
+          }
+          return null;
+        };
+        setVoidLastMoveSquares({ 0: getLastForBoard(0), 1: getLastForBoard(1) });
         setLastMoveSquares(null);
       }
 
@@ -270,8 +296,9 @@ export default function ChessGame() {
       setLastMoveCount(moves.length);
     } else {
       setLastMoveSquares(null);
+      setVoidLastMoveSquares({});
     }
-  }, [moves, lastMoveCount, game, toast]);
+  }, [moves, lastMoveCount, game, toast, isVoidMode]);
 
   // Make move mutation
   const makeMoveMutation = useMutation({
@@ -1083,7 +1110,7 @@ export default function ChessGame() {
 
   const formatMoveHistory = () => {
     const makeList = (sourceMoves: any[]) => {
-      const formatted: { moveNumber: number; white?: string; black?: string }[] = [];
+      const formatted: { moveNumber: number; white?: string; black?: string; whiteTransfer?: boolean; blackTransfer?: boolean }[] = [];
       const isDoubleKnight = game?.rules?.includes('double-knight');
       let i = 0;
       let moveNumber = 1;
@@ -1130,9 +1157,46 @@ export default function ChessGame() {
       return formatted;
     };
     if (!isVoidMode) return makeList(moves as any);
-    const b0 = (moves as any[]).filter(m => (m.special as string | undefined)?.startsWith('void:board=0'));
-    const b1 = (moves as any[]).filter(m => (m.special as string | undefined)?.startsWith('void:board=1'));
-    return { board0: makeList(b0), board1: makeList(b1) } as any;
+    const all = (moves as any[]) || [];
+    const b0 = all.filter(m => (m.special as string | undefined)?.startsWith('void:board=0'));
+    const b1 = all.filter(m => (m.special as string | undefined)?.startsWith('void:board=1'));
+
+    // Build base rows per board from their own moves
+    const rows0Map = new Map<number, { moveNumber: number; white?: string; black?: string; whiteTransfer?: boolean; blackTransfer?: boolean }>();
+    const rows1Map = new Map<number, { moveNumber: number; white?: string; black?: string; whiteTransfer?: boolean; blackTransfer?: boolean }>();
+
+    makeList(b0).forEach(r => rows0Map.set(r.moveNumber, { ...r }));
+    makeList(b1).forEach(r => rows1Map.set(r.moveNumber, { ...r }));
+
+    // Overlay transfer badges onto appropriate rows; ensure row exists for that moveNumber
+    for (let i = 0; i < all.length; i++) {
+      const mv: any = all[i];
+      const special = mv?.special as string | undefined;
+      if (!special || !special.startsWith('void-transfer')) continue;
+      const m = special.match(/void-transfer:(\d+)->(\d+)/);
+      const fromBoardId = m ? parseInt(m[1], 10) as 0 | 1 : 0;
+      const toBoardId = m ? parseInt(m[2], 10) as 0 | 1 : 1;
+      const moveNo: number = (mv.moveNumber as number) || (Math.floor(i / 2) + 1);
+      const isWhite = (mv.player as string) === 'white';
+
+      const ensureRow = (map: Map<number, any>) => {
+        if (!map.has(moveNo)) map.set(moveNo, { moveNumber: moveNo });
+        return map.get(moveNo)!;
+      };
+
+      if (fromBoardId === 0 || toBoardId === 0) {
+        const row = ensureRow(rows0Map);
+        if (isWhite) row.whiteTransfer = true; else row.blackTransfer = true;
+      }
+      if (fromBoardId === 1 || toBoardId === 1) {
+        const row = ensureRow(rows1Map);
+        if (isWhite) row.whiteTransfer = true; else row.blackTransfer = true;
+      }
+    }
+
+    const list0 = Array.from(rows0Map.values()).sort((a, b) => a.moveNumber - b.moveNumber);
+    const list1 = Array.from(rows1Map.values()).sort((a, b) => a.moveNumber - b.moveNumber);
+    return { board0: list0, board1: list1 } as any;
   };
 
   // Extract transfer events for Void mode
@@ -1341,7 +1405,7 @@ export default function ChessGame() {
                   viewerColor={getCurrentPlayerColor()}
                   rules={(game!.rules as any) || []}
                   fogActiveOverride={fogActive}
-                  lastMoveSquares={lastMoveSquares}
+                  lastMoveSquares={(voidLastMoveSquares as any)[0] || null}
                 />
                 {/* Board B */}
                 <ChessBoard
@@ -1354,7 +1418,7 @@ export default function ChessGame() {
                   viewerColor={getCurrentPlayerColor()}
                   rules={(game!.rules as any) || []}
                   fogActiveOverride={fogActive}
-                  lastMoveSquares={lastMoveSquares}
+                  lastMoveSquares={(voidLastMoveSquares as any)[1] || null}
                 />
                 {transferMode && (
                   <div className="mt-2 text-center text-sm text-blue-700">Выберите фигуру для переноса, затем пустую клетку на другой доске</div>
