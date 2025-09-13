@@ -26,6 +26,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ChessPiece, ChessGameState, GameRules, GameRulesArray, Game, Move } from "@shared/schema";
 import { ChessLogic } from "@/lib/chess-logic";
+import { getLegalCastlingDestinationFromRookClick } from "@/lib/castling";
 import { Sword, Crown, Plus, Settings, Users, Share2, LogOut } from "lucide-react";
 
 export default function ChessGame() {
@@ -562,30 +563,22 @@ export default function ChessGame() {
           });
         }
       } else {
-        // Chess960 UX: king → rook click triggers castling to c/g
+        // Chess960 UX: king → rook click triggers castling to c/g using helper
         const fromPiece = gameState.board[selectedSquare];
         const targetPiece = piece;
         const rulesArray = (game?.rules as any) || [];
-        const isFischer = Array.isArray(rulesArray) && rulesArray.includes('fischer-random');
-        if (fromPiece && fromPiece.type === 'king' && targetPiece && targetPiece.type === 'rook' && targetPiece.color === fromPiece.color && isFischer) {
+        if (fromPiece && fromPiece.type === 'king' && targetPiece && targetPiece.type === 'rook' && targetPiece.color === fromPiece.color) {
           // Ensure it's player's turn
           const playerColor = getCurrentPlayerColor();
-          if (playerColor !== gameState.currentTurn) {
-            toast({ title: "Не ваш ход", description: "Дождитесь своей очереди", variant: "destructive", duration: 2000 });
-            setSelectedSquare(null);
-            setValidMoves([]);
-            return;
-          }
-
-          const cr = (gameState as any).castlingRooks as any;
-          const color: 'white' | 'black' = fromPiece.color as any;
-          const backRank = color === 'white' ? '1' : '8';
-          const rookSquare = square;
-          const isKingSide = cr?.[color]?.kingSide && cr[color].kingSide === rookSquare;
-          const isQueenSide = cr?.[color]?.queenSide && cr[color].queenSide === rookSquare;
-          if (isKingSide || isQueenSide) {
-            const dest = `${isKingSide ? 'g' : 'c'}${backRank}`;
-            if (validMoves.includes(dest)) {
+          if (playerColor === gameState.currentTurn) {
+            const dest = getLegalCastlingDestinationFromRookClick(
+              gameState,
+              selectedSquare,
+              square,
+              rulesArray,
+              validMoves
+            );
+            if (dest) {
               makeMoveMutation.mutate({
                 from: selectedSquare,
                 to: dest,
@@ -595,6 +588,8 @@ export default function ChessGame() {
               setValidMoves([]);
               return;
             }
+          } else {
+            toast({ title: "Не ваш ход", description: "Дождитесь своей очереди", variant: "destructive", duration: 2000 });
           }
         }
 
