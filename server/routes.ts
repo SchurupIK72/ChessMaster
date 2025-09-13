@@ -1017,8 +1017,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       state.enPassantTarget = null;
 
       // Castling or blink used detection
-      let isCastling = false;
-      let isBlinkTeleport = false;
+  let isCastling = false;
+  let isBlinkTeleport = false;
+  // For castling, stage rook move and perform after moving the king to avoid overwriting/deleting
+  let pendingCastlingRookFrom: string | null = null;
+  let pendingCastlingRookTo: string | null = null;
       if (piece.type === 'king') {
         const fromFile = mv.from[0];
         const toFile = mv.to[0];
@@ -1282,8 +1285,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update the board state by making the move
       let gameState = game.gameState as any;
-      const piece = gameState.board[moveData.from];
-      const targetPiece = gameState.board[moveData.to];
+  const piece = gameState.board[moveData.from];
+  const targetPiece = gameState.board[moveData.to];
+  let serverCaptured: string | undefined = undefined; // authoritative captured field computed on server
       
       // Basic validation: cannot capture own pieces
       if (piece && targetPiece && piece.color === targetPiece.color) {
@@ -1334,6 +1338,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const captureRank = piece.color === 'white' ? '5' : '4';
           const captureSquare = targetFile + captureRank;
           console.log('Vertical en passant - removing pawn from:', captureSquare);
+          const cap = gameState.board[captureSquare];
+          if (cap) serverCaptured = `${cap.color}-${cap.type}`;
           delete gameState.board[captureSquare]; // Remove the captured pawn
         } else {
           // Horizontal en passant (PawnRotation mode)
@@ -1350,7 +1356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           
           // Find the adjacent pawn that made the double move
-          let captureSquare = null;
+          let captureSquare: string | null = null;
           if (gameState.board[leftSquare] && gameState.board[leftSquare].color !== piece.color) {
             captureSquare = leftSquare;
           } else if (gameState.board[rightSquare] && gameState.board[rightSquare].color !== piece.color) {
@@ -1359,6 +1365,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (captureSquare) {
             console.log('Horizontal en passant - removing pawn from:', captureSquare);
+            const cap = gameState.board[captureSquare];
+            if (cap) serverCaptured = `${cap.color}-${cap.type}`;
             delete gameState.board[captureSquare]; // Remove the captured pawn
           } else {
             console.log('Warning: No adjacent pawn found for horizontal en passant');
@@ -1369,9 +1377,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Reset en passant target (will be set again if needed)
       gameState.enPassantTarget = null;
       
-      // Check for castling before moving the piece
-      let isCastling = false;
-      let isBlinkTeleport = false;
+  // Check for castling before moving the piece
+  let isCastling = false;
+  let isBlinkTeleport = false;
+  let pendingCastlingRookFrom: string | null = null;
+  let pendingCastlingRookTo: string | null = null;
       
       if (piece && piece.type === 'king') {
         const fromFile = moveData.from[0];
@@ -1405,11 +1415,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-  if (isCastling) {
-          // Move the rook as well (Chess960-aware)
+        if (isCastling) {
+          // Stage rook relocation (execute after king moves to avoid overwriting king's starting square)
           const rank = moveData.to[1];
           const isKingSide = toFile === 'g';
-          const rookTo = `${isKingSide ? 'f' : 'd'}${rank}`;
+          pendingCastlingRookTo = `${isKingSide ? 'f' : 'd'}${rank}`;
           let rookFrom = `${isKingSide ? 'h' : 'a'}${rank}`;
           const isFischer = Array.isArray(game.rules) && (game.rules as any).includes('fischer-random');
           if (isFischer && gameState.castlingRooks) {
@@ -1417,8 +1427,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const mapped = gameState.castlingRooks[piece.color]?.[side];
             if (mapped) rookFrom = mapped;
           }
-          gameState.board[rookTo] = gameState.board[rookFrom];
-          delete (gameState.board as any)[rookFrom];
+          pendingCastlingRookFrom = rookFrom;
+          serverCaptured = undefined;
         } else if (isBlinkTeleport && !isCastling) {
           // Mark Blink as used for this color (but not for castling)
           if (!gameState.blinkUsed) {
@@ -1429,8 +1439,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Move the piece
+      // If this is a standard capture (non-en-passant, non-castling), record it
+      if (!serverCaptured && targetPiece && targetPiece.color !== piece.color) {
+        serverCaptured = `${targetPiece.color}-${targetPiece.type}`;
+      }
       gameState.board[moveData.to] = piece;
       delete gameState.board[moveData.from];
+
+      // After moving the king, perform staged rook move for castling
+      if (isCastling && pendingCastlingRookFrom && pendingCastlingRookTo) {
+        gameState.board[pendingCastlingRookTo] = gameState.board[pendingCastlingRookFrom];
+        delete (gameState.board as any)[pendingCastlingRookFrom];
+      }
 
       // Update castling rights after moving pieces
       if (piece && piece.type === 'king') {
@@ -1611,7 +1631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add the move to history
       // DoubleKnight: если это второй ход конём подряд, то оба хода должны быть отдельными объектами
       // Проверяем, не был ли предыдущий ход тем же игроком и конём
-      let shouldAddMove = true;
+  let shouldAddMove = true;
       if (Array.isArray(game.rules) && game.rules.includes('double-knight')) {
         const lastMoves = await storage.getGameMoves(gameId);
         const lastMove = lastMoves.length > 0 ? lastMoves[lastMoves.length - 1] : null;
@@ -1628,7 +1648,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       if (shouldAddMove) {
-        await storage.addMove(moveData);
+        const moveToSave = { ...moveData, captured: serverCaptured };
+        await storage.addMove(moveToSave as any);
       }
   // Возвращаем весь массив ходов, чтобы клиент всегда получал актуальную историю
       const allMoves = await storage.getGameMoves(gameId);
