@@ -1247,7 +1247,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const other = state.voidBoards![otherId] as any;
           const otherHasMoves = hasLegalMoves(other, color, rulesArray as any);
           if (dkAfterRebuild && dkAfterRebuild.color === color) {
-            state.voidMeta!.pending = { color, movedBoards: [boardId] } as any;
+            // DK started on the first sub-move of the full turn
+            state.voidMeta!.pending = { color, movedBoards: [boardId], dkStartedAsSecond: false } as any;
           } else if (!otherHasMoves) {
             state.voidMeta!.pending = null;
             finalizeVoidTurn(color);
@@ -1261,8 +1262,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (origin.doubleKnightMove && origin.doubleKnightMove.color === color) {
             // Keep pending as-is (replay side-effect)
           } else {
-            state.voidMeta!.pending = null;
-            finalizeVoidTurn(color);
+            // If this move started a Double Knight on the other board, keep pending on this board to allow the second hop
+            const dkOther = (state.voidBoards![boardId] as any).doubleKnightMove as undefined | { knightSquare: string; color: 'white'|'black' };
+            if (Array.isArray(rulesArray) && (rulesArray as any).includes('double-knight') && dkOther && dkOther.color === color) {
+              // DK started on the second sub-move of the full turn
+              state.voidMeta!.pending = { color, movedBoards: [boardId], dkStartedAsSecond: true } as any;
+            } else {
+              state.voidMeta!.pending = null;
+              finalizeVoidTurn(color);
+            }
           }
         } else if (state.voidMeta!.pending.color === color && state.voidMeta!.pending.movedBoards.includes(boardId)) {
           // Same-board second: allow only if DK second hop
@@ -1273,14 +1281,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (allowSameBoardDueToDK) {
             // Clear DK requirement on this board after the second hop
             (state.voidBoards![boardId] as any).doubleKnightMove = null;
-            const otherId = (boardId === 0 ? 1 : 0) as 0|1;
-            const other = state.voidBoards![otherId] as any;
-            const otherHasMoves = hasLegalMoves(other, color, rulesArray as any);
-            if (otherHasMoves) {
-              state.voidMeta!.pending = { color, movedBoards: [boardId] } as any;
-            } else {
+            const startedAsSecond = ((state.voidMeta!.pending as any)?.dkStartedAsSecond === true);
+            if (startedAsSecond) {
+              // DK started on the second sub-move; completing DK ends the full turn
               state.voidMeta!.pending = null;
               finalizeVoidTurn(color);
+            } else {
+              // DK started on first sub-move; require other board if it has moves
+              const otherId = (boardId === 0 ? 1 : 0) as 0|1;
+              const other = state.voidBoards![otherId] as any;
+              const otherHasMoves = hasLegalMoves(other, color, rulesArray as any);
+              if (otherHasMoves) {
+                state.voidMeta!.pending = { color, movedBoards: [boardId] } as any;
+              } else {
+                state.voidMeta!.pending = null;
+                finalizeVoidTurn(color);
+              }
             }
           }
         }
@@ -1993,7 +2009,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const otherHasMoves = hasLegalMoves(other, color, game.rules as any);
           if (dkAfter && dkAfter.color === color) {
             // Double-Knight requires immediate second hop on the same board; do NOT auto-pass
-            gameState.voidMeta.pending = { color, movedBoards: [boardId] };
+            gameState.voidMeta.pending = { color, movedBoards: [boardId], dkStartedAsSecond: false } as any;
           } else if (!otherHasMoves) {
             // No moves on the other board: auto-finish turn
             gameState.voidMeta.pending = null;
@@ -2009,9 +2025,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (originBoard.doubleKnightMove && originBoard.doubleKnightMove.color === color) {
             return res.status(400).json({ message: `Must complete Double Knight on board ${originBoardId}` });
           }
-          // Otherwise, this is a valid second sub-move on the other board: finish the turn
-          gameState.voidMeta.pending = null;
-          await finalizeVoidTurn();
+          // Otherwise, this is a valid second sub-move on the other board.
+          // If this move started Double Knight on this board, we must allow its second hop (do not finalize yet).
+          const dkStartedHere = !!(isDoubleKnightRule && dk && dk.color === color);
+          if (dkStartedHere) {
+            gameState.voidMeta.pending = { color, movedBoards: [boardId], dkStartedAsSecond: true } as any;
+          } else {
+            // Finish the full turn
+            gameState.voidMeta.pending = null;
+            await finalizeVoidTurn();
+          }
         } else if (gameState.voidMeta.pending.color === color && gameState.voidMeta.pending.movedBoards.includes(boardId)) {
           // Same-board second sub-move: permitted ONLY if this is the DK second hop; do not finalize yet—require the other board
           const originBoardId = boardId;
@@ -2022,13 +2045,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (wasDKSecond) {
             // Ensure DK marker is cleared on origin board to allow other-board sub-move
             (gameState.voidBoards[originBoardId] as any).doubleKnightMove = null;
-            if (otherHasMoves) {
-              // Keep pending and require a move on the other board to complete the full turn
-              gameState.voidMeta.pending = { color, movedBoards: [originBoardId] };
-            } else {
-              // Other board has no moves; after finishing DK sequence, finalize
+            const startedAsSecond = ((gameState.voidMeta.pending as any)?.dkStartedAsSecond === true);
+            if (startedAsSecond) {
+              // DK started on second sub-move; DK completion ends the full turn immediately
               gameState.voidMeta.pending = null;
               await finalizeVoidTurn();
+            } else {
+              if (otherHasMoves) {
+                // Keep pending and require a move on the other board to complete the full turn
+                gameState.voidMeta.pending = { color, movedBoards: [originBoardId] };
+              } else {
+                // Other board has no moves; after finishing DK sequence, finalize
+                gameState.voidMeta.pending = null;
+                await finalizeVoidTurn();
+              }
             }
           } else {
             return res.status(400).json({ message: 'Second sub-move must be on the other board' });
