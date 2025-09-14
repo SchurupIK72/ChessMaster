@@ -120,26 +120,53 @@ export default function GameStatus({ game, elapsedTime, onChangeRules, moves = [
                 }
                 // Special handling for Meteor Shower to show burned squares and next strike
                 if (ruleKey === 'meteor-shower' && rule) {
-                  const burned = gameState?.burnedSquares || [];
-                  // Prefer calculating from move history (undo-safe, like Fog of War)
-                  const completed = computeCompletedFullMoves(activeRules, moves);
-                  const mod = completed % 5;
-                  const movesUntilNext = (5 - mod) % 5 || 5;
-                  return (
-                    <div key={ruleKey} className="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-orange-800">{rule.name}</p>
-                          <p className="text-sm text-orange-700">{rule.description}</p>
-                          <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                            <span className="px-2 py-1 rounded bg-orange-100 text-orange-800">Сгоревшие клетки: {burned.length}</span>
-                              <span className="px-2 py-1 rounded bg-orange-100 text-orange-800">До следующего метеора (полных ходов): <span className="font-semibold">{movesUntilNext}</span></span>
+                  const isVoid = Array.isArray(activeRules) && activeRules.includes('void');
+                  if (isVoid && Array.isArray((gameState as any)?.voidBoards) && (gameState as any).voidBoards.length === 2) {
+                    const vb = (gameState as any).voidBoards as any[];
+                    const burnedA: string[] = vb[0]?.burnedSquares || [];
+                    const burnedB: string[] = vb[1]?.burnedSquares || [];
+                    const completedA = Math.max(0, (vb[0]?.fullmoveNumber ?? 1) - 1);
+                    const completedB = Math.max(0, (vb[1]?.fullmoveNumber ?? 1) - 1);
+                    const remainA = ((5 - (completedA % 5)) % 5) || 5;
+                    const remainB = ((5 - (completedB % 5)) % 5) || 5;
+                    return (
+                      <div key={ruleKey} className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-orange-800">{rule.name}</p>
+                            <p className="text-sm text-orange-700">{rule.description}</p>
+                            <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                              <span className="px-2 py-1 rounded bg-orange-100 text-orange-800">Сгоревшие клетки A: {burnedA.length}</span>
+                              <span className="px-2 py-1 rounded bg-orange-100 text-orange-800">Сгоревшие клетки B: {burnedB.length}</span>
+                              <span className="px-2 py-1 rounded bg-orange-100 text-orange-800">До следующего метеора A (полных ходов): <span className="font-semibold">{remainA}</span></span>
+                              <span className="px-2 py-1 rounded bg-orange-100 text-orange-800">До следующего метеора B (полных ходов): <span className="font-semibold">{remainB}</span></span>
+                            </div>
                           </div>
+                          <div className="w-3 h-3 bg-orange-600 rounded-full" />
                         </div>
-                        <div className="w-3 h-3 bg-orange-600 rounded-full" />
                       </div>
-                    </div>
-                  );
+                    );
+                  } else {
+                    const burned = gameState?.burnedSquares || [];
+                    const completed = computeCompletedFullMoves(activeRules, moves);
+                    const mod = completed % 5;
+                    const movesUntilNext = (5 - mod) % 5 || 5;
+                    return (
+                      <div key={ruleKey} className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-orange-800">{rule.name}</p>
+                            <p className="text-sm text-orange-700">{rule.description}</p>
+                            <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                              <span className="px-2 py-1 rounded bg-orange-100 text-orange-800">Сгоревшие клетки: {burned.length}</span>
+                              <span className="px-2 py-1 rounded bg-orange-100 text-orange-800">До следующего метеора (полных ходов): <span className="font-semibold">{movesUntilNext}</span></span>
+                            </div>
+                          </div>
+                          <div className="w-3 h-3 bg-orange-600 rounded-full" />
+                        </div>
+                      </div>
+                    );
+                  }
                 }
                 // Special handling for Fog of War to show per-board progress (Void) or single-board progress
                 if (ruleKey === 'fog-of-war' && rule) {
