@@ -141,6 +141,45 @@ export default function GameStatus({ game, elapsedTime, onChangeRules, moves = [
                     </div>
                   );
                 }
+                // Special handling for Fog of War to show per-board progress (Void) or single-board progress
+                if (ruleKey === 'fog-of-war' && rule) {
+                  const isVoid = Array.isArray(activeRules) && activeRules.includes('void');
+                  if (isVoid && Array.isArray((gameState as any)?.voidBoards) && (gameState as any).voidBoards.length === 2) {
+                    const vb = (gameState as any).voidBoards as any[];
+                    const completedA = Math.max(0, (vb[0]?.fullmoveNumber ?? 1) - 1);
+                    const completedB = Math.max(0, (vb[1]?.fullmoveNumber ?? 1) - 1);
+                    return (
+                      <div key={ruleKey} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-blue-800">{rule.name}</p>
+                            <p className="text-sm text-blue-700">{rule.description}</p>
+                            <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                              <span className="px-2 py-1 rounded bg-blue-100 text-blue-800">Прогресс: A: <span className="font-semibold">{Math.min(completedA, 5)}</span>/5, B: <span className="font-semibold">{Math.min(completedB, 5)}</span>/5</span>
+                            </div>
+                          </div>
+                          <div className="w-3 h-3 bg-blue-600 rounded-full" />
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    const completed = Math.max(0, computeCompletedFullMoves(activeRules, moves));
+                    return (
+                      <div key={ruleKey} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-blue-800">{rule.name}</p>
+                            <p className="text-sm text-blue-700">{rule.description}</p>
+                            <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                              <span className="px-2 py-1 rounded bg-blue-100 text-blue-800">Прогресс: <span className="font-semibold">{Math.min(completed, 5)}</span>/5</span>
+                            </div>
+                          </div>
+                          <div className="w-3 h-3 bg-blue-600 rounded-full" />
+                        </div>
+                      </div>
+                    );
+                  }
+                }
                 // Special handling for Void mode to show tokens and sub-move status
                 if (ruleKey === 'void' && rule) {
                   const voidMeta = (gameState?.voidMeta) || null;
