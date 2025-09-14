@@ -1698,6 +1698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const toBoard = gameState.voidBoards[toBoardId];
           const piece = fromBoard.board[fromSquare];
           if (!piece || piece.color !== color) return res.status(400).json({ message: 'Invalid piece for transfer' });
+          if (piece.type === 'king') return res.status(400).json({ message: 'King cannot be transferred between boards' });
           if (toBoard.board[toSquare]) return res.status(400).json({ message: 'Target square is not empty' });
 
           // Validate king safety on source board

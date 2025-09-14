@@ -363,6 +363,10 @@ export default function ChessGame() {
       if (canAutoTransfer && otherSel && !piece) {
         const srcPiece = (boards[otherBoardId] as any as ChessGameState).board[otherSel] as ChessPiece | null;
         if (srcPiece && srcPiece.color === playerColor) {
+          if (srcPiece.type === 'king') {
+            toast({ title: 'Запрещено', description: 'Короля нельзя переносить между досками', variant: 'destructive', duration: 2000 });
+            return;
+          }
           // If transferring pawn to last rank, prompt promotion
           const rank = parseInt(square[1]);
           const shouldPromote = srcPiece.type === 'pawn' && ((srcPiece.color === 'white' && rank === 8) || (srcPiece.color === 'black' && rank === 1));
@@ -399,6 +403,10 @@ export default function ChessGame() {
       if (!transferFrom) {
         // Choose source piece
         if (piece && myTurn && piece.color === playerColor) {
+          if (piece.type === 'king') {
+            toast({ title: 'Запрещено', description: 'Короля нельзя переносить между досками', variant: 'destructive', duration: 2000 });
+            return;
+          }
           setTransferFrom({ boardId, square });
         }
         return;
@@ -518,7 +526,7 @@ export default function ChessGame() {
         const canAutoTransfer = myTokens > 0 && !meta.pending;
         const otherId = (boardId === 0 ? 1 : 0) as 0 | 1;
         let otherMoves: string[] = [];
-        if (canAutoTransfer) {
+        if (canAutoTransfer && (active.board[square] as any)?.type !== 'king') {
           const otherBoard = boards[otherId] as any as ChessGameState;
           // all empty squares on the other board
           const files = ['a','b','c','d','e','f','g','h'];
@@ -1110,7 +1118,7 @@ export default function ChessGame() {
 
   const formatMoveHistory = () => {
     const makeList = (sourceMoves: any[]) => {
-      const formatted: { moveNumber: number; white?: string; black?: string; whiteTransfer?: boolean; blackTransfer?: boolean }[] = [];
+      const formatted: { moveNumber: number; white?: string; black?: string }[] = [];
       const isDoubleKnight = game?.rules?.includes('double-knight');
       let i = 0;
       let moveNumber = 1;
@@ -1157,46 +1165,9 @@ export default function ChessGame() {
       return formatted;
     };
     if (!isVoidMode) return makeList(moves as any);
-    const all = (moves as any[]) || [];
-    const b0 = all.filter(m => (m.special as string | undefined)?.startsWith('void:board=0'));
-    const b1 = all.filter(m => (m.special as string | undefined)?.startsWith('void:board=1'));
-
-    // Build base rows per board from their own moves
-    const rows0Map = new Map<number, { moveNumber: number; white?: string; black?: string; whiteTransfer?: boolean; blackTransfer?: boolean }>();
-    const rows1Map = new Map<number, { moveNumber: number; white?: string; black?: string; whiteTransfer?: boolean; blackTransfer?: boolean }>();
-
-    makeList(b0).forEach(r => rows0Map.set(r.moveNumber, { ...r }));
-    makeList(b1).forEach(r => rows1Map.set(r.moveNumber, { ...r }));
-
-    // Overlay transfer badges onto appropriate rows; ensure row exists for that moveNumber
-    for (let i = 0; i < all.length; i++) {
-      const mv: any = all[i];
-      const special = mv?.special as string | undefined;
-      if (!special || !special.startsWith('void-transfer')) continue;
-      const m = special.match(/void-transfer:(\d+)->(\d+)/);
-      const fromBoardId = m ? parseInt(m[1], 10) as 0 | 1 : 0;
-      const toBoardId = m ? parseInt(m[2], 10) as 0 | 1 : 1;
-      const moveNo: number = (mv.moveNumber as number) || (Math.floor(i / 2) + 1);
-      const isWhite = (mv.player as string) === 'white';
-
-      const ensureRow = (map: Map<number, any>) => {
-        if (!map.has(moveNo)) map.set(moveNo, { moveNumber: moveNo });
-        return map.get(moveNo)!;
-      };
-
-      if (fromBoardId === 0 || toBoardId === 0) {
-        const row = ensureRow(rows0Map);
-        if (isWhite) row.whiteTransfer = true; else row.blackTransfer = true;
-      }
-      if (fromBoardId === 1 || toBoardId === 1) {
-        const row = ensureRow(rows1Map);
-        if (isWhite) row.whiteTransfer = true; else row.blackTransfer = true;
-      }
-    }
-
-    const list0 = Array.from(rows0Map.values()).sort((a, b) => a.moveNumber - b.moveNumber);
-    const list1 = Array.from(rows1Map.values()).sort((a, b) => a.moveNumber - b.moveNumber);
-    return { board0: list0, board1: list1 } as any;
+    const b0 = (moves as any[]).filter(m => (m.special as string | undefined)?.startsWith('void:board=0'));
+    const b1 = (moves as any[]).filter(m => (m.special as string | undefined)?.startsWith('void:board=1'));
+    return { board0: makeList(b0), board1: makeList(b1) } as any;
   };
 
   // Extract transfer events for Void mode
