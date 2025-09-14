@@ -58,6 +58,8 @@ export default function ChessGame() {
   // Computed later once `game` is available
   const [voidSelected, setVoidSelected] = useState<{ [key: number]: string | null }>({});
   const [voidValidMoves, setVoidValidMoves] = useState<{ [key: number]: string[] }>({});
+  // Local overlay for Void boards to support Double Knight second hop without waiting for SSE
+  const [voidLocalBoards, setVoidLocalBoards] = useState<{ [key: number]: ChessGameState | null }>({});
   const [transferMode, setTransferMode] = useState(false);
   const [transferFrom, setTransferFrom] = useState<{ boardId: 0 | 1; square: string } | null>(null);
   const [pendingTransferPromotion, setPendingTransferPromotion] = useState<
@@ -171,6 +173,13 @@ export default function ChessGame() {
       try { src.close(); } catch {}
     };
   }, [gameId]);
+
+  // When fresh game data arrives, drop any local overlays (server state becomes source of truth)
+  useEffect(() => {
+    if (game && (game as any).gameState) {
+      setVoidLocalBoards({});
+    }
+  }, [game]);
 
   // Derived flags
   const isVoidMode = Array.isArray((game as any)?.rules) && ((game as any)?.rules as any[]).includes('void');
@@ -356,7 +365,9 @@ export default function ChessGame() {
   const handleVoidSquareClick = (boardId: 0 | 1, square: string) => {
     if (!game || !game.gameState || !isVoidMode || !Array.isArray((game.gameState as any).voidBoards)) return;
     const boards = (game.gameState as any).voidBoards as ChessGameState[];
-    const active = boards[boardId] as any as ChessGameState;
+    // Effective boards use local overlay if present (for immediate DK second-hop UX)
+    const getEffectiveVoidBoard = (id: 0 | 1): ChessGameState => (voidLocalBoards[id] as ChessGameState) || (boards[id] as any as ChessGameState);
+    const active = getEffectiveVoidBoard(boardId);
     const piece = active.board[square];
 
     const playerColor = getCurrentPlayerColor();
@@ -457,7 +468,7 @@ export default function ChessGame() {
     }
 
     // Normal per-board move selection
-    const sel = voidSelected[boardId] || null;
+  const sel = voidSelected[boardId] || null;
     const vm = voidValidMoves[boardId] || [];
     if (sel) {
       if (sel === square) {
@@ -482,7 +493,7 @@ export default function ChessGame() {
           }
           // Void + Double Knight UX: if a sub-move is already pending on the other board, do not allow starting a new DK here
           const dkMeta = (game.gameState as any).voidMeta || { pending: null };
-          const isDK = Array.isArray(game.rules) && game.rules.includes('double-knight');
+          const isDKGuard = Array.isArray(game.rules) && game.rules.includes('double-knight');
           const pending = dkMeta?.pending as { color: 'white'|'black'; movedBoards: number[] } | null;
           const isSecondBoardMove = !!(pending && pending.color === playerColor && !pending.movedBoards.includes(boardId));
           // Identify origin board of the first sub-move
@@ -493,7 +504,7 @@ export default function ChessGame() {
             ? !!((boards[originBoardId] as any)?.doubleKnightMove)
             : false;
           // Block only when origin DK is still active and needs to be completed
-          if (isDK && isSecondBoardMove && originDKActive) {
+          if (isDKGuard && isSecondBoardMove && originDKActive) {
             toast({ title: 'Завершите двойной ход', description: 'Сначала завершите двойной ход конём на исходной доске', variant: 'destructive', duration: 2500 });
             setVoidSelected({ ...voidSelected, [boardId]: null });
             setVoidValidMoves({ ...voidValidMoves, [boardId]: [] });
@@ -532,6 +543,31 @@ export default function ChessGame() {
               if (capturedPawn) captured = `${capturedPawn.color}-${capturedPawn.type}`;
             }
           }
+          // Optimistic overlay for DK first hop: if rules have double-knight and this is the first knight hop on this board,
+          // apply move locally and set doubleKnightMove so the second hop is immediately available.
+          const rulesArr = (game.rules as any[]) || [];
+          const isDKNow = Array.isArray(rulesArr) && rulesArr.includes('double-knight');
+          const activeBeforeMove = getEffectiveVoidBoard(boardId);
+          const isFirstDKHop = isDKNow && fromPiece.type === 'knight' && !(activeBeforeMove as any).doubleKnightMove;
+
+          if (isFirstDKHop) {
+            const overlay: ChessGameState = {
+              ...(activeBeforeMove as any),
+              board: { ...(activeBeforeMove as any).board },
+              // keep currentTurn same so that DK second hop is for the same player
+            } as any;
+            // apply piece move locally (ignore rare captures nuances outside knight)
+            overlay.board[square] = { ...fromPiece } as any;
+            delete (overlay.board as any)[sel];
+            (overlay as any).doubleKnightMove = { knightSquare: square, color: fromPiece.color } as any;
+            setVoidLocalBoards(prev => ({ ...prev, [boardId]: overlay }));
+          } else {
+            // If this is the DK second hop or any other move, clear any overlay on this board
+            if (voidLocalBoards[boardId]) {
+              setVoidLocalBoards(prev => ({ ...prev, [boardId]: null }));
+            }
+          }
+
           makeMoveMutation.mutate({
             from: sel,
             to: square,
@@ -556,14 +592,15 @@ export default function ChessGame() {
           ? (pending.movedBoards[0] as 0|1)
           : undefined;
         const originDKActive = (typeof originBoardId !== 'undefined')
-          ? !!((boards[originBoardId] as any)?.doubleKnightMove)
+          ? !!(((getEffectiveVoidBoard(originBoardId) as any))?.doubleKnightMove)
           : false;
         if (isDK && isSecondBoardMove && originDKActive) {
           toast({ title: 'Завершите двойной ход', description: 'Сначала завершите двойной ход конём на исходной доске', variant: 'destructive', duration: 2500 });
           return;
         }
         setVoidSelected({ ...voidSelected, [boardId]: square });
-        const movesList = chessLogic.getValidMoves(active as any, square, game?.rules as any);
+        const effective = getEffectiveVoidBoard(boardId);
+        const movesList = chessLogic.getValidMoves(effective as any, square, game?.rules as any);
         // compute transfer destinations on the other board if token available and no pending
         const meta = (game.gameState as any).voidMeta || { tokens: { white: 0, black: 0 }, pending: null };
         const myTokens = meta.tokens?.[playerColor] ?? 0;
