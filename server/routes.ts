@@ -1234,8 +1234,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Halfmove clock
         if (piece?.type === 'pawn' || targetPiece) active.halfmoveClock = 0; else active.halfmoveClock++;
 
-        // Apply special rules on that board
-        const updated = applyAllSpecialRules(active as any, rulesArray as any, mv.from, mv.to, piece as any) as any;
+  // Capture DK state before rule application to detect legitimate same-board second steps
+  const dkBefore = (active as any).doubleKnightMove as undefined | { knightSquare: string; color: 'white'|'black' };
+  // Apply special rules on that board
+  const updated = applyAllSpecialRules(active as any, rulesArray as any, mv.from, mv.to, piece as any) as any;
         state.voidBoards![boardId] = updated;
 
         // Pending and finalize
@@ -1252,6 +1254,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else if (state.voidMeta!.pending.color === color && !state.voidMeta!.pending.movedBoards.includes(boardId)) {
           state.voidMeta!.pending = null;
           finalizeVoidTurn(color);
+        } else if (state.voidMeta!.pending.color === color && state.voidMeta!.pending.movedBoards.includes(boardId)) {
+          // Same-board second sub-move: permit only for Double-Knight second hop, then complete the turn
+          const allowSameBoardDueToDK = !!(
+            Array.isArray(rulesArray) && (rulesArray as any).includes('double-knight') &&
+            dkBefore &&
+            dkBefore.color === color &&
+            piece && piece.type === 'knight' &&
+            mv.from === dkBefore.knightSquare
+          );
+          if (allowSameBoardDueToDK) {
+            state.voidMeta!.pending = null;
+            finalizeVoidTurn(color);
+          }
         }
       }
 
@@ -1762,11 +1777,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const boardId = body.boardId as 0|1;
         if (boardId !== 0 && boardId !== 1) return res.status(400).json({ message: 'boardId is required in Void mode' });
         const active = gameState.voidBoards[boardId];
-        // If a second sub-move is attempted on the same board, reject: second must be on the other board.
-        if (gameState.voidMeta?.pending && gameState.voidMeta.pending.color === color && gameState.voidMeta.pending.movedBoards.includes(boardId)) {
+        // If a second sub-move is attempted on the same board, normally reject; but allow when Double-Knight requires a second move with the same knight on this board.
+        const movingPieceForCheck = active.board[moveData.from];
+        const isDoubleKnightRule = Array.isArray(game.rules) && (game.rules as any).includes('double-knight');
+        const dk = (active as any).doubleKnightMove as undefined | { knightSquare: string; color: 'white'|'black' };
+        const allowSameBoardDueToDK = !!(
+          isDoubleKnightRule &&
+          dk &&
+          dk.color === color &&
+          movingPieceForCheck &&
+          movingPieceForCheck.type === 'knight' &&
+          moveData.from === dk.knightSquare
+        );
+        if (gameState.voidMeta?.pending && gameState.voidMeta.pending.color === color && gameState.voidMeta.pending.movedBoards.includes(boardId) && !allowSameBoardDueToDK) {
           return res.status(400).json({ message: 'Second sub-move must be on the other board' });
         }
-        const piece = active.board[moveData.from];
+        const piece = movingPieceForCheck;
         const targetPiece = active.board[moveData.to];
         let serverCaptured: string | undefined = undefined;
         if (!piece || piece.color !== color) return res.status(400).json({ message: 'Invalid piece or wrong turn' });
@@ -1959,6 +1985,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Second sub-move on the other board completes the turn
           gameState.voidMeta.pending = null;
           await finalizeVoidTurn();
+        } else if (gameState.voidMeta.pending.color === color && gameState.voidMeta.pending.movedBoards.includes(boardId)) {
+          // Same-board second sub-move: allow only if it was a Double-Knight sequence; in that case, also complete the turn now.
+          const wasDKSecond = isDoubleKnightRule && dk && dk.color === color;
+          if (wasDKSecond) {
+            gameState.voidMeta.pending = null;
+            await finalizeVoidTurn();
+          }
         }
 
         await storage.updateGameState(gameId, gameState);
