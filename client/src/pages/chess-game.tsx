@@ -65,37 +65,47 @@ export default function ChessGame() {
   >(null);
 
   // Helper: compute whether Fog of War is currently active considering Double Knight pairing
-  const computeFogActive = (rules: any, movesList: Move[]): boolean => {
-    const fogRules = (rules as any) || [];
-    const hasFog = Array.isArray(fogRules) && fogRules.includes('fog-of-war');
-    if (!hasFog) return false;
-    const hasDoubleKnight = Array.isArray(fogRules) && fogRules.includes('double-knight');
-    let turns = 0;
-    let i = 0;
-    while (i < movesList.length) {
-      const m1 = movesList[i];
-      const currentPlayer = m1.player;
-      if (
-        hasDoubleKnight &&
-        i + 1 < movesList.length &&
-        movesList[i + 1].player === currentPlayer &&
-        typeof m1.piece === 'string' && m1.piece.endsWith('-knight') &&
-        typeof movesList[i + 1].piece === 'string' && movesList[i + 1].piece.endsWith('-knight') &&
-        m1.to && movesList[i + 1].from && m1.to === movesList[i + 1].from
-      ) {
-        turns += 1;
-        i += 2;
-      } else if (hasDoubleKnight && typeof m1.piece === 'string' && m1.piece.endsWith('-knight')) {
-        i += 1; // wait for second step to complete the player's turn
-      } else {
-        turns += 1;
-        i += 1;
+    const computeFogActive = (rules: any, movesList: Move[], currentGame?: Game): boolean => {
+      const rulesArr = (rules as any) || [];
+      const hasFog = Array.isArray(rulesArr) && rulesArr.includes('fog-of-war');
+      if (!hasFog) return false;
+
+      const isVoid = Array.isArray(rulesArr) && rulesArr.includes('void');
+      if (isVoid && currentGame && (currentGame.gameState as any)?.voidBoards?.length === 2) {
+        const vb = (currentGame.gameState as any).voidBoards as any[];
+        const completed0 = Math.max(0, (vb[0]?.fullmoveNumber ?? 1) - 1);
+        const completed1 = Math.max(0, (vb[1]?.fullmoveNumber ?? 1) - 1);
+        // Keep fog until BOTH boards have completed at least 5 full moves
+        return completed0 < 5 || completed1 < 5;
       }
-    }
-  // Fog remains active until 10 effective turns (i.e., through Black's 5th move);
-  // after Black's 5th move completes (turns >= 10), fog ends
-  return turns < 10;
-  };
+
+      // Non-void / fallback to move-history based calculation
+      const hasDoubleKnight = Array.isArray(rulesArr) && rulesArr.includes('double-knight');
+      let turns = 0;
+      let i = 0;
+      while (i < movesList.length) {
+        const m1 = movesList[i];
+        const currentPlayer = m1.player;
+        if (
+          hasDoubleKnight &&
+          i + 1 < movesList.length &&
+          movesList[i + 1].player === currentPlayer &&
+          typeof m1.piece === 'string' && m1.piece.endsWith('-knight') &&
+          typeof movesList[i + 1].piece === 'string' && movesList[i + 1].piece.endsWith('-knight') &&
+          m1.to && movesList[i + 1].from && m1.to === movesList[i + 1].from
+        ) {
+          turns += 1; // two-step knight counts as one player turn
+          i += 2;
+        } else if (hasDoubleKnight && typeof m1.piece === 'string' && m1.piece.endsWith('-knight')) {
+          i += 1; // wait for the second step to complete player's turn
+        } else {
+          turns += 1;
+          i += 1;
+        }
+      }
+      // Fog remains active until 10 effective player turns (i.e., through Black's 5th move)
+      return turns < 10;
+    };
 
   // Get current player's color
   const getCurrentPlayerColor = (): 'white' | 'black' | null => {
@@ -1268,7 +1278,7 @@ export default function ChessGame() {
   }
 
   // Fog of War: use the same helper for consistency across UI
-  const fogActive = computeFogActive(game?.rules as any, moves);
+    const fogActive = computeFogActive(game?.rules as any, moves, game);
   return (
   <div className="min-h-screen bg-slate-50 font-inter">
       <header className="bg-white shadow-sm border-b border-slate-200">

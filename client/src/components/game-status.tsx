@@ -21,6 +21,7 @@ const ruleDescriptions: Record<string, { name: string; description: string; stat
   'fog-of-war': { name: 'Туман войны', description: 'Первые 5 ходов видна только своя половина доски; история ходов скрыта', status: 'active' },
   'meteor-shower': { name: 'Метеоритный дождь', description: 'Каждые 5 ходов случайная пустая клетка сгорает и становится недоступной', status: 'active' },
   'fischer-random': { name: 'Шахматы Фишера (Chess960)', description: 'Случайная расстановка на 1-й и 8-й горизонталях (разноцветные слоны, король между ладьями)', status: 'active' },
+  'void': { name: 'Void Mode', description: 'Две независимые доски; один ход = два под-хода на разных досках; перенос фигур между досками за токены (короля переносить нельзя)', status: 'active' },
 };
 
 export default function GameStatus({ game, elapsedTime, onChangeRules, moves = [] }: GameStatusProps) {
@@ -136,6 +137,35 @@ export default function GameStatus({ game, elapsedTime, onChangeRules, moves = [
                           </div>
                         </div>
                         <div className="w-3 h-3 bg-orange-600 rounded-full" />
+                      </div>
+                    </div>
+                  );
+                }
+                // Special handling for Void mode to show tokens and sub-move status
+                if (ruleKey === 'void' && rule) {
+                  const voidMeta = (gameState?.voidMeta) || null;
+                  const tokens = voidMeta?.tokens || { white: 0, black: 0 };
+                  const pending = voidMeta?.pending || null;
+                  const movedBoards: number[] = pending?.movedBoards || [];
+                  const boardLabel = (n: number) => (n === 0 ? 'A' : 'B');
+                  const progress = pending ? `${movedBoards.length}/2` : '0/2';
+                  const moved = movedBoards.map(boardLabel).join(', ');
+                  return (
+                    <div key={ruleKey} className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-purple-800">{rule.name}</p>
+                          <p className="text-sm text-purple-700">{rule.description}</p>
+                          <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                            <span className="px-2 py-1 rounded bg-purple-100 text-purple-800">Токены: белые {tokens.white ?? 0}, черные {tokens.black ?? 0}</span>
+                            {pending ? (
+                              <span className="px-2 py-1 rounded bg-purple-100 text-purple-800">Под-ходы выполнены: <span className="font-semibold">{progress}</span>{moved ? ` (доски: ${moved})` : ''}</span>
+                            ) : (
+                              <span className="px-2 py-1 rounded bg-purple-100 text-purple-800">Под-ходы выполнены: <span className="font-semibold">0/2</span></span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="w-3 h-3 bg-purple-600 rounded-full" />
                       </div>
                     </div>
                   );
