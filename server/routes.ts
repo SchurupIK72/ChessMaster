@@ -1739,8 +1739,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           updateFlags(fromBoard, fromBoardId);
           updateFlags(toBoard, toBoardId);
 
-          await storage.updateGameState(gameId, gameState);
+          // Important: finalize full turn first so per-board currentTurn and flags are updated,
+          // then persist the full updated gameState (so isCheck/isCheckmate/isStalemate are saved correctly)
           await finalizeVoidTurn();
+          await storage.updateGameState(gameId, gameState);
 
           const saved = await storage.addMove({
             gameId,
