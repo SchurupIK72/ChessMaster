@@ -1271,6 +1271,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             dkBefore && dkBefore.color === color && piece && piece.type === 'knight' && mv.from === dkBefore.knightSquare
           );
           if (allowSameBoardDueToDK) {
+            // Clear DK requirement on this board after the second hop
+            (state.voidBoards![boardId] as any).doubleKnightMove = null;
             const otherId = (boardId === 0 ? 1 : 0) as 0|1;
             const other = state.voidBoards![otherId] as any;
             const otherHasMoves = hasLegalMoves(other, color, rulesArray as any);
@@ -2018,6 +2020,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const otherHasMoves = hasLegalMoves(other, color, game.rules as any);
           const wasDKSecond = isDoubleKnightRule && dk && dk.color === color;
           if (wasDKSecond) {
+            // Ensure DK marker is cleared on origin board to allow other-board sub-move
+            (gameState.voidBoards[originBoardId] as any).doubleKnightMove = null;
             if (otherHasMoves) {
               // Keep pending and require a move on the other board to complete the full turn
               gameState.voidMeta.pending = { color, movedBoards: [originBoardId] };
