@@ -5,6 +5,7 @@ import { insertGameSchema, insertMoveSchema, insertUserSchema } from "@shared/sc
 import { z } from "zod";
 import { ChessGameState, Game, ChessPiece } from "@shared/schema";
 import { generateFischerBackRankFromSeed } from "./chess960";
+import bcrypt from "bcryptjs";
 
 // Simple chess logic for server-side checkmate detection
 function isKingInCheck(gameState: any, color: 'white' | 'black', gameRules?: string[]): boolean {
@@ -1571,6 +1572,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     return state;
   }
+  // Helper function to hash password
+  async function hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10);
+  }
+
   // Create a new game
   app.post("/api/games", async (req, res) => {
     try {
@@ -1578,9 +1584,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create a unique player for this game session
       const playerName = `Player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const tempPasswordHash = await hashPassword('temp_password');
+      
       const player = await storage.createUser({
         username: playerName,
-        password: 'temp_password',
+        password: tempPasswordHash,
         email: `${playerName}@temp.com`,
         phone: '0000000000'
       });
@@ -1639,9 +1647,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create a unique player for this game session
       const playerName = `Player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const tempPasswordHash = await hashPassword('temp_password');
+      
       const player = await storage.createUser({
         username: playerName,
-        password: 'temp_password',
+        password: tempPasswordHash,
         email: `${playerName}@temp.com`,
         phone: '0000000000'
       });
@@ -2535,10 +2545,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Email уже зарегистрирован' });
       }
 
-      // Create user
+      // Hash password before saving
+      const hashedPassword = await bcrypt.hash(validatedData.password, 10);
+
+      // Create user with hashed password
       const user = await storage.createUser({
         username: validatedData.username,
-        password: validatedData.password,
+        password: hashedPassword,
         email: validatedData.email,
         phone: validatedData.phone,
       });
@@ -2578,8 +2591,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Неверный никнейм или пароль' });
       }
 
-      // In a real app, you would hash the password
-      if (user.password !== password) {
+      // Compare password with stored hash
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
         return res.status(401).json({ message: 'Неверный никнейм или пароль' });
       }
 
@@ -2637,9 +2651,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!guestUser) {
         // Fallback: create a new guest user
         const guestUsername = `guest_${Date.now()}`;
+        const guestPasswordHash = await hashPassword('guest123');
+        
         const newGuestUser = await storage.createUser({
           username: guestUsername,
-          password: 'guest123',
+          password: guestPasswordHash,
           email: `${guestUsername}@temp.com`,
           phone: '0000000000'
         });
