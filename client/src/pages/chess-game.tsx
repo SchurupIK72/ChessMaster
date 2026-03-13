@@ -491,24 +491,32 @@ export default function ChessGame() {
             setVoidValidMoves({ ...voidValidMoves, [boardId]: [] });
             return;
           }
-          // Void + Double Knight UX: if a sub-move is already pending on the other board, do not allow starting a new DK here
+          // Void + Double Knight UX: if DoubleKnight is active on another board, only allow moving that specific knight
           const dkMeta = (game.gameState as any).voidMeta || { pending: null };
-          const isDKGuard = Array.isArray(game.rules) && game.rules.includes('double-knight');
+          const isDKRule = Array.isArray(game.rules) && game.rules.includes('double-knight');
           const pending = dkMeta?.pending as { color: 'white'|'black'; movedBoards: number[] } | null;
-          const isSecondBoardMove = !!(pending && pending.color === playerColor && !pending.movedBoards.includes(boardId));
-          // Identify origin board of the first sub-move
-          const originBoardId = (pending && pending.movedBoards && pending.movedBoards.length > 0)
-            ? (pending.movedBoards[0] as 0|1)
-            : undefined;
-          const originDKActive = (typeof originBoardId !== 'undefined')
-            ? !!((boards[originBoardId] as any)?.doubleKnightMove)
-            : false;
-          // Block only when origin DK is still active and needs to be completed
-          if (isDKGuard && isSecondBoardMove && originDKActive) {
-            toast({ title: 'Завершите двойной ход', description: 'Сначала завершите двойной ход конём на исходной доске', variant: 'destructive', duration: 2500 });
-            setVoidSelected({ ...voidSelected, [boardId]: null });
-            setVoidValidMoves({ ...voidValidMoves, [boardId]: [] });
-            return;
+          // Check if there's an active DK pending on any board
+          let dkPendingBoardId: number | undefined = undefined;
+          if (isDKRule && pending && pending.color === playerColor) {
+            for (let bid = 0; bid <= 1; bid++) {
+              const effectiveBoardForCheck = getEffectiveVoidBoard(bid as 0 | 1);
+              if ((effectiveBoardForCheck as any).doubleKnightMove) {
+                dkPendingBoardId = bid;
+                break;
+              }
+            }
+          }
+          // If DK is pending and the piece being selected is NOT the knight from that DK, block it
+          if (isDKRule && typeof dkPendingBoardId !== 'undefined') {
+            const dkState = getEffectiveVoidBoard(dkPendingBoardId as 0 | 1);
+            const dkKnightSquare = (dkState as any).doubleKnightMove?.knightSquare;
+            const isTheDKKnight = fromPiece.type === 'knight' && boardId === dkPendingBoardId && sel === dkKnightSquare;
+            if (!isTheDKKnight) {
+              toast({ title: 'Завершите двойной ход', description: 'Допускается только второй ход тем же конём', variant: 'destructive', duration: 2500 });
+              setVoidSelected({ ...voidSelected, [boardId]: null });
+              setVoidValidMoves({ ...voidValidMoves, [boardId]: [] });
+              return;
+            }
           }
           // Promotion check on this board
           if (fromPiece.type === 'pawn') {
@@ -583,20 +591,30 @@ export default function ChessGame() {
     } else {
       // Select piece
       if (piece && myTurn && piece.color === playerColor) {
-        // Void + Double Knight UX: if a sub-move is already pending on the other board, do not allow starting a new DK here
+        // Void + Double Knight UX: if DoubleKnight is active on another board, only allow selecting that knight
         const dkMeta = (game.gameState as any).voidMeta || { pending: null };
         const isDK = Array.isArray(game.rules) && game.rules.includes('double-knight');
         const pending = dkMeta?.pending as { color: 'white'|'black'; movedBoards: number[] } | null;
-        const isSecondBoardMove = !!(pending && pending.color === playerColor && !pending.movedBoards.includes(boardId));
-        const originBoardId = (pending && pending.movedBoards && pending.movedBoards.length > 0)
-          ? (pending.movedBoards[0] as 0|1)
-          : undefined;
-        const originDKActive = (typeof originBoardId !== 'undefined')
-          ? !!(((getEffectiveVoidBoard(originBoardId) as any))?.doubleKnightMove)
-          : false;
-        if (isDK && isSecondBoardMove && originDKActive) {
-          toast({ title: 'Завершите двойной ход', description: 'Сначала завершите двойной ход конём на исходной доске', variant: 'destructive', duration: 2500 });
-          return;
+        // Check if there's an active DK pending on any board
+        let dkPendingBoardId: number | undefined = undefined;
+        if (isDK && pending && pending.color === playerColor) {
+          for (let bid = 0; bid <= 1; bid++) {
+            const effectiveBoardForCheck = getEffectiveVoidBoard(bid as 0 | 1);
+            if ((effectiveBoardForCheck as any).doubleKnightMove) {
+              dkPendingBoardId = bid;
+              break;
+            }
+          }
+        }
+        // If DK is pending and trying to select a different piece, block it
+        if (isDK && typeof dkPendingBoardId !== 'undefined') {
+          const dkState = getEffectiveVoidBoard(dkPendingBoardId as 0 | 1);
+          const dkKnightSquare = (dkState as any).doubleKnightMove?.knightSquare;
+          const isTheDKKnight = piece.type === 'knight' && boardId === dkPendingBoardId && square === dkKnightSquare;
+          if (!isTheDKKnight) {
+            toast({ title: 'Завершите двойной ход', description: 'Допускается только второй ход тем же конём', variant: 'destructive', duration: 2500 });
+            return;
+          }
         }
         setVoidSelected({ ...voidSelected, [boardId]: square });
         const effective = getEffectiveVoidBoard(boardId);
