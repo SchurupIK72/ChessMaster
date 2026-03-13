@@ -70,10 +70,8 @@ export function getLegalCastlingDestinationFromRookClick(
   // Require castling rights for that side; prevents triggering Blink to c/g when castling not allowed
   if (!side || !gameState.castlingRights || !gameState.castlingRights[side]) return null;
 
-  // Verify that destination is a legal king move when Blink is disabled (so we're not matching a Blink square)
-  const rulesNoBlink = Array.isArray(rules) ? rules.filter(r => r !== 'blink') : [];
-  const logic = new ChessLogic();
-  const kingMovesNoBlink = logic.getValidMoves(gameState as any, kingSquare, rulesNoBlink);
-  if (kingMovesNoBlink.includes(dest)) return dest;
-  return null;
+  // Do NOT require dest to be present in client-side king moves: in Chess960 the king's destination
+  // may be initially occupied by its own rook (e.g., rook on g8). Server-side validation allows this
+  // and will move the rook accordingly. We rely on castling rights and server legality checks.
+  return dest;
 }

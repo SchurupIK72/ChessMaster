@@ -566,7 +566,7 @@ export default function ChessGame() {
             if (voidLocalBoards[boardId]) {
               setVoidLocalBoards(prev => ({ ...prev, [boardId]: null }));
             }
-          }
+          } 
 
           makeMoveMutation.mutate({
             from: sel,
