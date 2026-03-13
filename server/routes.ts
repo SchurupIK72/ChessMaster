@@ -2654,16 +2654,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const guestUser = await storage.getUser(guestId);
       
       if (!guestUser) {
-        // Fallback: create a new guest user
-        const guestUsername = `guest_${Date.now()}`;
+        // Fallback: create a new guest user with retry logic for phone uniqueness
+        const guestUsername = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const guestPasswordHash = await hashPassword('guest123');
         
-        const newGuestUser = await storage.createUser({
-          username: guestUsername,
-          password: guestPasswordHash,
-          email: `${guestUsername}@temp.com`,
-          phone: generateUniquePhone()
-        });
+        let newGuestUser = null;
+        let retries = 0;
+        const maxRetries = 3;
+        
+        while (!newGuestUser && retries < maxRetries) {
+          try {
+            newGuestUser = await storage.createUser({
+              username: guestUsername,
+              password: guestPasswordHash,
+              email: `${guestUsername}@temp.com`,
+              phone: generateUniquePhone()
+            });
+          } catch (error: any) {
+            retries++;
+            if (retries >= maxRetries) {
+              throw error;
+            }
+            // Retry with a new phone number
+            console.log(`Phone collision, retrying (attempt ${retries + 1}/${maxRetries})`);
+          }
+        }
+        
+        if (!newGuestUser) {
+          throw new Error('Failed to create guest user after retries');
+        }
         
         return res.json({ 
           message: 'Гостевая сессия создана',
