@@ -1577,6 +1577,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return bcrypt.hash(password, 10);
   }
 
+  // Helper function to generate unique phone
+  function generateUniquePhone(): string {
+    return Math.floor(Math.random() * 9000000000 + 1000000000).toString();
+  }
+
   // Create a new game
   app.post("/api/games", async (req, res) => {
     try {
@@ -1590,7 +1595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: playerName,
         password: tempPasswordHash,
         email: `${playerName}@temp.com`,
-        phone: '0000000000'
+        phone: generateUniquePhone()
       });
       
       // Add player ID to game data
@@ -1653,7 +1658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: playerName,
         password: tempPasswordHash,
         email: `${playerName}@temp.com`,
-        phone: '0000000000'
+        phone: generateUniquePhone()
       });
       
       console.log('Created player:', player);
@@ -2657,7 +2662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           username: guestUsername,
           password: guestPasswordHash,
           email: `${guestUsername}@temp.com`,
-          phone: '0000000000'
+          phone: generateUniquePhone()
         });
         
         return res.json({ 
