@@ -358,9 +358,15 @@ export default function ChessGame() {
       // Fire-and-forget cache updates: rely on SSE to update moves; only invalidate the game
       // (remove await to avoid blocking UI)
       queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/games", gameId, "moves"] });
       // SSE 'move' event will trigger both game and moves invalidations via effect; no need to duplicate here
     },
     onError: (error: any) => {
+      setVoidLocalBoards({});
+      setVoidSelected({});
+      setVoidValidMoves({});
+      queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/games", gameId, "moves"] });
       toast({
         title: "Invalid Move",
         description: error.message || "That move is not allowed",
@@ -375,6 +381,16 @@ export default function ChessGame() {
     const boards = (game.gameState as any).voidBoards as ChessGameState[];
     const active = getEffectiveVoidBoard(boardId);
     if (!active) return;
+    const waitingForDoubleKnightSync = makeMoveMutation.isPending &&
+      Object.values(voidLocalBoards).some(board => !!board?.doubleKnightMove);
+    if (waitingForDoubleKnightSync) {
+      toast({
+        title: 'Синхронизация хода',
+        description: 'Дождитесь подтверждения первого прыжка коня, затем выполните второй',
+        duration: 1500,
+      });
+      return;
+    }
     const piece = active.board[square];
 
     const playerColor = getCurrentPlayerColor();
