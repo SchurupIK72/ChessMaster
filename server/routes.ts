@@ -2102,7 +2102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           // Otherwise, this is a valid second sub-move on the other board.
           // If this move started Double Knight on this board, we must allow its second hop (do not finalize yet).
-          const dkStartedHere = !!(isDoubleKnightRule && dk && dk.color === color);
+          const dkStartedHere = !!(isDoubleKnightRule && dkAfter && dkAfter.color === color);
           if (dkStartedHere) {
             gameState.voidMeta.pending = { color, movedBoards: [boardId], dkStartedAsSecond: true } as any;
           } else {
