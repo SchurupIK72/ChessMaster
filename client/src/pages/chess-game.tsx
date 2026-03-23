@@ -183,6 +183,14 @@ export default function ChessGame() {
 
   // Derived flags
   const isVoidMode = Array.isArray((game as any)?.rules) && ((game as any)?.rules as any[]).includes('void');
+  const getEffectiveVoidBoard = (id: 0 | 1): ChessGameState | null => {
+    if (!game?.gameState || !Array.isArray((game.gameState as any).voidBoards)) {
+      return null;
+    }
+
+    const boards = (game.gameState as any).voidBoards as ChessGameState[];
+    return (voidLocalBoards[id] as ChessGameState) || (boards[id] as ChessGameState);
+  };
 
   // Create new game mutation
   const createGameMutation = useMutation({
@@ -365,9 +373,8 @@ export default function ChessGame() {
   const handleVoidSquareClick = (boardId: 0 | 1, square: string) => {
     if (!game || !game.gameState || !isVoidMode || !Array.isArray((game.gameState as any).voidBoards)) return;
     const boards = (game.gameState as any).voidBoards as ChessGameState[];
-    // Effective boards use local overlay if present (for immediate DK second-hop UX)
-    const getEffectiveVoidBoard = (id: 0 | 1): ChessGameState => (voidLocalBoards[id] as ChessGameState) || (boards[id] as any as ChessGameState);
     const active = getEffectiveVoidBoard(boardId);
+    if (!active) return;
     const piece = active.board[square];
 
     const playerColor = getCurrentPlayerColor();
@@ -569,6 +576,19 @@ export default function ChessGame() {
             delete (overlay.board as any)[sel];
             (overlay as any).doubleKnightMove = { knightSquare: square, color: fromPiece.color } as any;
             setVoidLocalBoards(prev => ({ ...prev, [boardId]: overlay }));
+            setVoidSelected(prev => ({ ...prev, [boardId]: square }));
+            setVoidValidMoves(prev => ({
+              ...prev,
+              [boardId]: chessLogic.getValidMoves(overlay as any, square, game?.rules as any),
+            }));
+            makeMoveMutation.mutate({
+              from: sel,
+              to: square,
+              piece: `${fromPiece.color}-${fromPiece.type}`,
+              captured,
+              boardId,
+            });
+            return;
           } else {
             // If this is the DK second hop or any other move, clear any overlay on this board
             if (voidLocalBoards[boardId]) {
@@ -583,6 +603,9 @@ export default function ChessGame() {
             captured,
             boardId,
           });
+          setVoidSelected({ ...voidSelected, [boardId]: null });
+          setVoidValidMoves({ ...voidValidMoves, [boardId]: [] });
+          return;
         }
       }
       // clear selection if not a valid move
@@ -1466,7 +1489,7 @@ export default function ChessGame() {
                 </div>
                 {/* Board A */}
                 <ChessBoard
-                  gameState={(game!.gameState as any).voidBoards[0] as ChessGameState}
+                  gameState={(getEffectiveVoidBoard(0) || (game!.gameState as any).voidBoards[0]) as ChessGameState}
                   selectedSquare={voidSelected[0] || null}
                   validMoves={voidValidMoves[0] || []}
                   onSquareClick={(sq) => handleVoidSquareClick(0, sq)}
@@ -1479,7 +1502,7 @@ export default function ChessGame() {
                 />
                 {/* Board B */}
                 <ChessBoard
-                  gameState={(game!.gameState as any).voidBoards[1] as ChessGameState}
+                  gameState={(getEffectiveVoidBoard(1) || (game!.gameState as any).voidBoards[1]) as ChessGameState}
                   selectedSquare={voidSelected[1] || null}
                   validMoves={voidValidMoves[1] || []}
                   onSquareClick={(sq) => handleVoidSquareClick(1, sq)}

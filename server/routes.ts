@@ -859,6 +859,7 @@ function applyDoubleKnightRule(gameState: any, fromSquare: string, toSquare: str
 export async function registerRoutes(app: Express): Promise<Server> {
   // --- Simple SSE hub per game ---
   const sseClients: Map<number, Set<Response>> = new Map();
+  type GameRole = 'white' | 'black' | 'spectator';
 
   function addSseClient(gameId: number, res: Response) {
     if (!sseClients.has(gameId)) sseClients.set(gameId, new Set());
@@ -879,6 +880,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     set.forEach((res) => {
       try { res.write(data); } catch {}
     });
+  }
+
+  function getSessionUserId(req: any): number | null {
+    const rawUserId = req?.session?.userId;
+    if (typeof rawUserId === "number" && Number.isFinite(rawUserId)) return rawUserId;
+    if (typeof rawUserId === "string") {
+      const parsed = parseInt(rawUserId, 10);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  }
+
+  function getGameRole(game: Game, userId: number): GameRole {
+    if (game.whitePlayerId === userId) return "white";
+    if (game.blackPlayerId === userId) return "black";
+    return "spectator";
+  }
+
+  async function requireCurrentUser(req: any, res: Response) {
+    const userId = getSessionUserId(req);
+    if (!userId) {
+      res.status(401).json({ message: "Authentication required" });
+      return null;
+    }
+
+    const user = await storage.getUser(userId);
+    if (!user) {
+      res.status(401).json({ message: "User not found for current session" });
+      return null;
+    }
+
+    return user;
+  }
+
+  async function requireGameParticipant(req: any, res: Response, gameId: number) {
+    if (!Number.isFinite(gameId)) {
+      res.status(400).json({ message: "Invalid game id" });
+      return null;
+    }
+
+    const user = await requireCurrentUser(req, res);
+    if (!user) return null;
+
+    const game = await storage.getGame(gameId);
+    if (!game) {
+      res.status(404).json({ message: "Game not found" });
+      return null;
+    }
+
+    const role = getGameRole(game, user.id);
+    if (role === "spectator") {
+      res.status(403).json({ message: "Only game participants can perform this action" });
+      return null;
+    }
+
+    return { user, game, role };
   }
 
   // SSE stream for game updates
@@ -1585,23 +1642,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new game
   app.post("/api/games", async (req, res) => {
     try {
+      const user = await requireCurrentUser(req, res);
+      if (!user) return;
+
       const gameData = insertGameSchema.parse(req.body);
-      
-      // Create a unique player for this game session
-      const playerName = `Player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const tempPasswordHash = await hashPassword('temp_password');
-      
-      const player = await storage.createUser({
-        username: playerName,
-        password: tempPasswordHash,
-        email: `${playerName}@temp.com`,
-        phone: generateUniquePhone()
-      });
-      
-      // Add player ID to game data
+
       const gameWithPlayer = {
         ...gameData,
-        whitePlayerId: player.id,
+        whitePlayerId: user.id,
+        blackPlayerId: null,
         shareId: Math.random().toString(36).substring(2, 8).toUpperCase()
       };
       
@@ -1643,40 +1692,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Join game by share ID
   app.post("/api/join-game", async (req, res) => {
     try {
-      console.log('Join game request:', req.body);
+      const user = await requireCurrentUser(req, res);
+      if (!user) return;
+
       const { shareId } = req.body;
       
       if (!shareId) {
         return res.status(400).json({ message: "shareId is required" });
       }
-      
-      // Create a unique player for this game session
-      const playerName = `Player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const tempPasswordHash = await hashPassword('temp_password');
-      
-      const player = await storage.createUser({
-        username: playerName,
-        password: tempPasswordHash,
-        email: `${playerName}@temp.com`,
-        phone: generateUniquePhone()
-      });
-      
-      console.log('Created player:', player);
-      
-      const game = await storage.joinGame(shareId, player.id);
-      console.log('Joined game:', game);
+
+      const existingGame = await storage.getGameByShareId(shareId);
+      if (!existingGame) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+
+      const existingRole = getGameRole(existingGame, user.id);
+      if (existingRole !== "spectator") {
+        return res.json(existingGame);
+      }
+
+      const game = await storage.joinGame(shareId, user.id);
       res.json(game);
     } catch (error: any) {
-      console.error('Join game error:', error);
       res.status(400).json({ message: error.message });
     }
   });
   app.post("/api/games/join/:shareId", async (req, res) => {
     try {
+      const user = await requireCurrentUser(req, res);
+      if (!user) return;
+
       const shareId = req.params.shareId;
-      // Generate new player ID for joining player (will be black)
-      const playerId = Math.floor(Math.random() * 1000) + 2; // Ensure different from creator
-      const game = await storage.joinGame(shareId, playerId);
+
+      const existingGame = await storage.getGameByShareId(shareId);
+      if (!existingGame) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+
+      const existingRole = getGameRole(existingGame, user.id);
+      if (existingRole !== "spectator") {
+        return res.json(existingGame);
+      }
+
+      const game = await storage.joinGame(shareId, user.id);
       res.json(game);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1687,16 +1745,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/games/:id/moves", async (req, res) => {
     try {
       const gameId = parseInt(req.params.id);
+      const context = await requireGameParticipant(req, res, gameId);
+      if (!context) return;
+
+      const { game, role } = context;
+      if (role !== game.currentTurn) {
+        return res.status(403).json({ message: "Only the current player can make a move" });
+      }
+
       const moveData = insertMoveSchema.parse({
         ...req.body,
         gameId,
       });
-
-      // Get current game state
-      const game = await storage.getGame(gameId);
-      if (!game) {
-        return res.status(404).json({ message: "Game not found" });
-      }
 
       // Update the board state by making the move
       let gameState = game.gameState as any;
@@ -2485,8 +2545,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/games/:id/undo", async (req, res) => {
     try {
       const gameId = parseInt(req.params.id);
-      const game = await storage.getGame(gameId);
-      if (!game) return res.status(404).json({ message: "Game not found" });
+      const context = await requireGameParticipant(req, res, gameId);
+      if (!context) return;
+      const { game } = context;
 
       // delete last move
       const deleted = await storage.deleteLastMove(gameId);
@@ -2512,6 +2573,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/games/:id/status", async (req, res) => {
     try {
       const gameId = parseInt(req.params.id);
+      const context = await requireGameParticipant(req, res, gameId);
+      if (!context) return;
       const { status, winner } = req.body;
       const game = await storage.updateGameStatus(gameId, status, winner);
   broadcast(gameId, 'status', { type: 'status', gameId, status: game.status, winner: game.winner });
@@ -2525,6 +2588,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/games/:id/captured", async (req, res) => {
     try {
       const gameId = parseInt(req.params.id);
+      const context = await requireGameParticipant(req, res, gameId);
+      if (!context) return;
       const { capturedPieces } = req.body;
       const game = await storage.updateCapturedPieces(gameId, capturedPieces);
       res.json(game);
@@ -2607,7 +2672,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (sess) {
         sess.userId = user.id;
       }
-      
       res.json({ 
         message: 'Авторизация успешна',
         user: { id: user.id, username: user.username, email: user.email }
@@ -2649,6 +2713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Guest user route for anonymous players - simplified without sessions
   app.post('/api/auth/guest', async (req, res) => {
     try {
+      const sess: any = (req as any).session;
       // Get a random guest user from pre-created accounts (IDs 12-61 based on the database)
       const guestId = Math.floor(Math.random() * 50) + 12;
       const guestUser = await storage.getUser(guestId);
@@ -2683,6 +2748,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!newGuestUser) {
           throw new Error('Failed to create guest user after retries');
         }
+
+        if (sess) {
+          sess.userId = newGuestUser.id;
+        }
         
         return res.json({ 
           message: 'Гостевая сессия создана',
@@ -2691,6 +2760,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      if (sess) {
+        sess.userId = guestUser.id;
+      }
+
       res.json({ 
         message: 'Гостевая сессия создана',
         user: { id: guestUser.id, username: guestUser.username, email: guestUser.email },
@@ -2706,15 +2779,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/games/:id/offer-draw', async (req, res) => {
     try {
       const gameId = parseInt(req.params.id);
+      const context = await requireGameParticipant(req, res, gameId);
+      if (!context) return;
+      const { game, role } = context;
       const { player } = req.body;
       
       if (!player || !['white', 'black'].includes(player)) {
         return res.status(400).json({ message: "Invalid player" });
       }
-      
-      const game = await storage.getGame(gameId);
-      if (!game) {
-        return res.status(404).json({ message: "Game not found" });
+
+      if (player !== role) {
+        return res.status(403).json({ message: "You can only offer a draw for your own side" });
       }
       
       // Check if draw already offered by this player
@@ -2734,14 +2809,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/games/:id/accept-draw', async (req, res) => {
     try {
       const gameId = parseInt(req.params.id);
-      
-      const game = await storage.getGame(gameId);
-      if (!game) {
-        return res.status(404).json({ message: "Game not found" });
-      }
+      const context = await requireGameParticipant(req, res, gameId);
+      if (!context) return;
+      const { game, role } = context;
       
       if (!game.drawOfferedBy) {
         return res.status(400).json({ message: "No draw offer to accept" });
+      }
+
+      if (game.drawOfferedBy === role) {
+        return res.status(403).json({ message: "You cannot accept your own draw offer" });
       }
       
   const updatedGame = await storage.acceptDraw(gameId);
@@ -2756,14 +2833,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/games/:id/decline-draw', async (req, res) => {
     try {
       const gameId = parseInt(req.params.id);
-      
-      const game = await storage.getGame(gameId);
-      if (!game) {
-        return res.status(404).json({ message: "Game not found" });
-      }
+      const context = await requireGameParticipant(req, res, gameId);
+      if (!context) return;
+      const { game, role } = context;
       
       if (!game.drawOfferedBy) {
         return res.status(400).json({ message: "No draw offer to decline" });
+      }
+
+      if (game.drawOfferedBy === role) {
+        return res.status(403).json({ message: "You cannot decline your own draw offer" });
       }
       
   const updatedGame = await storage.declineDraw(gameId);
