@@ -25,10 +25,10 @@ export default function MoveHistory({ moves, title }: MoveHistoryProps) {
   }, [moves]);
 
   return (
-    <Card>
+    <Card className="border border-black/10 shadow-[0_16px_48px_rgba(0,0,0,0.08)]">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
-          <History className="h-5 w-5 mr-2 text-blue-600" />
+        <CardTitle className="text-lg font-semibold text-neutral-900 flex items-center">
+          <History className="h-5 w-5 mr-2 text-neutral-900" />
           {title || 'Move History'}
         </CardTitle>
       </CardHeader>
@@ -36,7 +36,7 @@ export default function MoveHistory({ moves, title }: MoveHistoryProps) {
   <ScrollArea className="h-64 w-full" viewportRef={scrollAreaViewportRef}>
           <div className="space-y-2">
             {moves.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">
+              <div className="text-center py-8 text-neutral-500">
                 <p>No moves yet</p>
                 <p className="text-sm">Start playing to see move history</p>
               </div>
@@ -47,31 +47,31 @@ export default function MoveHistory({ moves, title }: MoveHistoryProps) {
                   return (
                     <div
                       key={index}
-                      className={`flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 ${
-                        isCurrentMove ? 'bg-blue-50 border border-blue-200' : ''
+                      className={`flex items-center justify-between p-2 rounded-2xl hover:bg-neutral-100 ${
+                        isCurrentMove ? 'bg-neutral-950 text-white border border-black' : 'border border-transparent'
                       }`}
                     >
                       <div className="flex items-center space-x-3">
                         <span className={`text-sm font-medium w-6 ${
-                          isCurrentMove ? 'text-blue-600' : 'text-slate-500'
+                          isCurrentMove ? 'text-white/70' : 'text-neutral-500'
                         }`}>
                           {move.moveNumber}.
                         </span>
                         <span className={`font-medium ${
-                          isCurrentMove ? 'text-blue-800' : 'text-slate-800'
+                          isCurrentMove ? 'text-white' : 'text-neutral-900'
                         }`}>
                           {move.white || '...'}
                         </span>
                         <span className={`font-medium ${
-                          isCurrentMove ? 'text-blue-800' : move.black ? 'text-slate-800' : 'text-slate-400'
+                          isCurrentMove ? 'text-white' : move.black ? 'text-neutral-900' : 'text-neutral-400'
                         }`}>
                           {move.black || '...'}
                         </span>
                       </div>
                       {isCurrentMove ? (
-                        <Play className="h-4 w-4 text-blue-600" />
+                        <Play className="h-4 w-4 text-white" />
                       ) : (
-                        <ChevronRight className="h-4 w-4 text-slate-400" />
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
                       )}
                     </div>
                   );
@@ -86,7 +86,7 @@ export default function MoveHistory({ moves, title }: MoveHistoryProps) {
             <Button
               variant="ghost"
               onClick={handleExport}
-              className="w-full text-sm text-blue-600 hover:text-blue-800"
+              className="w-full text-sm text-neutral-900 hover:bg-neutral-100 hover:text-black"
             >
               <Download className="h-4 w-4 mr-2" />
               Export Game (PGN)

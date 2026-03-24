@@ -1350,20 +1350,20 @@ export default function ChessGame() {
 
   if (!gameId) {
     return (
-      <div className="min-h-screen bg-slate-50 font-inter">
-        <header className="bg-white shadow-sm border-b border-slate-200">
+      <div className="min-h-screen bg-neutral-950 text-white">
+        <header className="border-b border-white/10 bg-black/70 backdrop-blur">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between py-4">
               <div className="flex items-center space-x-3">
-                <Crown className="h-8 w-8 text-blue-600" />
-                <h1 className="text-2xl font-bold text-slate-800">Sword Master</h1>
-                <span className="text-sm text-slate-500 hidden sm:block">Special Rules Edition</span>
+                <Crown className="h-8 w-8 text-white" />
+                <h1 className="text-2xl font-bold text-white">ChessMaster</h1>
+                <span className="text-sm text-white/55 hidden sm:block">Special Rules Edition</span>
               </div>
               <div className="flex items-center space-x-4">
                 <Button 
                   onClick={handleLogout} 
                   variant="outline"
-                  className="border-red-600 text-red-600 hover:bg-red-50"
+                  className="border-white/15 bg-transparent text-white hover:bg-white/10"
                   title="Выйти из аккаунта"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
@@ -1376,16 +1376,16 @@ export default function ChessGame() {
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
-              <Sword className="h-24 w-24 text-slate-400 mx-auto mb-6" />
-              <h2 className="text-3xl font-bold text-slate-800 mb-4">Добро пожаловать в Шахматы Мастер</h2>
-              <p className="text-lg text-slate-600 mb-8">Начните новую игру или присоединитесь к игре друга</p>
+            <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-12 shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
+              <Sword className="h-24 w-24 text-white/35 mx-auto mb-6" />
+              <h2 className="text-4xl font-bold text-white mb-4">Добро пожаловать в ChessMaster</h2>
+              <p className="text-lg text-white/65 mb-8">Начните новую игру или присоединитесь к игре друга</p>
               <div className="flex gap-4 justify-center">
-                <Button onClick={handleNewGame} size="lg" className="bg-blue-600 hover:bg-blue-700">
+                <Button onClick={handleNewGame} size="lg" className="bg-white text-black hover:bg-neutral-200">
                   <Plus className="h-5 w-5 mr-2" />
                   Начать игру
                 </Button>
-                <Button onClick={handleJoinGameClick} size="lg" variant="outline">
+                <Button onClick={handleJoinGameClick} size="lg" variant="outline" className="border-white/15 bg-transparent text-white hover:bg-white/10 hover:text-white">
                   <Users className="h-5 w-5 mr-2" />
                   Присоединиться
                 </Button>
@@ -1418,43 +1418,43 @@ export default function ChessGame() {
   }
 
   if (gameLoading || (gameId && !game)) {
-    return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>;
+    return <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">Loading...</div>;
   }
 
   // Fog of War: use the same helper for consistency across UI
     const fogActive = computeFogActive(game?.rules as any, moves, game);
   return (
-  <div className="min-h-screen bg-slate-50 font-inter">
-      <header className="bg-white shadow-sm border-b border-slate-200">
+  <div className="min-h-screen bg-neutral-950 text-white">
+      <header className="border-b border-white/10 bg-black/70 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-3">
-              <Crown className="h-8 w-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-slate-800">Sword Master</h1>
-              <span className="text-sm text-slate-500 hidden sm:block">Special Rules Edition</span>
+              <Crown className="h-8 w-8 text-white" />
+              <h1 className="text-2xl font-bold text-white">ChessMaster</h1>
+              <span className="text-sm text-white/55 hidden sm:block">Special Rules Edition</span>
             </div>
             <div className="flex items-center space-x-4">
               {game?.shareId && (
                 <Button 
                   onClick={handleShareGame} 
                   variant="outline"
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                  className="border-white/15 bg-transparent text-white hover:bg-white/10 hover:text-white"
                 >
                   <Share2 className="h-4 w-4 mr-2" />
                   Поделиться
                 </Button>
               )}
-              <Button onClick={handleNewGame} className="bg-blue-600 hover:bg-blue-700">
+              <Button onClick={handleNewGame} className="bg-white text-black hover:bg-neutral-200">
                 <Plus className="h-4 w-4 mr-2" />
                 Новая игра
               </Button>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
                 <Settings className="h-5 w-5" />
               </Button>
               <Button 
                 onClick={handleLogout} 
                 variant="outline"
-                className="border-red-600 text-red-600 hover:bg-red-50"
+                className="border-white/15 bg-transparent text-white hover:bg-white/10 hover:text-white"
                 title="Выйти из аккаунта"
               >
                 <LogOut className="h-4 w-4 mr-2" />
@@ -1498,11 +1498,11 @@ export default function ChessGame() {
             {isVoidMode && Array.isArray((game!.gameState as any).voidBoards) && (
               <div className="w-full flex flex-col gap-6">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 text-slate-700">
+                  <div className="flex items-center gap-2 text-white">
                     <SplitSquareVertical className="h-5 w-5" />
                     <span className="font-semibold">Void Mode</span>
                   </div>
-                  <div className="text-sm text-slate-600">
+                  <div className="text-sm text-white/70">
                     {(() => {
                       const meta = (game!.gameState as any).voidMeta || { tokens: { white: 0, black: 0 }, pending: null };
                       const color = getCurrentPlayerColor();
@@ -1546,7 +1546,7 @@ export default function ChessGame() {
                   lastMoveSquares={(voidLastMoveSquares as any)[1] || null}
                 />
                 {transferMode && (
-                  <div className="mt-2 text-center text-sm text-blue-700">Выберите фигуру для переноса, затем пустую клетку на другой доске</div>
+                  <div className="mt-2 text-center text-sm text-white/70">Выберите фигуру для переноса, затем пустую клетку на другой доске</div>
                 )}
               </div>
             )}
@@ -1562,7 +1562,7 @@ export default function ChessGame() {
               <Button variant="destructive" onClick={handleResign}>
                 Сдаться
               </Button>
-              <Button variant="outline" className="bg-yellow-600 text-white hover:bg-yellow-700" onClick={handleOfferDraw}>
+              <Button variant="outline" className="border-white/15 bg-white text-black hover:bg-neutral-200" onClick={handleOfferDraw}>
                 Ничья
               </Button>
             </div>
@@ -1676,7 +1676,7 @@ export default function ChessGame() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Отменить</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmOfferDraw} className="bg-yellow-600 hover:bg-yellow-700">
+            <AlertDialogAction onClick={confirmOfferDraw} className="bg-black text-white hover:bg-neutral-800">
               Да, предложить ничью
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1693,7 +1693,7 @@ export default function ChessGame() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={handleDeclineDraw}>Отклонить</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAcceptDraw} className="bg-green-600 hover:bg-green-700">
+            <AlertDialogAction onClick={handleAcceptDraw} className="bg-black text-white hover:bg-neutral-800">
               Принять ничью
             </AlertDialogAction>
           </AlertDialogFooter>

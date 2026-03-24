@@ -46,8 +46,10 @@ function Router() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-green-50 dark:bg-green-950 flex items-center justify-center">
-        <div className="text-green-800 dark:text-green-200">Загрузка...</div>
+      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
+        <div className="rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm uppercase tracking-[0.3em] text-white/80">
+          Загрузка...
+        </div>
       </div>
     );
   }

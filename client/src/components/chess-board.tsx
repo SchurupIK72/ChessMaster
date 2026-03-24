@@ -70,15 +70,14 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
         key={square}
         className={cn(
           "aspect-square flex items-center justify-center text-4xl cursor-pointer transition-all relative",
-          // Классическая шахматная раскраска
-          isLight ? "bg-green-100" : "bg-green-700",
+          isLight ? "bg-neutral-100" : "bg-neutral-900",
           "hover:bg-opacity-80",
-          isSelected && "bg-blue-400 bg-opacity-60 ring-2 ring-blue-600",
-          isValidMove && !effectiveMasked && !isBurned && "bg-yellow-300 bg-opacity-70",
-          !piece && isValidMove && !effectiveMasked && "hover:bg-yellow-400 hover:bg-opacity-80",
-          piece && !isSelected && isLight ? "hover:bg-green-200" : "hover:bg-green-600",
-          isLastMoveFrom && "ring-4 ring-yellow-500 ring-opacity-80",
-          isLastMoveTo && "ring-4 ring-orange-500 ring-opacity-80",
+          isSelected && "bg-neutral-500/70 ring-2 ring-white",
+          isValidMove && !effectiveMasked && !isBurned && "bg-neutral-400/60",
+          !piece && isValidMove && !effectiveMasked && "hover:bg-neutral-300/80",
+          piece && !isSelected && isLight ? "hover:bg-neutral-200" : "hover:bg-neutral-800",
+          isLastMoveFrom && "ring-4 ring-neutral-300 ring-opacity-80",
+          isLastMoveTo && "ring-4 ring-white ring-opacity-80",
           isBurned && "after:absolute after:inset-0 after:bg-gradient-to-br after:from-slate-900/70 after:to-red-900/60 after:z-[12]"
         )}
         onClick={() => {
@@ -132,16 +131,16 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
         )}
   {isValidMove && !piece && !effectiveMasked && !isBurned && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-5 h-5 bg-yellow-400 rounded-full opacity-80 shadow-lg border-2 border-yellow-600" />
+            <div className="w-5 h-5 bg-white rounded-full opacity-80 shadow-lg border-2 border-neutral-900" />
           </div>
         )}
   {isValidMove && piece && !effectiveMasked && !isBurned && (
-          <div className="absolute inset-0 border-4 border-yellow-400 opacity-80 pointer-events-none rounded-lg shadow-lg" />
+          <div className="absolute inset-0 border-4 border-white opacity-80 pointer-events-none rounded-lg shadow-lg" />
         )}
         {/* Neutral marker in fog for valid moves without revealing captures */}
   {isMasked && isValidMove && !isBurned && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-4 h-4 bg-yellow-300/80 rounded-full shadow" />
+            <div className="w-4 h-4 bg-white/80 rounded-full shadow" />
           </div>
         )}
       </div>
@@ -149,20 +148,20 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 w-full max-w-2xl">
+    <div className="bg-white rounded-[28px] shadow-[0_22px_60px_rgba(0,0,0,0.18)] border border-black/10 p-6 w-full max-w-2xl">
       {/* Black Player Info */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
-          <div className="w-4 h-4 bg-slate-800 rounded-full" />
-          <span className="font-medium text-slate-800">Black Player</span>
+          <div className="w-4 h-4 bg-black rounded-full" />
+          <span className="font-medium text-neutral-900">Black Player</span>
         </div>
-        <div className="text-sm text-slate-500">
+        <div className="text-sm text-neutral-500">
           <span>♛</span>
         </div>
       </div>
 
       {/* Chess Board with coordinates */}
-      <div className="aspect-square w-full p-2 rounded-lg relative overflow-hidden bg-slate-800">
+      <div className="aspect-square w-full p-2 rounded-[22px] relative overflow-hidden bg-black">
         {/* Board grid */}
         <div className="grid grid-cols-8 grid-rows-8 gap-0 w-full h-full relative">
           {/* Squares */}
@@ -173,7 +172,7 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
           {ranks.map((rank, i) => (
             <span
               key={rank}
-              className="absolute text-white text-xs font-bold drop-shadow pointer-events-none select-none"
+              className="absolute text-white/85 text-xs font-bold drop-shadow pointer-events-none select-none"
               style={{
                 left: 2,
                 top: `calc(${(i) * 12.5}% + 8px)`,
@@ -187,7 +186,7 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
           {files.map((file, i) => (
             <span
               key={file}
-              className="absolute text-white text-xs font-bold drop-shadow pointer-events-none select-none"
+              className="absolute text-white/85 text-xs font-bold drop-shadow pointer-events-none select-none"
               style={{
                 left: `calc(${i * 12.5}% + 18px)`,
                 bottom: 2,
@@ -203,30 +202,30 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
       {/* White Player Info */}
       <div className="flex items-center justify-between mt-6">
         <div className="flex items-center space-x-3">
-          <div className="w-4 h-4 bg-white border-2 border-slate-800 rounded-full" />
-          <span className="font-medium text-slate-800">White Player</span>
+          <div className="w-4 h-4 bg-white border-2 border-black rounded-full" />
+          <span className="font-medium text-neutral-900">White Player</span>
         </div>
-        <div className="text-sm text-slate-500">
+        <div className="text-sm text-neutral-500">
           <span>♔</span>
         </div>
       </div>
 
       {/* Current Turn Indicator */}
       {gameState.isCheck && (
-        <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-lg text-center">
-          <span className="text-red-800 font-medium">Check!</span>
+        <div className="mt-4 p-3 bg-neutral-950 text-white rounded-2xl text-center">
+          <span className="font-medium tracking-[0.2em] uppercase">Check</span>
         </div>
       )}
       
       {gameState.isCheckmate && (
-        <div className="mt-4 p-3 bg-red-600 text-white rounded-lg text-center">
+        <div className="mt-4 p-3 bg-black text-white rounded-2xl text-center">
           <span className="font-bold">Checkmate! {currentTurn === 'white' ? 'Black' : 'White'} wins!</span>
         </div>
       )}
 
       {gameState.isStalemate && (
-        <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg text-center">
-          <span className="text-yellow-800 font-medium">Stalemate! Draw game.</span>
+        <div className="mt-4 p-3 bg-neutral-100 border border-black/10 rounded-2xl text-center">
+          <span className="text-neutral-700 font-medium">Stalemate! Draw game.</span>
         </div>
       )}
     </div>

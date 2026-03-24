@@ -18,31 +18,31 @@ interface TransfersPanelProps {
 export default function TransfersPanel({ events }: TransfersPanelProps) {
   const label = (id: 0 | 1) => (id === 0 ? 'A' : 'B');
   return (
-    <Card>
+    <Card className="border border-black/10 shadow-[0_16px_48px_rgba(0,0,0,0.08)]">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
-          <ArrowLeftRight className="h-5 w-5 mr-2 text-blue-600" />
+        <CardTitle className="text-lg font-semibold text-neutral-900 flex items-center">
+          <ArrowLeftRight className="h-5 w-5 mr-2 text-neutral-900" />
           Transfers
         </CardTitle>
       </CardHeader>
       <CardContent>
         {events.length === 0 ? (
-          <div className="text-center py-4 text-slate-500 text-sm">No transfers yet</div>
+          <div className="text-center py-4 text-neutral-500 text-sm">No transfers yet</div>
         ) : (
           <ul className="space-y-2">
             {events.map((e, idx) => (
-              <li key={idx} className="flex items-center justify-between text-sm bg-slate-50 rounded-md px-2 py-1">
+              <li key={idx} className="flex items-center justify-between text-sm bg-neutral-100 rounded-2xl px-3 py-2">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 text-slate-700">
+                  <span className="inline-flex items-center gap-1 text-neutral-800">
                     <span className="font-semibold">{label(e.fromBoardId)}</span>
-                    <ArrowLeftRight className="h-4 w-4 text-slate-500" />
+                    <ArrowLeftRight className="h-4 w-4 text-neutral-500" />
                     <span className="font-semibold">{label(e.toBoardId)}</span>
                   </span>
-                  <span className="text-slate-600">
+                  <span className="text-neutral-600">
                     {e.from} → {e.to}
                   </span>
                 </div>
-                <div className="text-slate-400">
+                <div className="text-neutral-400">
                   {e.piece?.split('-')[1] || ''}
                 </div>
               </li>

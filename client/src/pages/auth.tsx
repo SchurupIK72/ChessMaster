@@ -159,19 +159,22 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-green-50 dark:bg-green-950 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-green-800 dark:text-green-200">
-            Шахматы Мастер
+    <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-4">
+      <Card className="w-full max-w-md border border-white/10 bg-white/[0.04] text-white shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur">
+        <CardHeader className="text-center space-y-3">
+          <div className="mx-auto w-fit rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.35em] text-white/60">
+            ChessMaster
+          </div>
+          <CardTitle className="text-4xl font-bold text-white">
+            ChessMaster
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-white/65">
             Авторизуйтесь или зарегистрируйтесь для игры
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-2 border border-white/10 bg-white/5">
               <TabsTrigger value="login">Вход</TabsTrigger>
               <TabsTrigger value="register">Регистрация</TabsTrigger>
             </TabsList>
@@ -209,7 +212,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
                 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full bg-white text-black hover:bg-neutral-200"
                   disabled={loginMutation.isPending}
                 >
                   {loginMutation.isPending ? "Вход..." : "Войти"}
@@ -279,7 +282,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
                 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full bg-white text-black hover:bg-neutral-200"
                   disabled={registerMutation.isPending}
                 >
                   {registerMutation.isPending ? "Регистрация..." : "Зарегистрироваться"}
@@ -292,7 +295,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
             <Button
               variant="outline"
               onClick={handleGuestLogin}
-              className="w-full"
+              className="w-full border-white/15 bg-transparent text-white hover:bg-white/10 hover:text-white"
             >
               Продолжить как гость
             </Button>
