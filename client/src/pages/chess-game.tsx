@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
@@ -32,7 +32,7 @@ import { Sword, Crown, Plus, Settings, Users, Share2, LogOut, SplitSquareVertica
 
 export default function ChessGame() {
   // Звук хода
-  const moveAudio = typeof window !== 'undefined' ? new Audio('/move.mp3') : null;
+  const moveAudioRef = useRef<HTMLAudioElement | null>(null);
   const [gameId, setGameId] = useState<number | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [validMoves, setValidMoves] = useState<string[]>([]);
@@ -173,6 +173,20 @@ export default function ChessGame() {
       try { src.close(); } catch {}
     };
   }, [gameId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const audio = new Audio("/move.mp3");
+    audio.preload = "auto";
+    moveAudioRef.current = audio;
+
+    return () => {
+      audio.pause();
+      audio.src = "";
+      moveAudioRef.current = null;
+    };
+  }, []);
 
   // When fresh game data arrives, drop any local overlays (server state becomes source of truth)
   useEffect(() => {
@@ -316,8 +330,9 @@ export default function ChessGame() {
           });
         }
           // Воспроизвести звук хода при любом новом ходе
-          if (moveAudio) {
-            try { moveAudio.currentTime = 0; moveAudio.play(); } catch (e) {}
+          const audio = moveAudioRef.current;
+          if (audio) {
+            try { audio.currentTime = 0; audio.play(); } catch (e) {}
           }
       }
       setLastMoveCount(moves.length);
@@ -347,8 +362,9 @@ export default function ChessGame() {
     },
     onSuccess: () => {
       // Play move sound immediately
-      if (moveAudio) {
-        try { moveAudio.currentTime = 0; moveAudio.play(); } catch (e) {}
+      const audio = moveAudioRef.current;
+      if (audio) {
+        try { audio.currentTime = 0; audio.play(); } catch (e) {}
       }
 
       // Instant UI response: clear selection and highlighted moves
