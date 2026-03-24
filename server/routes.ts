@@ -2704,8 +2704,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/logout', (req, res) => {
     const sess: any = (req as any).session;
     if (sess && typeof sess.destroy === 'function') {
-      sess.destroy(() => res.json({ message: 'Выход выполнен' }));
+      sess.destroy(() => {
+        res.clearCookie('connect.sid');
+        res.json({ message: 'Выход выполнен' });
+      });
     } else {
+      res.clearCookie('connect.sid');
       res.json({ message: 'Выход выполнен' });
     }
   });

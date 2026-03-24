@@ -30,7 +30,11 @@ import { ChessLogic } from "@/lib/chess-logic";
 import { getLegalCastlingDestinationFromRookClick } from "@/lib/castling";
 import { Sword, Crown, Plus, Settings, Users, Share2, LogOut, SplitSquareVertical } from "lucide-react";
 
-export default function ChessGame() {
+interface ChessGameProps {
+  onLogout?: () => void;
+}
+
+export default function ChessGame({ onLogout }: ChessGameProps) {
   // Звук хода
   const moveAudioRef = useRef<HTMLAudioElement | null>(null);
   const [gameId, setGameId] = useState<number | null>(null);
@@ -1076,25 +1080,30 @@ export default function ChessGame() {
     }
   };
 
-  const handleLogout = () => {
-    // Clear localStorage data
-    localStorage.removeItem('guestUser');
-    localStorage.removeItem('playerId');
-    
-    // Reset game state
-    setGameId(null);
-    setSelectedSquare(null);
-    setValidMoves([]);
-    setGameStartTime(null);
-    setElapsedTime("00:00");
-    
-    toast({
-      title: "Выход выполнен",
-      description: "Вы вышли из аккаунта",
-    });
-    
-    // Reload page to return to login screen
-    window.location.reload();
+  const handleLogout = async () => {
+    try {
+      await apiRequest("POST", "/api/auth/logout", {});
+    } finally {
+      localStorage.removeItem('guestUser');
+      localStorage.removeItem('playerId');
+      queryClient.clear();
+
+      setGameId(null);
+      setSelectedSquare(null);
+      setValidMoves([]);
+      setGameStartTime(null);
+      setElapsedTime("00:00");
+      setVoidSelected({});
+      setVoidValidMoves({});
+      setVoidLocalBoards({});
+
+      onLogout?.();
+
+      toast({
+        title: "Выход выполнен",
+        description: "Вы вышли из аккаунта",
+      });
+    }
   };
 
   const handleResign = () => {

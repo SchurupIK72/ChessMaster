@@ -28,13 +28,16 @@ function Router() {
       }
 
       // Then check for authenticated session
-  const response = await fetch("/api/auth/session", { credentials: "include" });
+      const response = await fetch("/api/auth/session", { credentials: "include" });
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
+      } else {
+        setUser(null);
       }
     } catch (error) {
       console.log("No active session");
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
@@ -42,6 +45,13 @@ function Router() {
 
   const handleAuthSuccess = () => {
     checkSession();
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("guestUser");
+    localStorage.removeItem("playerId");
+    queryClient.clear();
+    setUser(null);
   };
 
   if (isLoading) {
@@ -62,7 +72,9 @@ function Router() {
   // Show main app if user is authenticated
   return (
     <Switch>
-      <Route path="/" component={ChessGame} />
+      <Route path="/">
+        {() => <ChessGame onLogout={handleLogout} />}
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
