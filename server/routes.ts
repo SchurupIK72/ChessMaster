@@ -6,6 +6,7 @@ import { z } from "zod";
 import { ChessGameState, Game, ChessPiece } from "@shared/schema";
 import { generateFischerBackRankFromSeed } from "./chess960";
 import bcrypt from "bcryptjs";
+import { sessionCookieName, sessionCookieOptions } from "./session";
 
 // Simple chess logic for server-side checkmate detection
 function isKingInCheck(gameState: any, color: 'white' | 'black', gameRules?: string[]): boolean {
@@ -2683,6 +2684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get('/api/auth/session', async (req, res) => {
+    res.set('Cache-Control', 'no-store');
     const sess: any = (req as any).session;
     if (!sess?.userId) {
       return res.status(401).json({ message: 'Не авторизован' });
@@ -2702,16 +2704,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/auth/logout', (req, res) => {
-    const sess: any = (req as any).session;
-    if (sess && typeof sess.destroy === 'function') {
-      sess.destroy(() => {
-        res.clearCookie('connect.sid');
-        res.json({ message: 'Выход выполнен' });
-      });
-    } else {
-      res.clearCookie('connect.sid');
-      res.json({ message: 'Выход выполнен' });
+    res.set('Cache-Control', 'no-store');
+
+    const sessionReq: any = req as any;
+    const sessionId = sessionReq.sessionID;
+    const sessionStore = sessionReq.sessionStore;
+
+    const finalizeLogout = (status = 200, message = 'Выход выполнен') => {
+      res.clearCookie(sessionCookieName, sessionCookieOptions);
+      if (!res.headersSent) {
+        res.status(status).json({ message });
+      }
+    };
+
+    if (!sessionId || !sessionStore || typeof sessionStore.destroy !== 'function') {
+      return finalizeLogout();
     }
+
+    if (sessionReq.session) {
+      delete sessionReq.session.userId;
+    }
+
+    sessionStore.destroy(sessionId, (error: unknown) => {
+      if (error) {
+        console.error('Logout error:', error);
+        return finalizeLogout(500, 'Ошибка завершения сессии');
+      }
+
+      return finalizeLogout();
+    });
   });
 
   // Guest user route for anonymous players - simplified without sessions

@@ -28,7 +28,10 @@ function Router() {
       }
 
       // Then check for authenticated session
-      const response = await fetch("/api/auth/session", { credentials: "include" });
+      const response = await fetch("/api/auth/session", {
+        credentials: "include",
+        cache: "no-store",
+      });
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
@@ -52,6 +55,7 @@ function Router() {
     localStorage.removeItem("playerId");
     queryClient.clear();
     setUser(null);
+    window.history.replaceState({}, "", "/");
   };
 
   if (isLoading) {

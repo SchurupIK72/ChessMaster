@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import memorystore from "memorystore";
 import { registerRoutes } from "./routes";
+import { sessionCookieOptions } from "./session";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -19,11 +20,7 @@ app.use(
     secret: process.env.SESSION_SECRET || "dev_secret_change_me",
     resave: false,
     saveUninitialized: false,
-    cookie: {
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-      secure: process.env.NODE_ENV !== "development",
-      sameSite: process.env.NODE_ENV !== "development" ? "lax" : "lax",
-    },
+    cookie: sessionCookieOptions,
   })
 );
 
