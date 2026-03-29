@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,10 +7,13 @@ import NotFound from "@/pages/not-found";
 import ChessGame from "@/pages/chess-game";
 import AuthPage from "@/pages/auth";
 import { useState, useEffect } from "react";
+import { parseDirectMatchRoute } from "@/lib/match-links";
 
 function Router() {
+  const [location] = useLocation();
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { matchId: directMatchId, legacyShareId } = parseDirectMatchRoute(location);
 
   // Check session on app load
   useEffect(() => {
@@ -68,12 +71,15 @@ function Router() {
     );
   }
 
+  if (directMatchId || legacyShareId) {
+    return <ChessGame onLogout={handleLogout} initialMatchId={directMatchId} initialShareId={legacyShareId} />;
+  }
+
   // Show auth page if no user
   if (!user) {
     return <AuthPage onSuccess={handleAuthSuccess} />;
   }
 
-  // Show main app if user is authenticated
   return (
     <Switch>
       <Route path="/">

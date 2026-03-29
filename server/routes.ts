@@ -6,6 +6,7 @@ import { z } from "zod";
 import { ChessGameState, Game, ChessPiece } from "@shared/schema";
 import { generateFischerBackRankFromSeed } from "./chess960";
 import bcrypt from "bcryptjs";
+import { GameRole, generateUniqueMatchId, getGameRole, isParticipantRole, resolveViewerRole } from "./match-access";
 import { sessionCookieName, sessionCookieOptions } from "./session";
 
 // Simple chess logic for server-side checkmate detection
@@ -860,7 +861,6 @@ function applyDoubleKnightRule(gameState: any, fromSquare: string, toSquare: str
 export async function registerRoutes(app: Express): Promise<Server> {
   // --- Simple SSE hub per game ---
   const sseClients: Map<number, Set<Response>> = new Map();
-  type GameRole = 'white' | 'black' | 'spectator';
 
   function addSseClient(gameId: number, res: Response) {
     if (!sseClients.has(gameId)) sseClients.set(gameId, new Set());
@@ -893,10 +893,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return null;
   }
 
-  function getGameRole(game: Game, userId: number): GameRole {
-    if (game.whitePlayerId === userId) return "white";
-    if (game.blackPlayerId === userId) return "black";
-    return "spectator";
+  function getViewerRole(req: any, game: Game): GameRole {
+    return resolveViewerRole(getSessionUserId(req), game);
+  }
+
+  function serializeGameForViewer(req: any, game: Game) {
+    return {
+      ...game,
+      viewerRole: getViewerRole(req, game),
+    };
   }
 
   async function requireCurrentUser(req: any, res: Response) {
@@ -931,7 +936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const role = getGameRole(game, user.id);
-    if (role === "spectator") {
+    if (!isParticipantRole(role)) {
       res.status(403).json({ message: "Only game participants can perform this action" });
       return null;
     }
@@ -1647,16 +1652,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) return;
 
       const gameData = insertGameSchema.parse(req.body);
+      const matchId = await generateUniqueMatchId((candidate) => storage.getGameByMatchId(candidate));
 
       const gameWithPlayer = {
         ...gameData,
+        matchId,
         whitePlayerId: user.id,
         blackPlayerId: null,
         shareId: Math.random().toString(36).substring(2, 8).toUpperCase()
       };
       
       const game = await storage.createGame(gameWithPlayer);
-      res.json(game);
+      res.json(serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1676,15 +1683,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/games/match/:matchId", async (req, res) => {
+    try {
+      const matchId = req.params.matchId.toUpperCase();
+      const game = await storage.getGameByMatchId(matchId);
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      res.json(serializeGameForViewer(req, game));
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   // Get game by share ID
   app.get("/api/games/share/:shareId", async (req, res) => {
     try {
-      const shareId = req.params.shareId;
+      const shareId = req.params.shareId.toUpperCase();
       const game = await storage.getGameByShareId(shareId);
       if (!game) {
         return res.status(404).json({ message: "Game not found" });
       }
-      res.json(game);
+      res.json(serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1702,18 +1722,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "shareId is required" });
       }
 
-      const existingGame = await storage.getGameByShareId(shareId);
+      const normalizedShareId = String(shareId).toUpperCase();
+      const existingGame = await storage.getGameByShareId(normalizedShareId);
       if (!existingGame) {
         return res.status(404).json({ message: "Game not found" });
       }
 
       const existingRole = getGameRole(existingGame, user.id);
       if (existingRole !== "spectator") {
-        return res.json(existingGame);
+        return res.json(serializeGameForViewer(req, existingGame));
       }
 
-      const game = await storage.joinGame(shareId, user.id);
-      res.json(game);
+      const game = await storage.joinGame(normalizedShareId, user.id);
+      res.json(serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1723,7 +1744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await requireCurrentUser(req, res);
       if (!user) return;
 
-      const shareId = req.params.shareId;
+      const shareId = req.params.shareId.toUpperCase();
 
       const existingGame = await storage.getGameByShareId(shareId);
       if (!existingGame) {
@@ -1732,11 +1753,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const existingRole = getGameRole(existingGame, user.id);
       if (existingRole !== "spectator") {
-        return res.json(existingGame);
+        return res.json(serializeGameForViewer(req, existingGame));
       }
 
       const game = await storage.joinGame(shareId, user.id);
-      res.json(game);
+      res.json(serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

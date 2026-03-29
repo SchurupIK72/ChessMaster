@@ -3,53 +3,38 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
-import { Users, Loader2 } from "lucide-react";
+import { Link2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { extractInvitePath, normalizeShareId } from "@/lib/match-links";
 
 interface JoinGameModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onJoinGame: (shareId: string) => void;
+  onJoinGame: (inviteValue: string) => void;
   isLoading?: boolean;
 }
 
 export default function JoinGameModal({ open, onOpenChange, onJoinGame, isLoading = false }: JoinGameModalProps) {
-  const [shareId, setShareId] = useState("");
+  const [inviteValue, setInviteValue] = useState("");
   const { toast } = useToast();
 
+  const isValidInvite = Boolean(extractInvitePath(inviteValue) || normalizeShareId(inviteValue));
+
   const handleJoinGame = () => {
-    const trimmedId = shareId.trim().toUpperCase();
-    
-    if (!trimmedId) {
+    if (!isValidInvite) {
       toast({
-        title: "Ошибка",
-        description: "Введите код игры",
+        title: "Error",
+        description: "Paste a ChessMaster match link or enter a 6-character legacy game code",
         variant: "destructive",
       });
       return;
     }
 
-    if (trimmedId.length !== 6) {
-      toast({
-        title: "Ошибка",
-        description: "Код игры должен содержать 6 символов",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    onJoinGame(trimmedId);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (value.length <= 6) {
-      setShareId(value);
-    }
+    onJoinGame(inviteValue.trim());
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !isLoading) {
+    if (e.key === "Enter" && !isLoading) {
       handleJoinGame();
     }
   };
@@ -59,64 +44,54 @@ export default function JoinGameModal({ open, onOpenChange, onJoinGame, isLoadin
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Присоединиться к игре
+            <Link2 className="h-5 w-5" />
+            Join Match
           </DialogTitle>
           <DialogDescription>
-            Введите 6-значный код игры, полученный от друга
+            Paste a canonical ChessMaster match link. Legacy game codes and old `/join/...` links are still supported.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-6">
           <div className="space-y-3">
-            <Label htmlFor="shareId">Код игры</Label>
+            <Label htmlFor="inviteValue">Match link or game code</Label>
             <Input
-              id="shareId"
-              placeholder="ABC123"
-              value={shareId}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
-              maxLength={6}
-              className="text-center text-xl font-mono tracking-[0.3em] font-bold uppercase"
+              id="inviteValue"
+              placeholder="https://chessmasterx.onrender.com/matchABC123 or ABC123"
+              value={inviteValue}
+              onChange={(e) => setInviteValue(e.target.value)}
+              onKeyDown={handleKeyPress}
+              className="text-sm"
               disabled={isLoading}
               autoFocus
             />
             <p className="text-xs text-muted-foreground text-center">
-              Код состоит из 6 букв и цифр
+              Supported: `/match...`, `/join/...`, full ChessMaster URLs, or the old 6-character code.
             </p>
           </div>
 
           <div className="flex gap-2">
-            <Button 
-              onClick={handleJoinGame}
-              disabled={!shareId.trim() || shareId.length !== 6 || isLoading}
-              className="flex-1"
-            >
+            <Button onClick={handleJoinGame} disabled={!isValidInvite || isLoading} className="flex-1">
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Подключение...
+                  Connecting...
                 </>
               ) : (
                 <>
-                  <Users className="mr-2 h-4 w-4" />
-                  Присоединиться
+                  <Link2 className="mr-2 h-4 w-4" />
+                  Open Match
                 </>
               )}
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              disabled={isLoading}
-              className="flex-1"
-            >
-              Отмена
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading} className="flex-1">
+              Cancel
             </Button>
           </div>
 
           <div className="bg-muted/50 p-4 rounded-lg">
             <p className="text-sm text-muted-foreground text-center">
-              После присоединения игра начнется автоматически
+              Match links are now the primary invite format. Legacy codes remain available for temporary backward compatibility.
             </p>
           </div>
         </div>

@@ -11,6 +11,7 @@ interface ChessBoardProps {
   lastMoveSquares?: { from: string, to: string } | null;
   rules?: GameRulesArray | string[];
   viewerColor?: 'white' | 'black' | null;
+  interactive?: boolean;
   fogActiveOverride?: boolean;
   fogCutoff?: number;
 }
@@ -30,7 +31,7 @@ const pieceSymbols: Record<string, string> = {
   'black-pawn': '♟︎',
 };
 
-export default function ChessBoard({ gameState, selectedSquare, validMoves, onSquareClick, currentTurn, flipped = false, lastMoveSquares, rules = [], viewerColor, fogActiveOverride, fogCutoff }: ChessBoardProps) {
+export default function ChessBoard({ gameState, selectedSquare, validMoves, onSquareClick, currentTurn, flipped = false, lastMoveSquares, rules = [], viewerColor, interactive = true, fogActiveOverride, fogCutoff }: ChessBoardProps) {
   const files = flipped ? ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'] : ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const ranks = flipped ? [1, 2, 3, 4, 5, 6, 7, 8] : [8, 7, 6, 5, 4, 3, 2, 1];
 
@@ -69,18 +70,20 @@ export default function ChessBoard({ gameState, selectedSquare, validMoves, onSq
       <div
         key={square}
         className={cn(
-          "aspect-square flex items-center justify-center text-4xl cursor-pointer transition-all relative",
+          "aspect-square flex items-center justify-center text-4xl transition-all relative",
+          interactive ? "cursor-pointer" : "cursor-default",
           isLight ? "bg-neutral-100" : "bg-neutral-900",
-          "hover:bg-opacity-80",
+          interactive && "hover:bg-opacity-80",
           isSelected && "bg-neutral-500/70 ring-2 ring-white",
           isValidMove && !effectiveMasked && !isBurned && "bg-neutral-400/60",
-          !piece && isValidMove && !effectiveMasked && "hover:bg-neutral-300/80",
-          piece && !isSelected && isLight ? "hover:bg-neutral-200" : "hover:bg-neutral-800",
+          interactive && !piece && isValidMove && !effectiveMasked && "hover:bg-neutral-300/80",
+          interactive && piece && !isSelected && isLight ? "hover:bg-neutral-200" : interactive && "hover:bg-neutral-800",
           isLastMoveFrom && "ring-4 ring-neutral-300 ring-opacity-80",
           isLastMoveTo && "ring-4 ring-white ring-opacity-80",
           isBurned && "after:absolute after:inset-0 after:bg-gradient-to-br after:from-slate-900/70 after:to-red-900/60 after:z-[12]"
         )}
         onClick={() => {
+          if (!interactive) return;
           // In fog, prevent selecting hidden squares unless it's a valid destination or it's your own piece on that square
           if (isBurned) return; // burned squares are unavailable
           if (isMasked) {

@@ -28,13 +28,19 @@ import { useToast } from "@/hooks/use-toast";
 import { ChessPiece, ChessGameState, GameRules, GameRulesArray, Game, Move } from "@shared/schema";
 import { ChessLogic } from "@/lib/chess-logic";
 import { getLegalCastlingDestinationFromRookClick } from "@/lib/castling";
+import { extractInvitePath, normalizeShareId } from "@/lib/match-links";
 import { Sword, Crown, Plus, Settings, Users, Share2, LogOut, SplitSquareVertical } from "lucide-react";
 
 interface ChessGameProps {
   onLogout?: () => void;
+  initialMatchId?: string | null;
+  initialShareId?: string | null;
 }
 
-export default function ChessGame({ onLogout }: ChessGameProps) {
+type ViewerRole = 'white' | 'black' | 'spectator';
+type GameWithRole = Game & { viewerRole?: ViewerRole };
+
+export default function ChessGame({ onLogout, initialMatchId = null, initialShareId = null }: ChessGameProps) {
   // Звук хода
   const moveAudioRef = useRef<HTMLAudioElement | null>(null);
   const [gameId, setGameId] = useState<number | null>(null);
@@ -56,6 +62,8 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
   const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState("00:00");
   const [lastMoveCount, setLastMoveCount] = useState(0);
+  const [isResolvingMatch, setIsResolvingMatch] = useState(!!initialMatchId || !!initialShareId);
+  const [matchLookupFailed, setMatchLookupFailed] = useState(false);
   const { toast } = useToast();
 
   const chessLogic = new ChessLogic();
@@ -116,24 +124,16 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
   // Get current player's color
   const getCurrentPlayerColor = (): 'white' | 'black' | null => {
     if (!game) return null;
-    
-    // Simple player identification system for demo
-    // In a real app this would use proper user authentication
-    let playerId = parseInt(localStorage.getItem('playerId') || '1');
-    
-    // If no playerId stored, generate one
-    if (!playerId) {
-      playerId = Math.floor(Math.random() * 1000) + 1;
-      localStorage.setItem('playerId', playerId.toString());
+
+    if (game.viewerRole === 'white' || game.viewerRole === 'black') {
+      return game.viewerRole;
     }
-    
-    if (game.whitePlayerId === playerId) return 'white';
-    if (game.blackPlayerId === playerId) return 'black';
+
     return null;
   };
 
   // Query for current game (no polling; we'll use SSE to refresh)
-  const { data: game, isLoading: gameLoading } = useQuery<Game>({
+  const { data: game, isLoading: gameLoading } = useQuery<GameWithRole>({
     queryKey: ["/api/games", gameId],
     queryFn: () => fetch(`/api/games/${gameId}`).then(res => res.json()),
     enabled: !!gameId,
@@ -145,6 +145,9 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
     queryFn: () => fetch(`/api/games/${gameId}/moves`).then(res => res.json()),
     enabled: !!gameId,
   });
+
+  const isSpectator = game?.viewerRole === 'spectator';
+  const viewerColor = isSpectator ? null : getCurrentPlayerColor();
 
   // Live updates via Server-Sent Events (SSE)
   useEffect(() => {
@@ -177,6 +180,49 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
       try { src.close(); } catch {}
     };
   }, [gameId]);
+
+  useEffect(() => {
+    if ((!initialMatchId && !initialShareId) || gameId) {
+      setIsResolvingMatch(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsResolvingMatch(true);
+    setMatchLookupFailed(false);
+
+    const lookupPath = initialMatchId
+      ? `/api/games/match/${initialMatchId}`
+      : `/api/games/share/${initialShareId}`;
+
+    fetch(lookupPath, { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Match not found");
+        }
+        return response.json();
+      })
+      .then((matchedGame: GameWithRole) => {
+        if (cancelled) return;
+        setGameId(matchedGame.id);
+        setGameStartTime(matchedGame.gameStartTime ? new Date(matchedGame.gameStartTime) : null);
+        window.history.replaceState({}, "", `/match${matchedGame.matchId}`);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMatchLookupFailed(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsResolvingMatch(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialMatchId, initialShareId, gameId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -218,11 +264,10 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
       });
       return response.json();
     },
-    onSuccess: (newGame: Game) => {
-      // Store player ID for creator (will be white)
-      localStorage.setItem('playerId', newGame.whitePlayerId?.toString() || '1');
+    onSuccess: (newGame: GameWithRole) => {
       setGameId(newGame.id);
       setGameStartTime(new Date(newGame.gameStartTime!));
+      window.history.replaceState({}, '', `/match${newGame.matchId}`);
       setGameOverShown(false); // Reset flag for new game
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
       if (newGame.shareId) {
@@ -248,11 +293,10 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
       const response = await apiRequest("POST", `/api/games/join/${shareId}`, {});
       return response.json();
     },
-    onSuccess: (joinedGame: Game) => {
-      // Store player ID for joining player (will be black)
-      localStorage.setItem('playerId', joinedGame.blackPlayerId?.toString() || '2');
+    onSuccess: (joinedGame: GameWithRole) => {
       setGameId(joinedGame.id);
       setGameStartTime(new Date(joinedGame.gameStartTime!));
+      window.history.replaceState({}, '', `/match${joinedGame.matchId}`);
       setGameOverShown(false);
       setShowJoinModal(false);
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
@@ -322,9 +366,8 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
       // If this is not the first time we're checking moves
       if (lastMoveCount > 0 && moves.length > lastMoveCount) {
         const newMove = moves[moves.length - 1];
-        const playerId = parseInt(localStorage.getItem('playerId') || '1');
-        const isMyMove = (game?.whitePlayerId === playerId && newMove.player === 'white') || 
-                        (game?.blackPlayerId === playerId && newMove.player === 'black');
+        const playerColor = getCurrentPlayerColor();
+        const isMyMove = playerColor === newMove.player;
         // Only show notification if it's NOT my move and fog is not active
         if (!isMyMove && !fogActiveNow) {
           toast({
@@ -398,6 +441,7 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
   // Void: per-board square click handler
   const handleVoidSquareClick = (boardId: 0 | 1, square: string) => {
     if (!game || !game.gameState || !isVoidMode || !Array.isArray((game.gameState as any).voidBoards)) return;
+    if (isSpectator) return;
     const boards = (game.gameState as any).voidBoards as ChessGameState[];
     const active = getEffectiveVoidBoard(boardId);
     if (!active) return;
@@ -834,6 +878,10 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
     if (!game || !game.drawOfferedBy) return;
     
     const playerColor = getCurrentPlayerColor();
+    if (!playerColor) {
+      setShowDrawOffer(false);
+      return;
+    }
     const drawOfferedByOpponent = game.drawOfferedBy !== playerColor;
     
     if (drawOfferedByOpponent && !showDrawOffer) {
@@ -841,8 +889,23 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
     }
   }, [game, showDrawOffer]);
 
+  useEffect(() => {
+    if (!isSpectator) return;
+
+    setSelectedSquare(null);
+    setValidMoves([]);
+    setVoidSelected({});
+    setVoidValidMoves({});
+    setTransferMode(false);
+    setTransferFrom(null);
+    setShowResignConfirm(false);
+    setShowDrawConfirm(false);
+    setShowDrawOffer(false);
+  }, [isSpectator]);
+
   const handleSquareClick = (square: string) => {
     if (!game || !game.gameState) return;
+    if (isSpectator) return;
 
     const gameState = game.gameState as ChessGameState;
     const piece = gameState.board[square];
@@ -1070,8 +1133,24 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
     setShowRuleModal(false);
   };
 
-  const handleJoinGame = (shareId: string) => {
-    joinGameMutation.mutate(shareId);
+  const handleJoinGame = (inviteValue: string) => {
+    const invitePath = extractInvitePath(inviteValue);
+    if (invitePath) {
+      window.location.assign(invitePath);
+      return;
+    }
+
+    const shareId = normalizeShareId(inviteValue);
+    if (shareId) {
+      joinGameMutation.mutate(shareId);
+      return;
+    }
+
+    toast({
+      title: "Ошибка",
+      description: "Введите ссылку матча ChessMaster или 6-значный код игры",
+      variant: "destructive",
+    });
   };
 
   const handleShareGame = () => {
@@ -1135,11 +1214,12 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
   };
 
   const handleResign = () => {
+    if (isSpectator) return;
     setShowResignConfirm(true);
   };
 
   const confirmResign = () => {
-    if (!game) return;
+    if (!game || isSpectator) return;
     // Determine the resigning player's color (not necessarily the current turn)
     const playerColor = getCurrentPlayerColor();
     const resigningColor = playerColor ?? game.currentTurn;
@@ -1154,11 +1234,12 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
   };
 
   const handleOfferDraw = () => {
+    if (isSpectator) return;
     setShowDrawConfirm(true);
   };
 
   const confirmOfferDraw = () => {
-    if (!game) return;
+    if (!game || isSpectator) return;
     const playerColor = getCurrentPlayerColor();
     if (playerColor) {
       offerDrawMutation.mutate(playerColor);
@@ -1167,11 +1248,13 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
   };
 
   const handleAcceptDraw = () => {
+    if (isSpectator) return;
     acceptDrawMutation.mutate();
     setShowDrawOffer(false);
   };
 
   const handleDeclineDraw = () => {
+    if (isSpectator) return;
     declineDrawMutation.mutate();
     setShowDrawOffer(false);
   };
@@ -1386,6 +1469,14 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
   })();
 
   if (!gameId) {
+    if (isResolvingMatch) {
+      return <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">Loading match...</div>;
+    }
+
+    if (matchLookupFailed) {
+      return <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">Match not found</div>;
+    }
+
     return (
       <div className="min-h-screen bg-neutral-950 text-white">
         <header className="border-b border-white/10 bg-black/70 backdrop-blur">
@@ -1520,6 +1611,7 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
               game={game!}
               elapsedTime={elapsedTime}
               onChangeRules={() => setShowRuleModal(true)}
+              canChangeRules={!isSpectator}
               moves={moves}
             />
           </div>
@@ -1534,8 +1626,9 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
                   validMoves={validMoves}
                   onSquareClick={handleSquareClick}
                   currentTurn={game!.currentTurn as 'white' | 'black'}
-                  flipped={getCurrentPlayerColor() === 'black'}
-                  viewerColor={getCurrentPlayerColor()}
+                  flipped={viewerColor === 'black'}
+                  viewerColor={viewerColor}
+                  interactive={!isSpectator}
                   rules={(game!.rules as any) || []}
                   fogActiveOverride={fogActive}
                   lastMoveSquares={lastMoveSquares}
@@ -1555,6 +1648,9 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
                       const color = getCurrentPlayerColor();
                       const myTokens = color ? (meta.tokens[color] || 0) : 0;
                       const canTransfer = color && color === game!.currentTurn && myTokens > 0 && !meta.pending;
+                      if (isSpectator) {
+                        return <span className="tracking-[0.18em] uppercase text-white/60">Read only</span>;
+                      }
                       return (
                         <div className="flex items-center gap-3">
                           <span>Токены переноса: <b>{myTokens}</b></span>
@@ -1573,8 +1669,9 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
                   validMoves={voidValidMoves[0] || []}
                   onSquareClick={(sq) => handleVoidSquareClick(0, sq)}
                   currentTurn={game!.currentTurn as 'white' | 'black'}
-                  flipped={getCurrentPlayerColor() === 'black'}
-                  viewerColor={getCurrentPlayerColor()}
+                  flipped={viewerColor === 'black'}
+                  viewerColor={viewerColor}
+                  interactive={!isSpectator}
                   rules={(game!.rules as any) || []}
                   fogActiveOverride={fogActive}
                   lastMoveSquares={(voidLastMoveSquares as any)[0] || null}
@@ -1586,20 +1683,21 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
                   validMoves={voidValidMoves[1] || []}
                   onSquareClick={(sq) => handleVoidSquareClick(1, sq)}
                   currentTurn={game!.currentTurn as 'white' | 'black'}
-                  flipped={getCurrentPlayerColor() === 'black'}
-                  viewerColor={getCurrentPlayerColor()}
+                  flipped={viewerColor === 'black'}
+                  viewerColor={viewerColor}
+                  interactive={!isSpectator}
                   rules={(game!.rules as any) || []}
                   fogActiveOverride={fogActive}
                   lastMoveSquares={(voidLastMoveSquares as any)[1] || null}
                 />
-                {transferMode && (
+                {transferMode && !isSpectator && (
                   <div className="mt-2 text-center text-sm text-white/70">Выберите фигуру для переноса, затем пустую клетку на другой доске</div>
                 )}
               </div>
             )}
 
             {/* Game Controls */}
-            <div className="flex items-center space-x-4 mt-6">
+            <div className={`flex items-center space-x-4 mt-6 ${isSpectator ? "pointer-events-none opacity-45" : ""}`}>
               <Button variant="outline" onClick={() => undoMoveMutation.mutate()} disabled={undoMoveMutation.isPending}>
                 Undo
               </Button>
@@ -1613,6 +1711,11 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
                 Ничья
               </Button>
             </div>
+            {isSpectator && (
+              <div className="mt-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm uppercase tracking-[0.18em] text-white/75">
+                Spectator Mode
+              </div>
+            )}
           </div>
 
           {/* Right Sidebar */}
@@ -1692,7 +1795,7 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
           open={showInviteModal}
           onOpenChange={setShowInviteModal}
           shareId={game.shareId}
-          gameUrl={`${window.location.origin}/?join=${game.shareId}`}
+          gameUrl={`${window.location.origin}/match${game.matchId}`}
         />
       )}
 

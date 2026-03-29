@@ -12,6 +12,7 @@ export interface IStorage {
   // Game methods
   createGame(game: InsertGame): Promise<Game>;
   getGame(id: number): Promise<Game | undefined>;
+  getGameByMatchId(matchId: string): Promise<Game | undefined>;
   getGameByShareId(shareId: string): Promise<Game | undefined>;
   updateGameState(id: number, gameState: ChessGameState): Promise<Game>;
   updateGameStatus(id: number, status: string, winner?: string): Promise<Game>;
@@ -66,6 +67,7 @@ export class DatabaseStorage implements IStorage {
     const [game] = await db
       .insert(games)
       .values({
+        matchId: insertGame.matchId!,
         shareId: insertGame.shareId || null,
         whitePlayerId: insertGame.whitePlayerId || null,
         blackPlayerId: insertGame.blackPlayerId || null,
@@ -81,6 +83,11 @@ export class DatabaseStorage implements IStorage {
 
   async getGame(id: number): Promise<Game | undefined> {
     const [game] = await db.select().from(games).where(eq(games.id, id));
+    return game || undefined;
+  }
+
+  async getGameByMatchId(matchId: string): Promise<Game | undefined> {
+    const [game] = await db.select().from(games).where(eq(games.matchId, matchId));
     return game || undefined;
   }
 
