@@ -1640,6 +1640,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Math.floor(Math.random() * 9000000000 + 1000000000).toString();
   }
 
+  async function generateUniqueMatchId(): Promise<string> {
+    while (true) {
+      const matchId = Math.random().toString(36).substring(2, 10).toUpperCase();
+      const existingGame = await storage.getGameByMatchId(matchId);
+      if (!existingGame) {
+        return matchId;
+      }
+    }
+  }
+
   // Create a new game
   app.post("/api/games", async (req, res) => {
     try {
@@ -1647,9 +1657,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) return;
 
       const gameData = insertGameSchema.parse(req.body);
+      const matchId = await generateUniqueMatchId();
 
       const gameWithPlayer = {
         ...gameData,
+        matchId,
         whitePlayerId: user.id,
         blackPlayerId: null,
         shareId: Math.random().toString(36).substring(2, 8).toUpperCase()
@@ -1667,6 +1679,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const gameId = parseInt(req.params.id);
       const game = await storage.getGame(gameId);
+      if (!game) {
+        return res.status(404).json({ message: "Game not found" });
+      }
+      res.json(game);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/games/match/:matchId", async (req, res) => {
+    try {
+      const matchId = req.params.matchId.toUpperCase();
+      const game = await storage.getGameByMatchId(matchId);
       if (!game) {
         return res.status(404).json({ message: "Game not found" });
       }

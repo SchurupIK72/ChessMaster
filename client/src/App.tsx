@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,8 +9,10 @@ import AuthPage from "@/pages/auth";
 import { useState, useEffect } from "react";
 
 function Router() {
+  const [location] = useLocation();
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const directMatchId = location.match(/^\/match([A-Za-z0-9]+)$/)?.[1] ?? null;
 
   // Check session on app load
   useEffect(() => {
@@ -74,6 +76,10 @@ function Router() {
   }
 
   // Show main app if user is authenticated
+  if (directMatchId) {
+    return <ChessGame onLogout={handleLogout} initialMatchId={directMatchId} />;
+  }
+
   return (
     <Switch>
       <Route path="/">

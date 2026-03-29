@@ -13,6 +13,7 @@ export const users = pgTable("users", {
 
 export const games = pgTable("games", {
   id: serial("id").primaryKey(),
+  matchId: text("match_id").notNull().unique(),
   shareId: text("share_id").unique(), // Unique identifier for sharing games
   whitePlayerId: integer("white_player_id"),
   blackPlayerId: integer("black_player_id"),
@@ -62,6 +63,8 @@ export const insertGameSchema = createInsertSchema(games).pick({
   whitePlayerId: true,
   blackPlayerId: true,
   rules: true,
+}).extend({
+  matchId: z.string().optional(),
 });
 
 export const insertMoveSchema = createInsertSchema(moves).pick({

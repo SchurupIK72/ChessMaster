@@ -32,9 +32,10 @@ import { Sword, Crown, Plus, Settings, Users, Share2, LogOut, SplitSquareVertica
 
 interface ChessGameProps {
   onLogout?: () => void;
+  initialMatchId?: string | null;
 }
 
-export default function ChessGame({ onLogout }: ChessGameProps) {
+export default function ChessGame({ onLogout, initialMatchId = null }: ChessGameProps) {
   // Звук хода
   const moveAudioRef = useRef<HTMLAudioElement | null>(null);
   const [gameId, setGameId] = useState<number | null>(null);
@@ -56,6 +57,8 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
   const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState("00:00");
   const [lastMoveCount, setLastMoveCount] = useState(0);
+  const [isResolvingMatch, setIsResolvingMatch] = useState(!!initialMatchId);
+  const [matchLookupFailed, setMatchLookupFailed] = useState(false);
   const { toast } = useToast();
 
   const chessLogic = new ChessLogic();
@@ -179,6 +182,45 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
   }, [gameId]);
 
   useEffect(() => {
+    if (!initialMatchId || gameId) {
+      setIsResolvingMatch(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsResolvingMatch(true);
+    setMatchLookupFailed(false);
+
+    fetch(`/api/games/match/${initialMatchId}`, { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Match not found");
+        }
+        return response.json();
+      })
+      .then((matchedGame: Game) => {
+        if (cancelled) return;
+        setGameId(matchedGame.id);
+        setGameStartTime(matchedGame.gameStartTime ? new Date(matchedGame.gameStartTime) : null);
+        window.history.replaceState({}, "", `/match${matchedGame.matchId}`);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMatchLookupFailed(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsResolvingMatch(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialMatchId, gameId]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
 
     const audio = new Audio("/move.mp3");
@@ -223,6 +265,7 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
       localStorage.setItem('playerId', newGame.whitePlayerId?.toString() || '1');
       setGameId(newGame.id);
       setGameStartTime(new Date(newGame.gameStartTime!));
+      window.history.replaceState({}, '', `/match${newGame.matchId}`);
       setGameOverShown(false); // Reset flag for new game
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
       if (newGame.shareId) {
@@ -253,6 +296,7 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
       localStorage.setItem('playerId', joinedGame.blackPlayerId?.toString() || '2');
       setGameId(joinedGame.id);
       setGameStartTime(new Date(joinedGame.gameStartTime!));
+      window.history.replaceState({}, '', `/match${joinedGame.matchId}`);
       setGameOverShown(false);
       setShowJoinModal(false);
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
@@ -1386,6 +1430,14 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
   })();
 
   if (!gameId) {
+    if (isResolvingMatch) {
+      return <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">Loading match...</div>;
+    }
+
+    if (matchLookupFailed) {
+      return <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">Match not found</div>;
+    }
+
     return (
       <div className="min-h-screen bg-neutral-950 text-white">
         <header className="border-b border-white/10 bg-black/70 backdrop-blur">
@@ -1692,7 +1744,7 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
           open={showInviteModal}
           onOpenChange={setShowInviteModal}
           shareId={game.shareId}
-          gameUrl={`${window.location.origin}/?join=${game.shareId}`}
+          gameUrl={`${window.location.origin}/match${game.matchId}`}
         />
       )}
 
