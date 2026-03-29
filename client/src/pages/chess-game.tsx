@@ -28,17 +28,19 @@ import { useToast } from "@/hooks/use-toast";
 import { ChessPiece, ChessGameState, GameRules, GameRulesArray, Game, Move } from "@shared/schema";
 import { ChessLogic } from "@/lib/chess-logic";
 import { getLegalCastlingDestinationFromRookClick } from "@/lib/castling";
+import { extractInvitePath, normalizeShareId } from "@/lib/match-links";
 import { Sword, Crown, Plus, Settings, Users, Share2, LogOut, SplitSquareVertical } from "lucide-react";
 
 interface ChessGameProps {
   onLogout?: () => void;
   initialMatchId?: string | null;
+  initialShareId?: string | null;
 }
 
 type ViewerRole = 'white' | 'black' | 'spectator';
 type GameWithRole = Game & { viewerRole?: ViewerRole };
 
-export default function ChessGame({ onLogout, initialMatchId = null }: ChessGameProps) {
+export default function ChessGame({ onLogout, initialMatchId = null, initialShareId = null }: ChessGameProps) {
   // Звук хода
   const moveAudioRef = useRef<HTMLAudioElement | null>(null);
   const [gameId, setGameId] = useState<number | null>(null);
@@ -60,7 +62,7 @@ export default function ChessGame({ onLogout, initialMatchId = null }: ChessGame
   const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState("00:00");
   const [lastMoveCount, setLastMoveCount] = useState(0);
-  const [isResolvingMatch, setIsResolvingMatch] = useState(!!initialMatchId);
+  const [isResolvingMatch, setIsResolvingMatch] = useState(!!initialMatchId || !!initialShareId);
   const [matchLookupFailed, setMatchLookupFailed] = useState(false);
   const { toast } = useToast();
 
@@ -180,7 +182,7 @@ export default function ChessGame({ onLogout, initialMatchId = null }: ChessGame
   }, [gameId]);
 
   useEffect(() => {
-    if (!initialMatchId || gameId) {
+    if ((!initialMatchId && !initialShareId) || gameId) {
       setIsResolvingMatch(false);
       return;
     }
@@ -189,7 +191,11 @@ export default function ChessGame({ onLogout, initialMatchId = null }: ChessGame
     setIsResolvingMatch(true);
     setMatchLookupFailed(false);
 
-    fetch(`/api/games/match/${initialMatchId}`, { credentials: "include" })
+    const lookupPath = initialMatchId
+      ? `/api/games/match/${initialMatchId}`
+      : `/api/games/share/${initialShareId}`;
+
+    fetch(lookupPath, { credentials: "include" })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error("Match not found");
@@ -216,7 +222,7 @@ export default function ChessGame({ onLogout, initialMatchId = null }: ChessGame
     return () => {
       cancelled = true;
     };
-  }, [initialMatchId, gameId]);
+  }, [initialMatchId, initialShareId, gameId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1127,8 +1133,24 @@ export default function ChessGame({ onLogout, initialMatchId = null }: ChessGame
     setShowRuleModal(false);
   };
 
-  const handleJoinGame = (shareId: string) => {
-    joinGameMutation.mutate(shareId);
+  const handleJoinGame = (inviteValue: string) => {
+    const invitePath = extractInvitePath(inviteValue);
+    if (invitePath) {
+      window.location.assign(invitePath);
+      return;
+    }
+
+    const shareId = normalizeShareId(inviteValue);
+    if (shareId) {
+      joinGameMutation.mutate(shareId);
+      return;
+    }
+
+    toast({
+      title: "Ошибка",
+      description: "Введите ссылку матча ChessMaster или 6-значный код игры",
+      variant: "destructive",
+    });
   };
 
   const handleShareGame = () => {

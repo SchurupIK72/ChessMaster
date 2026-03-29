@@ -20,8 +20,8 @@
 | д | Финализация и merge | `merge-helper` | Не начат |
 
 ### Текущий статус
-- Текущий шаг: `б` - завершен этап 3 Spectator UI & Read-only Enforcement.
-- Следующий шаг: `б` - этап 4 Share Flow & Backward Compatibility.
+- Текущий шаг: `б` - завершен этап 4 Share Flow & Backward Compatibility.
+- Следующий шаг: `в` - этап 5 Tests.
 
 ---
 
@@ -251,14 +251,14 @@
 - Spectator видит полную доску в матчах с `fog-of-war`.
 
 ### Этап 4: Share Flow & Backward Compatibility (~80-180 строк)
-**Статус:** Не начат
+**Статус:** Завершён
 
 **Цель:** перевести UX приглашения на канонический match URL.
 
 **Задачи:**
-- [ ] Обновить invite/share modal под новый URL.
-- [ ] Обновить тексты приглашений и copy-to-clipboard flow.
-- [ ] Явно определить судьбу legacy `shareId`: alias, redirect или временная совместимость.
+- [x] Обновить invite/share modal под новый URL.
+- [x] Обновить тексты приглашений и copy-to-clipboard flow.
+- [x] Явно определить судьбу legacy `shareId`: alias, redirect или временная совместимость.
 
 **Файлы:**
 - `client/src/components/invite-modal.tsx`
@@ -362,6 +362,8 @@
 | 2026-03-29 | 1 | b75328f | Реализованы matchId, server lookup по matchId и прямое открытие `/match{matchId}` |
 | 2026-03-29 | 2 | c2b5b0e | Реализованы server-side viewerRole, reconnect игрока по ссылке и spectator role resolution |
 | 2026-03-29 | 3 | - | Реализованы spectator UI guards, read-only controls и полная visibility для spectator режима |
+| 2026-03-29 | 4 | - | Match link сделан primary invite flow, а legacy shareId оформлен как временно совместимый alias |
+
 
 
 

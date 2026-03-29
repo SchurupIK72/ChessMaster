@@ -1717,7 +1717,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get game by share ID
   app.get("/api/games/share/:shareId", async (req, res) => {
     try {
-      const shareId = req.params.shareId;
+      const shareId = req.params.shareId.toUpperCase();
       const game = await storage.getGameByShareId(shareId);
       if (!game) {
         return res.status(404).json({ message: "Game not found" });
@@ -1740,7 +1740,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "shareId is required" });
       }
 
-      const existingGame = await storage.getGameByShareId(shareId);
+      const normalizedShareId = String(shareId).toUpperCase();
+      const existingGame = await storage.getGameByShareId(normalizedShareId);
       if (!existingGame) {
         return res.status(404).json({ message: "Game not found" });
       }
@@ -1750,7 +1751,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(serializeGameForViewer(req, existingGame));
       }
 
-      const game = await storage.joinGame(shareId, user.id);
+      const game = await storage.joinGame(normalizedShareId, user.id);
       res.json(serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1761,7 +1762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await requireCurrentUser(req, res);
       if (!user) return;
 
-      const shareId = req.params.shareId;
+      const shareId = req.params.shareId.toUpperCase();
 
       const existingGame = await storage.getGameByShareId(shareId);
       if (!existingGame) {

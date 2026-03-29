@@ -13,6 +13,7 @@ function Router() {
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const directMatchId = location.match(/^\/match([A-Za-z0-9]+)$/)?.[1] ?? null;
+  const legacyShareId = location.match(/^\/join\/([A-Za-z0-9]{6})$/)?.[1] ?? null;
 
   // Check session on app load
   useEffect(() => {
@@ -70,8 +71,8 @@ function Router() {
     );
   }
 
-  if (directMatchId) {
-    return <ChessGame onLogout={handleLogout} initialMatchId={directMatchId} />;
+  if (directMatchId || legacyShareId) {
+    return <ChessGame onLogout={handleLogout} initialMatchId={directMatchId} initialShareId={legacyShareId} />;
   }
 
   // Show auth page if no user
