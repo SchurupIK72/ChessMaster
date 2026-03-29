@@ -1677,7 +1677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!game) {
         return res.status(404).json({ message: "Game not found" });
       }
-      res.json(game);
+      res.json(serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

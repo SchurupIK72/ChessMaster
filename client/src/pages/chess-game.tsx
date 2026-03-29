@@ -148,6 +148,9 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
 
   const isSpectator = game?.viewerRole === 'spectator';
   const viewerColor = isSpectator ? null : getCurrentPlayerColor();
+  const openSeatColor = game
+    ? (game.whitePlayerId == null ? "white" : game.blackPlayerId == null ? "black" : null)
+    : null;
 
   // Live updates via Server-Sent Events (SSE)
   useEffect(() => {
@@ -1153,6 +1156,49 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     });
   };
 
+  const ensureJoinSession = async () => {
+    const sessionResponse = await fetch("/api/auth/session", {
+      credentials: "include",
+      cache: "no-store",
+    });
+
+    if (sessionResponse.ok) {
+      return;
+    }
+
+    const guestResponse = await fetch("/api/auth/guest", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+
+    if (!guestResponse.ok) {
+      throw new Error("Не удалось создать гостевую сессию");
+    }
+
+    const guestData = await guestResponse.json();
+    if (guestData?.user) {
+      localStorage.setItem("guestUser", JSON.stringify(guestData.user));
+    }
+  };
+
+  const handleJoinOpenSeat = async () => {
+    if (!game?.shareId || !openSeatColor || joinGameMutation.isPending) return;
+
+    try {
+      await ensureJoinSession();
+      joinGameMutation.mutate(game.shareId);
+    } catch (error: any) {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось присоединиться к матчу",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleShareGame = () => {
     if (game?.shareId) {
       setShowInviteModal(true);
@@ -1572,6 +1618,16 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
               <span className="hidden text-sm text-white/55 sm:block">Special Rules Edition</span>
             </button>
             <div className="flex items-center space-x-4">
+              {isSpectator && openSeatColor && game?.shareId && (
+                <Button
+                  onClick={handleJoinOpenSeat}
+                  disabled={joinGameMutation.isPending}
+                  className="bg-white text-black hover:bg-neutral-200"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  {joinGameMutation.isPending ? "Подключение..." : `Играть за ${openSeatColor === "white" ? "белых" : "черных"}`}
+                </Button>
+              )}
               {game?.shareId && (
                 <Button 
                   onClick={handleShareGame} 
