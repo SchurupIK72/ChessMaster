@@ -162,12 +162,17 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
     <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-4">
       <Card className="w-full max-w-md border border-white/10 bg-white/[0.04] text-white shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur">
         <CardHeader className="text-center space-y-3">
-          <div className="mx-auto w-fit rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.35em] text-white/60">
-            ChessMaster
-          </div>
-          <CardTitle className="text-4xl font-bold text-white">
-            ChessMaster
-          </CardTitle>
+          <a
+            href="/"
+            className="mx-auto flex w-fit flex-col items-center gap-3 rounded-2xl px-3 py-2 transition-opacity hover:opacity-80"
+          >
+            <div className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.35em] text-white/60">
+              ChessMaster
+            </div>
+            <CardTitle className="text-4xl font-bold text-white">
+              ChessMaster
+            </CardTitle>
+          </a>
           <CardDescription className="text-white/65">
             Авторизуйтесь или зарегистрируйтесь для игры
           </CardDescription>

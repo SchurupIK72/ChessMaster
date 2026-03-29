@@ -1080,6 +1080,34 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
     }
   };
 
+  const handleBrandClick = () => {
+    setGameId(null);
+    setSelectedSquare(null);
+    setValidMoves([]);
+    setLastMoveSquares(null);
+    setVoidLastMoveSquares({});
+    setShowGameTypeModal(false);
+    setShowRuleModal(false);
+    setShowJoinModal(false);
+    setShowInviteModal(false);
+    setShowPromotionModal(false);
+    setShowGameOverModal(false);
+    setShowResignConfirm(false);
+    setShowDrawConfirm(false);
+    setShowDrawOffer(false);
+    setPromotionMove(null);
+    setGameStartTime(null);
+    setElapsedTime("00:00");
+    setLastMoveCount(0);
+    setVoidSelected({});
+    setVoidValidMoves({});
+    setVoidLocalBoards({});
+    setTransferMode(false);
+    setTransferFrom(null);
+    setPendingTransferPromotion(null);
+    window.history.replaceState({}, "", "/");
+  };
+
   const handleLogout = async () => {
     try {
       await apiRequest("POST", "/api/auth/logout", {});
@@ -1363,11 +1391,16 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
         <header className="border-b border-white/10 bg-black/70 backdrop-blur">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between py-4">
-              <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={handleBrandClick}
+                className="flex items-center space-x-3 rounded-full px-1 py-1 text-left transition-opacity hover:opacity-80"
+                title="Перейти на главную"
+              >
                 <Crown className="h-8 w-8 text-white" />
                 <h1 className="text-2xl font-bold text-white">ChessMaster</h1>
-                <span className="text-sm text-white/55 hidden sm:block">Special Rules Edition</span>
-              </div>
+                <span className="hidden text-sm text-white/55 sm:block">Special Rules Edition</span>
+              </button>
               <div className="flex items-center space-x-4">
                 <Button 
                   onClick={handleLogout} 
@@ -1437,11 +1470,16 @@ export default function ChessGame({ onLogout }: ChessGameProps) {
       <header className="border-b border-white/10 bg-black/70 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
-            <div className="flex items-center space-x-3">
+            <button
+              type="button"
+              onClick={handleBrandClick}
+              className="flex items-center space-x-3 rounded-full px-1 py-1 text-left transition-opacity hover:opacity-80"
+              title="Перейти на главную"
+            >
               <Crown className="h-8 w-8 text-white" />
               <h1 className="text-2xl font-bold text-white">ChessMaster</h1>
-              <span className="text-sm text-white/55 hidden sm:block">Special Rules Edition</span>
-            </div>
+              <span className="hidden text-sm text-white/55 sm:block">Special Rules Edition</span>
+            </button>
             <div className="flex items-center space-x-4">
               {game?.shareId && (
                 <Button 
