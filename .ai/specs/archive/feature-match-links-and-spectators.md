@@ -364,7 +364,8 @@
 | 2026-03-29 | 3 | 0b13950 | Реализованы spectator UI guards, read-only controls и полная visibility для spectator режима |
 | 2026-03-29 | 4 | 8d86490 | Match link сделан primary invite flow, а legacy shareId оформлен как временно совместимый alias |
 | 2026-03-29 | 5 | cd001ac | Добавлены pytest-тесты на matchId helpers, direct route parsing, viewer roles и participant guards |
-| 2026-03-29 | MERGE | pending | Фича подготовлена к merge в main; post-deploy GUI smoke вынесен в ручную проверку |
+| 2026-03-29 | MERGE | cbcd5db | Ветка feature/match-links-and-spectators слита в main; post-deploy GUI smoke вынесен в ручную проверку |
+
 
 
 
