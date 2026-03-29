@@ -1,9 +1,9 @@
 ﻿# Match Links And Spectators - Feature Specification
-
 > **Дата создания:** 2026-03-29
+> **Дата завершения:** 2026-03-29
 > **Ветка:** `feature/match-links-and-spectators`
 > **Тип:** feature
-> **Статус:** Draft
+> **Статус:** Завершён
 
 ---
 
@@ -14,14 +14,14 @@
 | Шаг | Действие | Навык | Статус |
 | --- | --- | --- | --- |
 | а | Создание ТЗ + Ветка | `spec-creation` | Завершён |
-| б | Реализация | `spec-implementer` | В работе |
-| в | Написание тестов | `test-writer` | Не начат |
-| г | GUI и smoke testing | `gui-testing` | Не начат |
-| д | Финализация и merge | `merge-helper` | Не начат |
+| б | Реализация | `spec-implementer` | Завершён |
+| в | Написание тестов | `test-writer` | Завершён |
+| г | GUI и smoke testing | `gui-testing` | Отложен до post-deploy smoke |
+| д | Финализация и merge | `merge-helper` | Завершён |
 
 ### Текущий статус
-- Текущий шаг: `в` - этап 5 Tests завершен, pytest green.
-- Следующий шаг: `г` - GUI и smoke testing.
+- Реализация и автоматические тесты завершены.
+- Post-deploy GUI/smoke проверка выполняется пользователем после merge.
 
 ---
 
@@ -361,9 +361,12 @@
 | 2026-03-29 | а | 52218c4 | Создано feature ТЗ для match links, reconnect и spectator mode |
 | 2026-03-29 | 1 | b75328f | Реализованы matchId, server lookup по matchId и прямое открытие `/match{matchId}` |
 | 2026-03-29 | 2 | c2b5b0e | Реализованы server-side viewerRole, reconnect игрока по ссылке и spectator role resolution |
-| 2026-03-29 | 3 | - | Реализованы spectator UI guards, read-only controls и полная visibility для spectator режима |
-| 2026-03-29 | 4 | - | Match link сделан primary invite flow, а legacy shareId оформлен как временно совместимый alias |
-| 2026-03-29 | 5 | - | Добавлены pytest-тесты на matchId helpers, direct route parsing, viewer roles и participant guards |
+| 2026-03-29 | 3 | 0b13950 | Реализованы spectator UI guards, read-only controls и полная visibility для spectator режима |
+| 2026-03-29 | 4 | 8d86490 | Match link сделан primary invite flow, а legacy shareId оформлен как временно совместимый alias |
+| 2026-03-29 | 5 | cd001ac | Добавлены pytest-тесты на matchId helpers, direct route parsing, viewer roles и participant guards |
+| 2026-03-29 | MERGE | pending | Фича подготовлена к merge в main; post-deploy GUI smoke вынесен в ручную проверку |
+
+
 
 
 
