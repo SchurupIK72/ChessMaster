@@ -20,8 +20,8 @@
 | д | Финализация и merge | `merge-helper` | Не начат |
 
 ### Текущий статус
-- Текущий шаг: `б` - завершен этап 2 Role Resolution & Reconnect.
-- Следующий шаг: `б` - этап 3 Spectator UI & Read-only Enforcement.
+- Текущий шаг: `б` - завершен этап 3 Spectator UI & Read-only Enforcement.
+- Следующий шаг: `б` - этап 4 Share Flow & Backward Compatibility.
 
 ---
 
@@ -230,15 +230,15 @@
 - Роль не определяется по `localStorage playerId`.
 
 ### Этап 3: Spectator UI & Read-only Enforcement (~120-220 строк)
-**Статус:** Не начат
+**Статус:** Завершён
 
 **Цель:** сделать полноценный spectator mode на клиенте и на сервере.
 
 **Задачи:**
-- [ ] Скрыть или отключить mutating controls для spectator.
-- [ ] Оставить spectator доступ к доске, истории, статусу и live updates.
-- [ ] Обеспечить полную видимость в матчах с `fog-of-war`.
-- [ ] Запретить spectator любые mutating game actions на API-уровне.
+- [x] Скрыть или отключить mutating controls для spectator.
+- [x] Оставить spectator доступ к доске, истории, статусу и live updates.
+- [x] Обеспечить полную видимость в матчах с `fog-of-war`.
+- [x] Запретить spectator любые mutating game actions на API-уровне.
 
 **Файлы:**
 - `client/src/pages/chess-game.tsx`
@@ -360,7 +360,12 @@
 | --- | --- | --- | --- |
 | 2026-03-29 | а | 52218c4 | Создано feature ТЗ для match links, reconnect и spectator mode |
 | 2026-03-29 | 1 | b75328f | Реализованы matchId, server lookup по matchId и прямое открытие `/match{matchId}` |
-| 2026-03-29 | 2 | - | Реализованы server-side viewerRole, reconnect игрока по ссылке и spectator role resolution |
+| 2026-03-29 | 2 | c2b5b0e | Реализованы server-side viewerRole, reconnect игрока по ссылке и spectator role resolution |
+| 2026-03-29 | 3 | - | Реализованы spectator UI guards, read-only controls и полная visibility для spectator режима |
+
+
+
+
 
 
 

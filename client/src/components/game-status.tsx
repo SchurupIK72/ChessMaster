@@ -8,6 +8,7 @@ interface GameStatusProps {
   game: Game;
   elapsedTime: string;
   onChangeRules: () => void;
+  canChangeRules?: boolean;
   moves?: Move[]; // used to compute meteor timing similar to Fog of War
 }
 
@@ -24,7 +25,7 @@ const ruleDescriptions: Record<string, { name: string; description: string; stat
   'void': { name: 'Void Mode', description: 'Две независимые доски; один ход = два под-хода на разных досках; перенос фигур между досками за токены (короля переносить нельзя)', status: 'active' },
 };
 
-export default function GameStatus({ game, elapsedTime, onChangeRules, moves = [] }: GameStatusProps) {
+export default function GameStatus({ game, elapsedTime, onChangeRules, canChangeRules = true, moves = [] }: GameStatusProps) {
   const activeRules = Array.isArray(game.rules) ? game.rules : [game.rules];
   const isStandardOnly = activeRules.length === 1 && activeRules[0] === 'standard';
   const gameState = game.gameState as any;
@@ -268,9 +269,13 @@ export default function GameStatus({ game, elapsedTime, onChangeRules, moves = [
             );
           })}
 
-          <Button onClick={onChangeRules} className="w-full bg-black text-white hover:bg-neutral-800">
+          <Button
+            onClick={onChangeRules}
+            disabled={!canChangeRules}
+            className="w-full bg-black text-white hover:bg-neutral-800 disabled:bg-neutral-200 disabled:text-neutral-500"
+          >
             <Edit className="h-4 w-4 mr-2" />
-            Change Rules
+            {canChangeRules ? "Change Rules" : "Spectator Mode"}
           </Button>
         </CardContent>
       </Card>
