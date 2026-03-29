@@ -899,6 +899,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return "spectator";
   }
 
+  function getViewerRole(req: any, game: Game): GameRole {
+    const userId = getSessionUserId(req);
+    if (!userId) return "spectator";
+    return getGameRole(game, userId);
+  }
+
+  function serializeGameForViewer(req: any, game: Game) {
+    return {
+      ...game,
+      viewerRole: getViewerRole(req, game),
+    };
+  }
+
   async function requireCurrentUser(req: any, res: Response) {
     const userId = getSessionUserId(req);
     if (!userId) {
@@ -1668,7 +1681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const game = await storage.createGame(gameWithPlayer);
-      res.json(game);
+      res.json(serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1695,7 +1708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!game) {
         return res.status(404).json({ message: "Game not found" });
       }
-      res.json(game);
+      res.json(serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1709,7 +1722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!game) {
         return res.status(404).json({ message: "Game not found" });
       }
-      res.json(game);
+      res.json(serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1734,11 +1747,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const existingRole = getGameRole(existingGame, user.id);
       if (existingRole !== "spectator") {
-        return res.json(existingGame);
+        return res.json(serializeGameForViewer(req, existingGame));
       }
 
       const game = await storage.joinGame(shareId, user.id);
-      res.json(game);
+      res.json(serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1757,11 +1770,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const existingRole = getGameRole(existingGame, user.id);
       if (existingRole !== "spectator") {
-        return res.json(existingGame);
+        return res.json(serializeGameForViewer(req, existingGame));
       }
 
       const game = await storage.joinGame(shareId, user.id);
-      res.json(game);
+      res.json(serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

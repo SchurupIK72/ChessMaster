@@ -70,14 +70,13 @@ function Router() {
     );
   }
 
+  if (directMatchId) {
+    return <ChessGame onLogout={handleLogout} initialMatchId={directMatchId} />;
+  }
+
   // Show auth page if no user
   if (!user) {
     return <AuthPage onSuccess={handleAuthSuccess} />;
-  }
-
-  // Show main app if user is authenticated
-  if (directMatchId) {
-    return <ChessGame onLogout={handleLogout} initialMatchId={directMatchId} />;
   }
 
   return (

@@ -35,6 +35,9 @@ interface ChessGameProps {
   initialMatchId?: string | null;
 }
 
+type ViewerRole = 'white' | 'black' | 'spectator';
+type GameWithRole = Game & { viewerRole?: ViewerRole };
+
 export default function ChessGame({ onLogout, initialMatchId = null }: ChessGameProps) {
   // Звук хода
   const moveAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -119,24 +122,16 @@ export default function ChessGame({ onLogout, initialMatchId = null }: ChessGame
   // Get current player's color
   const getCurrentPlayerColor = (): 'white' | 'black' | null => {
     if (!game) return null;
-    
-    // Simple player identification system for demo
-    // In a real app this would use proper user authentication
-    let playerId = parseInt(localStorage.getItem('playerId') || '1');
-    
-    // If no playerId stored, generate one
-    if (!playerId) {
-      playerId = Math.floor(Math.random() * 1000) + 1;
-      localStorage.setItem('playerId', playerId.toString());
+
+    if (game.viewerRole === 'white' || game.viewerRole === 'black') {
+      return game.viewerRole;
     }
-    
-    if (game.whitePlayerId === playerId) return 'white';
-    if (game.blackPlayerId === playerId) return 'black';
+
     return null;
   };
 
   // Query for current game (no polling; we'll use SSE to refresh)
-  const { data: game, isLoading: gameLoading } = useQuery<Game>({
+  const { data: game, isLoading: gameLoading } = useQuery<GameWithRole>({
     queryKey: ["/api/games", gameId],
     queryFn: () => fetch(`/api/games/${gameId}`).then(res => res.json()),
     enabled: !!gameId,
@@ -198,7 +193,7 @@ export default function ChessGame({ onLogout, initialMatchId = null }: ChessGame
         }
         return response.json();
       })
-      .then((matchedGame: Game) => {
+      .then((matchedGame: GameWithRole) => {
         if (cancelled) return;
         setGameId(matchedGame.id);
         setGameStartTime(matchedGame.gameStartTime ? new Date(matchedGame.gameStartTime) : null);
@@ -260,9 +255,7 @@ export default function ChessGame({ onLogout, initialMatchId = null }: ChessGame
       });
       return response.json();
     },
-    onSuccess: (newGame: Game) => {
-      // Store player ID for creator (will be white)
-      localStorage.setItem('playerId', newGame.whitePlayerId?.toString() || '1');
+    onSuccess: (newGame: GameWithRole) => {
       setGameId(newGame.id);
       setGameStartTime(new Date(newGame.gameStartTime!));
       window.history.replaceState({}, '', `/match${newGame.matchId}`);
@@ -291,9 +284,7 @@ export default function ChessGame({ onLogout, initialMatchId = null }: ChessGame
       const response = await apiRequest("POST", `/api/games/join/${shareId}`, {});
       return response.json();
     },
-    onSuccess: (joinedGame: Game) => {
-      // Store player ID for joining player (will be black)
-      localStorage.setItem('playerId', joinedGame.blackPlayerId?.toString() || '2');
+    onSuccess: (joinedGame: GameWithRole) => {
       setGameId(joinedGame.id);
       setGameStartTime(new Date(joinedGame.gameStartTime!));
       window.history.replaceState({}, '', `/match${joinedGame.matchId}`);
@@ -366,9 +357,8 @@ export default function ChessGame({ onLogout, initialMatchId = null }: ChessGame
       // If this is not the first time we're checking moves
       if (lastMoveCount > 0 && moves.length > lastMoveCount) {
         const newMove = moves[moves.length - 1];
-        const playerId = parseInt(localStorage.getItem('playerId') || '1');
-        const isMyMove = (game?.whitePlayerId === playerId && newMove.player === 'white') || 
-                        (game?.blackPlayerId === playerId && newMove.player === 'black');
+        const playerColor = getCurrentPlayerColor();
+        const isMyMove = playerColor === newMove.player;
         // Only show notification if it's NOT my move and fog is not active
         if (!isMyMove && !fogActiveNow) {
           toast({

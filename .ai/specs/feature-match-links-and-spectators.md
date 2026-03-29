@@ -20,8 +20,8 @@
 | д | Финализация и merge | `merge-helper` | Не начат |
 
 ### Текущий статус
-- Текущий шаг: `б` - завершен этап 1 Match Identity & Canonical Routing.
-- Следующий шаг: `б` - этап 2 Role Resolution & Reconnect.
+- Текущий шаг: `б` - завершен этап 2 Role Resolution & Reconnect.
+- Следующий шаг: `б` - этап 3 Spectator UI & Read-only Enforcement.
 
 ---
 
@@ -208,15 +208,15 @@
 - Неизвестный `matchId` возвращает корректный `404`.
 
 ### Этап 2: Role Resolution & Reconnect (~120-220 строк)
-**Статус:** Не начат
+**Статус:** Завершён
 
 **Цель:** разделить роли игрока и зрителя на сервере и восстановить игрока по ссылке.
 
 **Задачи:**
-- [ ] Добавить единый server-side способ вычисления роли пользователя в матче.
-- [ ] Сделать reconnect игрока по ссылке без ручного join-flow.
-- [ ] Обеспечить открытие матча как spectator для любого не-игрока.
-- [ ] Подготовить role-aware response shape для клиента.
+- [x] Добавить единый server-side способ вычисления роли пользователя в матче.
+- [x] Сделать reconnect игрока по ссылке без ручного join-flow.
+- [x] Обеспечить открытие матча как spectator для любого не-игрока.
+- [x] Подготовить role-aware response shape для клиента.
 
 **Файлы:**
 - `server/routes.ts`
@@ -359,7 +359,9 @@
 | Дата | Этап | Коммит | Описание |
 | --- | --- | --- | --- |
 | 2026-03-29 | а | 52218c4 | Создано feature ТЗ для match links, reconnect и spectator mode |
-| 2026-03-29 | 1 | - | Реализованы matchId, server lookup по matchId и прямое открытие `/match{matchId}` |
+| 2026-03-29 | 1 | b75328f | Реализованы matchId, server lookup по matchId и прямое открытие `/match{matchId}` |
+| 2026-03-29 | 2 | - | Реализованы server-side viewerRole, reconnect игрока по ссылке и spectator role resolution |
+
 
 
 
