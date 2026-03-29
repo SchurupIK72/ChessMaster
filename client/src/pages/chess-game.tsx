@@ -205,8 +205,31 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
         }
         return response.json();
       })
-      .then((matchedGame: GameWithRole) => {
+      .then(async (matchedGame: GameWithRole) => {
         if (cancelled) return;
+
+        const shouldAutoJoinBlack =
+          matchedGame.viewerRole === "spectator" &&
+          matchedGame.whitePlayerId != null &&
+          matchedGame.blackPlayerId == null &&
+          !!matchedGame.shareId;
+
+        if (shouldAutoJoinBlack) {
+          try {
+            await ensureJoinSession();
+            const joinResponse = await apiRequest("POST", `/api/games/join/${matchedGame.shareId}`, {});
+            const joinedGame: GameWithRole = await joinResponse.json();
+            if (cancelled) return;
+
+            setGameId(joinedGame.id);
+            setGameStartTime(joinedGame.gameStartTime ? new Date(joinedGame.gameStartTime) : null);
+            window.history.replaceState({}, "", `/match${joinedGame.matchId}`);
+            return;
+          } catch {
+            // Fall back to spectator view if auto-join fails for any reason.
+          }
+        }
+
         setGameId(matchedGame.id);
         setGameStartTime(matchedGame.gameStartTime ? new Date(matchedGame.gameStartTime) : null);
         window.history.replaceState({}, "", `/match${matchedGame.matchId}`);
