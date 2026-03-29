@@ -6,6 +6,7 @@ import { z } from "zod";
 import { ChessGameState, Game, ChessPiece } from "@shared/schema";
 import { generateFischerBackRankFromSeed } from "./chess960";
 import bcrypt from "bcryptjs";
+import { GameRole, generateUniqueMatchId, getGameRole, isParticipantRole, resolveViewerRole } from "./match-access";
 import { sessionCookieName, sessionCookieOptions } from "./session";
 
 // Simple chess logic for server-side checkmate detection
@@ -860,7 +861,6 @@ function applyDoubleKnightRule(gameState: any, fromSquare: string, toSquare: str
 export async function registerRoutes(app: Express): Promise<Server> {
   // --- Simple SSE hub per game ---
   const sseClients: Map<number, Set<Response>> = new Map();
-  type GameRole = 'white' | 'black' | 'spectator';
 
   function addSseClient(gameId: number, res: Response) {
     if (!sseClients.has(gameId)) sseClients.set(gameId, new Set());
@@ -893,16 +893,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return null;
   }
 
-  function getGameRole(game: Game, userId: number): GameRole {
-    if (game.whitePlayerId === userId) return "white";
-    if (game.blackPlayerId === userId) return "black";
-    return "spectator";
-  }
-
   function getViewerRole(req: any, game: Game): GameRole {
-    const userId = getSessionUserId(req);
-    if (!userId) return "spectator";
-    return getGameRole(game, userId);
+    return resolveViewerRole(getSessionUserId(req), game);
   }
 
   function serializeGameForViewer(req: any, game: Game) {
@@ -944,7 +936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const role = getGameRole(game, user.id);
-    if (role === "spectator") {
+    if (!isParticipantRole(role)) {
       res.status(403).json({ message: "Only game participants can perform this action" });
       return null;
     }
@@ -1653,16 +1645,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Math.floor(Math.random() * 9000000000 + 1000000000).toString();
   }
 
-  async function generateUniqueMatchId(): Promise<string> {
-    while (true) {
-      const matchId = Math.random().toString(36).substring(2, 10).toUpperCase();
-      const existingGame = await storage.getGameByMatchId(matchId);
-      if (!existingGame) {
-        return matchId;
-      }
-    }
-  }
-
   // Create a new game
   app.post("/api/games", async (req, res) => {
     try {
@@ -1670,7 +1652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) return;
 
       const gameData = insertGameSchema.parse(req.body);
-      const matchId = await generateUniqueMatchId();
+      const matchId = await generateUniqueMatchId((candidate) => storage.getGameByMatchId(candidate));
 
       const gameWithPlayer = {
         ...gameData,

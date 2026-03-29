@@ -20,6 +20,13 @@ export function extractInvitePath(value: string): string | null {
   return `/join/${parsed.value}`;
 }
 
+export function parseDirectMatchRoute(location: string): { matchId: string | null; legacyShareId: string | null } {
+  return {
+    matchId: location.match(/^\/match([A-Za-z0-9]+)$/)?.[1] ?? null,
+    legacyShareId: location.match(/^\/join\/([A-Za-z0-9]{6})$/)?.[1]?.toUpperCase() ?? null,
+  };
+}
+
 function parseInviteLikePath(value: string): { type: "match" | "join"; value: string } | null {
   const directMatch = value.match(/^\/?match([A-Za-z0-9]+)$/i);
   if (directMatch) {

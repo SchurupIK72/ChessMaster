@@ -7,13 +7,13 @@ import NotFound from "@/pages/not-found";
 import ChessGame from "@/pages/chess-game";
 import AuthPage from "@/pages/auth";
 import { useState, useEffect } from "react";
+import { parseDirectMatchRoute } from "@/lib/match-links";
 
 function Router() {
   const [location] = useLocation();
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const directMatchId = location.match(/^\/match([A-Za-z0-9]+)$/)?.[1] ?? null;
-  const legacyShareId = location.match(/^\/join\/([A-Za-z0-9]{6})$/)?.[1] ?? null;
+  const { matchId: directMatchId, legacyShareId } = parseDirectMatchRoute(location);
 
   // Check session on app load
   useEffect(() => {

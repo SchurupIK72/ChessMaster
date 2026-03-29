@@ -20,8 +20,8 @@
 | д | Финализация и merge | `merge-helper` | Не начат |
 
 ### Текущий статус
-- Текущий шаг: `б` - завершен этап 4 Share Flow & Backward Compatibility.
-- Следующий шаг: `в` - этап 5 Tests.
+- Текущий шаг: `в` - этап 5 Tests завершен, pytest green.
+- Следующий шаг: `г` - GUI и smoke testing.
 
 ---
 
@@ -272,15 +272,15 @@
 - Legacy поведение либо совместимо, либо явно деактивировано без двусмысленности.
 
 ### Этап 5: Tests (~120-220 строк)
-**Статус:** Не начат
+**Статус:** Завершён
 
 **Цель:** закрыть новую логику regression-тестами.
 
 **Задачи:**
-- [ ] Написать tests на создание уникального `matchId`.
-- [ ] Написать tests на direct open по `/match{matchId}`.
-- [ ] Написать tests на `white`, `black`, `spectator` role resolution.
-- [ ] Написать tests на spectator restrictions и visibility behavior.
+- [x] Написать tests на создание уникального `matchId`.
+- [x] Написать tests на direct open по `/match{matchId}`.
+- [x] Написать tests на `white`, `black`, `spectator` role resolution.
+- [x] Написать tests на spectator restrictions и visibility behavior.
 
 **Файлы:**
 - `package.json`
@@ -363,6 +363,8 @@
 | 2026-03-29 | 2 | c2b5b0e | Реализованы server-side viewerRole, reconnect игрока по ссылке и spectator role resolution |
 | 2026-03-29 | 3 | - | Реализованы spectator UI guards, read-only controls и полная visibility для spectator режима |
 | 2026-03-29 | 4 | - | Match link сделан primary invite flow, а legacy shareId оформлен как временно совместимый alias |
+| 2026-03-29 | 5 | - | Добавлены pytest-тесты на matchId helpers, direct route parsing, viewer roles и participant guards |
+
 
 
 
