@@ -3,6 +3,7 @@ import session from "express-session";
 import memorystore from "memorystore";
 import { registerRoutes } from "./routes";
 import { sessionCookieOptions } from "./session";
+import { ensureDatabaseCompatibility } from "./startup-migrations";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -55,6 +56,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  await ensureDatabaseCompatibility();
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
