@@ -806,9 +806,9 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
   });
 
   // Update game status mutation
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ status, winner }: { status: string; winner?: string }) => {
-      const response = await apiRequest("PATCH", `/api/games/${gameId}/status`, { status, winner });
+  const resignMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/games/${gameId}/resign`, {});
       return response.json();
     },
     onSuccess: () => {
@@ -902,10 +902,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     
     // Check for checkmate
     if (gameState.isCheckmate) {
-      const winner = gameState.currentTurn === 'white' ? 'black' : 'white';
       setShowGameOverModal(true);
       setGameOverShown(true);
-      updateStatusMutation.mutate({ status: 'completed', winner });
       return;
     }
     
@@ -913,12 +911,11 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     if (gameState.isStalemate) {
       setShowGameOverModal(true);
       setGameOverShown(true);
-      updateStatusMutation.mutate({ status: 'draw' });
       return;
     }
     
     // Check if game is already completed
-    if (game.status === 'completed' || game.status === 'draw' || game.status === 'timeout') {
+    if (game.status === 'completed' || game.status === 'draw' || game.status === 'timeout' || game.status === 'resigned') {
       setShowGameOverModal(true);
     }
   }, [game]);
@@ -1333,7 +1330,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     const playerColor = getCurrentPlayerColor();
     const resigningColor = playerColor ?? game.currentTurn;
     const winner = resigningColor === 'white' ? 'black' : 'white';
-    updateStatusMutation.mutate({ status: 'completed', winner });
+    resignMutation.mutate();
     setShowGameOverModal(true);
     setShowResignConfirm(false);
     toast({
@@ -1415,7 +1412,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
       };
     }
     
-    if (game.status === 'completed' && game.winner) {
+    if (game.status === 'resigned' && game.winner) {
       return {
         result: 'resignation' as const,
         winner: game.winner as 'white' | 'black'

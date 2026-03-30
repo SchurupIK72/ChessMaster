@@ -2839,8 +2839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update game status (resign, draw, etc.)
-  app.patch("/api/games/:id/status", async (req, res) => {
+  app.post("/api/games/:id/resign", async (req, res) => {
     try {
       const gameId = parseInt(req.params.id);
       const context = await requireGameParticipant(req, res, gameId);
@@ -2849,15 +2848,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (syncedGame.status === "timeout") {
         return res.status(409).json({ message: "Time expired" });
       }
-      const { status, winner } = gameStatusRequestSchema.parse(req.body);
-      let pausedClockState: ClockState | null = null;
-      if (isTerminalStatus(status)) {
-        pausedClockState = pauseClock(syncedGame.clockState as ClockState, new Date());
-        await storage.updateGameClockState(gameId, pausedClockState);
+      if (isTerminalStatus(syncedGame.status)) {
+        return res.status(400).json({ message: "Game is already finished" });
       }
-      const game = await storage.updateGameStatus(gameId, status, winner);
-  broadcast(gameId, 'status', { type: 'status', gameId, status: game.status, winner: game.winner });
-      res.json(pausedClockState ? { ...game, clockState: pausedClockState } : game);
+
+      const winner = context.role === "white" ? "black" : "white";
+      const pausedClockState = pauseClock(syncedGame.clockState as ClockState, new Date());
+      await storage.updateGameClockState(gameId, pausedClockState);
+
+      const game = await storage.updateGameStatus(gameId, "resigned", winner);
+      broadcast(gameId, 'status', { type: 'status', gameId, status: game.status, winner: game.winner });
+      res.json({ ...game, clockState: pausedClockState });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Legacy status endpoint is intentionally closed: use explicit server-owned flows.
+  app.patch("/api/games/:id/status", async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      const context = await requireGameParticipant(req, res, gameId);
+      if (!context) return;
+      return res.status(403).json({ message: "Direct status updates are disabled. Use move, draw, timeout, or resign flows." });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
