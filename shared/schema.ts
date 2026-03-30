@@ -84,6 +84,69 @@ export const insertMoveSchema = createInsertSchema(moves).pick({
   clockState: true,
 });
 
+const publicGameRuleValues = [
+  "standard",
+  "double-knight",
+  "pawn-rotation",
+  "xray-bishop",
+  "pawn-wall",
+  "blink",
+  "fog-of-war",
+  "meteor-shower",
+  "fischer-random",
+  "void",
+] as const;
+
+const boardSquareSchema = z.string().regex(/^[a-h][1-8]$/i);
+
+export const registerRequestSchema = z.object({
+  username: z.string().min(2).max(50),
+  password: z.string().min(6).regex(/^[a-zA-Z0-9]+$/),
+  email: z.string().email(),
+  phone: z.string().min(10).max(20),
+}).strict();
+
+export const loginRequestSchema = z.object({
+  username: z.string().min(2),
+  password: z.string().min(1),
+}).strict();
+
+export const createGameRequestSchema = z.object({
+  rules: z.array(z.enum(publicGameRuleValues)).min(1).default(["standard"]),
+  timeControlSeconds: z.number().int().positive().optional().default(300),
+}).strict();
+
+export const joinGameRequestSchema = z.object({
+  shareId: z.string().min(1).max(64),
+}).strict();
+
+export const moveRequestSchema = z.object({
+  moveNumber: z.number().int().positive(),
+  player: z.enum(["white", "black"]),
+  from: boardSquareSchema,
+  to: boardSquareSchema,
+  piece: z.string().min(2),
+  captured: z.string().optional(),
+  fen: z.string().min(1),
+  boardId: z.union([z.literal(0), z.literal(1)]).optional(),
+  voidTransfer: z.object({
+    fromBoardId: z.union([z.literal(0), z.literal(1)]),
+    fromSquare: boardSquareSchema,
+    toBoardId: z.union([z.literal(0), z.literal(1)]),
+    toSquare: boardSquareSchema,
+    promoted: z.enum(["queen", "rook", "bishop", "knight"]).optional(),
+  }).optional(),
+}).strict();
+
+export const offerDrawRequestSchema = z.object({
+  player: z.enum(["white", "black"]),
+}).strict();
+
+export const gameStatusRequestSchema = z.object({
+  status: z.enum(["completed", "draw"]),
+  winner: z.enum(["white", "black", "draw"]).optional(),
+}).strict();
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertGame = z.infer<typeof insertGameSchema>;

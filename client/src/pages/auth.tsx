@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { insertUserSchema } from "@shared/schema";
+import { loginRequestSchema, registerRequestSchema } from "@shared/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,8 @@ const loginSchema = z.object({
   password: z.string().min(1, "Пароль обязателен"),
 });
 
-type LoginForm = z.infer<typeof loginSchema>;
-type RegisterForm = z.infer<typeof insertUserSchema>;
+type LoginForm = z.infer<typeof loginRequestSchema>;
+type RegisterForm = z.infer<typeof registerRequestSchema>;
 
 interface AuthPageProps {
   onSuccess: () => void;
@@ -29,7 +29,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
   const { toast } = useToast();
 
   const loginForm = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(loginRequestSchema),
     defaultValues: {
       username: "",
       password: "",
@@ -37,7 +37,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
   });
 
   const registerForm = useForm<RegisterForm>({
-    resolver: zodResolver(insertUserSchema),
+    resolver: zodResolver(registerRequestSchema),
     defaultValues: {
       username: "",
       password: "",

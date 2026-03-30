@@ -1,7 +1,15 @@
 import type { Express, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGameSchema, insertMoveSchema, insertUserSchema } from "@shared/schema";
+import {
+  createGameRequestSchema,
+  gameStatusRequestSchema,
+  joinGameRequestSchema,
+  loginRequestSchema,
+  moveRequestSchema,
+  offerDrawRequestSchema,
+  registerRequestSchema,
+} from "@shared/schema";
 import { z } from "zod";
 import { ChessGameState, ClockState, Game, ChessPiece } from "@shared/schema";
 import { generateFischerBackRankFromSeed } from "./chess960";
@@ -1765,7 +1773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await requireCurrentUser(req, res);
       if (!user) return;
 
-      const gameData = insertGameSchema.parse(req.body);
+      const gameData = createGameRequestSchema.parse(req.body);
       const matchId = await generateUniqueMatchId((candidate) => storage.getGameByMatchId(candidate));
 
       const gameWithPlayer = {
@@ -1830,11 +1838,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await requireCurrentUser(req, res);
       if (!user) return;
 
-      const { shareId } = req.body;
-      
-      if (!shareId) {
-        return res.status(400).json({ message: "shareId is required" });
-      }
+      const { shareId } = joinGameRequestSchema.parse(req.body);
 
       const normalizedShareId = String(shareId).toUpperCase();
       const existingGame = await storage.getGameByShareId(normalizedShareId);
@@ -1900,10 +1904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only the current player can make a move" });
       }
 
-      const moveData = insertMoveSchema.parse({
-        ...req.body,
-        gameId,
-      });
+      const moveData = moveRequestSchema.parse(req.body);
 
       // Update the board state by making the move
       let gameState = currentGame.gameState as any;
@@ -2756,7 +2757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (syncedGame.status === "timeout") {
         return res.status(409).json({ message: "Time expired" });
       }
-      const { status, winner } = req.body;
+      const { status, winner } = gameStatusRequestSchema.parse(req.body);
       let pausedClockState: ClockState | null = null;
       if (isTerminalStatus(status)) {
         pausedClockState = pauseClock(syncedGame.clockState as ClockState, new Date());
@@ -2776,9 +2777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gameId = parseInt(req.params.id);
       const context = await requireGameParticipant(req, res, gameId);
       if (!context) return;
-      const { capturedPieces } = req.body;
-      const game = await storage.updateCapturedPieces(gameId, capturedPieces);
-      res.json(game);
+      res.status(403).json({ message: "Captured pieces are derived state managed by the server" });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -2787,7 +2786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.post('/api/auth/register', async (req, res) => {
     try {
-      const validatedData = insertUserSchema.parse(req.body);
+      const validatedData = registerRequestSchema.parse(req.body);
       
       // Check if username already exists
       const existingUser = await storage.getUserByUsername(validatedData.username);
@@ -2836,7 +2835,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/login', async (req, res) => {
     try {
-      const { username, password } = req.body;
+      const { username, password } = loginRequestSchema.parse(req.body);
       
       if (!username || !password) {
         return res.status(400).json({ message: 'Никнейм и пароль обязательны' });
@@ -2999,11 +2998,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Game is already finished" });
       }
       const { role } = context;
-      const { player } = req.body;
-      
-      if (!player || !['white', 'black'].includes(player)) {
-        return res.status(400).json({ message: "Invalid player" });
-      }
+      const { player } = offerDrawRequestSchema.parse(req.body);
 
       if (player !== role) {
         return res.status(403).json({ message: "You can only offer a draw for your own side" });
