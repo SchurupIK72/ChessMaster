@@ -1767,6 +1767,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Math.floor(Math.random() * 9000000000 + 1000000000).toString();
   }
 
+  function serializeBoardFen(state: ChessGameState): string {
+    const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
+    const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
+    const boardRows = ranks.map((rank) => {
+      let emptyCount = 0;
+      let row = "";
+      for (const file of files) {
+        const piece = state.board[`${file}${rank}`];
+        if (!piece) {
+          emptyCount++;
+          continue;
+        }
+        if (emptyCount > 0) {
+          row += emptyCount;
+          emptyCount = 0;
+        }
+        const symbolMap: Record<ChessPiece["type"], string> = {
+          king: "k",
+          queen: "q",
+          rook: "r",
+          bishop: "b",
+          knight: "n",
+          pawn: "p",
+        };
+        const symbol = symbolMap[piece.type];
+        row += piece.color === "white" ? symbol.toUpperCase() : symbol;
+      }
+      return emptyCount > 0 ? `${row}${emptyCount}` : row;
+    });
+
+    const castling = [
+      state.castlingRights.whiteKingside ? "K" : "",
+      state.castlingRights.whiteQueenside ? "Q" : "",
+      state.castlingRights.blackKingside ? "k" : "",
+      state.castlingRights.blackQueenside ? "q" : "",
+    ].join("") || "-";
+
+    return `${boardRows.join("/")} ${state.currentTurn === "white" ? "w" : "b"} ${castling} ${state.enPassantTarget ?? "-"} ${state.halfmoveClock} ${state.fullmoveNumber}`;
+  }
+
+  function serializeGameSnapshot(gameState: ChessGameState): string {
+    if (gameState.voidMode && Array.isArray(gameState.voidBoards)) {
+      const boardSnapshots = gameState.voidBoards.map((board) => serializeBoardFen(board));
+      return `void:${boardSnapshots.join("|")};turn=${gameState.currentTurn}`;
+    }
+
+    return serializeBoardFen(gameState);
+  }
+
   // Create a new game
   app.post("/api/games", async (req, res) => {
     try {
@@ -1905,6 +1954,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const moveData = moveRequestSchema.parse(req.body);
+      const existingMoves = await storage.getGameMoves(gameId);
+      const nextMoveNumber = Math.floor(existingMoves.length / 2) + 1;
 
       // Update the board state by making the move
       let gameState = currentGame.gameState as any;
@@ -1916,7 +1967,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const color = currentGame.currentTurn as 'white' | 'black';
-        const body: any = (req as any).body || {};
         const broadcastAndReturn = async (saved: any) => {
           broadcast(gameId, 'move', { type: 'move', gameId, move: saved });
           return res.json(saved);
@@ -1958,8 +2008,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
 
         // Transfer token usage
-        if (body.voidTransfer) {
-          const { fromBoardId, fromSquare, toBoardId, toSquare, promoted } = body.voidTransfer as { fromBoardId: 0|1; fromSquare: string; toBoardId: 0|1; toSquare: string; promoted?: 'queen'|'rook'|'bishop'|'knight' };
+        if (moveData.voidTransfer) {
+          const { fromBoardId, fromSquare, toBoardId, toSquare, promoted } = moveData.voidTransfer;
           if (fromBoardId === toBoardId) return res.status(400).json({ message: 'Transfer must be between different boards' });
           if (!gameState.voidMeta) gameState.voidMeta = { pending: null, tokens: { white: 0, black: 0 }, playerTurnCount: { white: 0, black: 0 } };
           const tokens = gameState.voidMeta.tokens?.[color] ?? 0;
@@ -2019,21 +2069,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const saved = await storage.addMove({
             gameId,
-            moveNumber: moveData.moveNumber,
+            moveNumber: nextMoveNumber,
             player: color,
             from: fromSquare,
             to: toSquare,
             piece: `${piece.color}-${finalType}`,
             captured: undefined,
             special: `void-transfer:${fromBoardId}->${toBoardId}`,
-            fen: moveData.fen,
+            fen: serializeGameSnapshot(gameState as ChessGameState),
             clockState: moveClockState,
           } as any);
           return broadcastAndReturn(saved);
         }
 
         // Sub-move on a board
-        const boardId = body.boardId as 0|1;
+        const boardId = moveData.boardId as 0|1;
         if (boardId !== 0 && boardId !== 1) return res.status(400).json({ message: 'boardId is required in Void mode' });
         const active = gameState.voidBoards[boardId];
         // If a second sub-move is attempted on the same board, normally reject; but allow when Double-Knight requires a second move with the same knight on this board.
@@ -2182,6 +2232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
+        let finalPieceType = piece.type;
         if (piece && piece.type === 'pawn') {
           const fromRank = parseInt(moveData.from[1]);
           const toRank = parseInt(moveData.to[1]);
@@ -2215,7 +2266,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           const shouldPromote = (piece.color === 'white' && toRank === 8) || (piece.color === 'black' && toRank === 1);
           if (shouldPromote) {
-            const [_, promotedPieceType] = moveData.piece.split('-');
+            const promotedPieceType = moveData.promotion || 'queen';
+            finalPieceType = promotedPieceType;
             active.board[moveData.to] = { type: promotedPieceType as any, color: piece.color };
           }
         }
@@ -2296,12 +2348,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const moveClockState = startClock(clockStateBeforeMove, nextActiveColor, new Date());
         await storage.updateGameState(gameId, gameState);
         await storage.updateGameClockState(gameId, moveClockState);
-        const saved = await storage.addMove({ ...moveData, captured: serverCaptured, special: `void:board=${boardId}`, clockState: moveClockState } as any);
+        const saved = await storage.addMove({
+          gameId,
+          moveNumber: nextMoveNumber,
+          player: color,
+          from: moveData.from,
+          to: moveData.to,
+          piece: `${piece.color}-${finalPieceType}`,
+          captured: serverCaptured,
+          special: `void:board=${boardId}`,
+          fen: serializeGameSnapshot(gameState as ChessGameState),
+          clockState: moveClockState,
+        } as any);
         return broadcastAndReturn(saved);
       }
   const piece = gameState.board[moveData.from];
   const targetPiece = gameState.board[moveData.to];
   let serverCaptured: string | undefined = undefined; // authoritative captured field computed on server
+  let wasEnPassant = false;
       
       // Basic validation: cannot capture own pieces, except for Chess960 castling where king may not move (from==to)
       if (piece && targetPiece && piece.color === targetPiece.color) {
@@ -2361,6 +2425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log('Vertical en passant - removing pawn from:', captureSquare);
           const cap = gameState.board[captureSquare];
           if (cap) serverCaptured = `${cap.color}-${cap.type}`;
+          wasEnPassant = true;
           delete gameState.board[captureSquare]; // Remove the captured pawn
         } else {
           // Horizontal en passant (PawnRotation mode)
@@ -2388,6 +2453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log('Horizontal en passant - removing pawn from:', captureSquare);
             const cap = gameState.board[captureSquare];
             if (cap) serverCaptured = `${cap.color}-${cap.type}`;
+            wasEnPassant = true;
             delete gameState.board[captureSquare]; // Remove the captured pawn
           } else {
             console.log('Warning: No adjacent pawn found for horizontal en passant');
@@ -2528,6 +2594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check for pawn moves (set en passant target and track horizontal moves)
+      let finalPieceType = piece.type;
       if (piece && piece.type === 'pawn') {
         const fromRank = parseInt(moveData.from[1]);
         const toRank = parseInt(moveData.to[1]);
@@ -2589,8 +2656,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                              (piece.color === 'black' && toRank === 1);
         
         if (shouldPromote) {
-          // Extract piece type from moveData.piece (format: "color-pieceType")
-          const [_, promotedPieceType] = moveData.piece.split('-');
+          const promotedPieceType = moveData.promotion || 'queen';
+          finalPieceType = promotedPieceType;
           gameState.board[moveData.to] = {
             type: promotedPieceType as any,
             color: piece.color
@@ -2599,7 +2666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Update move counters
-      if (piece?.type === 'pawn' || moveData.captured) {
+      if (piece?.type === 'pawn' || serverCaptured) {
         gameState.halfmoveClock = 0; // Reset on pawn move or capture
       } else {
         gameState.halfmoveClock++;
@@ -2660,19 +2727,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (moveClockState) {
         await storage.updateGameClockState(gameId, moveClockState);
       }
+      if (gameState.isCheckmate) {
+        await storage.updateGameStatus(gameId, "completed", piece.color);
+      } else if (gameState.isStalemate) {
+        await storage.updateGameStatus(gameId, "draw", "draw");
+      }
       
       // Add the move to history
       // DoubleKnight: если это второй ход конём подряд, то оба хода должны быть отдельными объектами
       // Проверяем, не был ли предыдущий ход тем же игроком и конём
   let shouldAddMove = true;
+      const savedPiece = `${piece.color}-${finalPieceType}`;
+      const savedSpecial = isCastling
+        ? "castling"
+        : wasEnPassant
+          ? "en_passant"
+          : isBlinkTeleport
+            ? "blink"
+            : finalPieceType !== piece.type
+              ? "promotion"
+              : undefined;
       if (Array.isArray(game.rules) && game.rules.includes('double-knight')) {
-        const lastMoves = await storage.getGameMoves(gameId);
-        const lastMove = lastMoves.length > 0 ? lastMoves[lastMoves.length - 1] : null;
+        const lastMove = existingMoves.length > 0 ? existingMoves[existingMoves.length - 1] : null;
         if (
           lastMove &&
-          lastMove.player === moveData.player &&
+          lastMove.player === piece.color &&
           lastMove.piece?.includes('knight') &&
-          moveData.piece?.includes('knight') &&
+          savedPiece.includes('knight') &&
           gameState.doubleKnightMove &&
           lastMove.to === gameState.doubleKnightMove.knightSquare
         ) {
@@ -2681,7 +2762,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       if (shouldAddMove) {
-        const moveToSave = { ...moveData, captured: serverCaptured, clockState: moveClockState ?? undefined };
+        const moveToSave = {
+          gameId,
+          moveNumber: nextMoveNumber,
+          player: piece.color,
+          from: moveData.from,
+          to: moveData.to,
+          piece: savedPiece,
+          captured: serverCaptured,
+          special: savedSpecial,
+          fen: serializeGameSnapshot(gameState as ChessGameState),
+          clockState: moveClockState ?? undefined,
+        };
         await storage.addMove(moveToSave as any);
       }
   // Возвращаем весь массив ходов, чтобы клиент всегда получал актуальную историю

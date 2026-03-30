@@ -426,17 +426,13 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
 
   // Make move mutation
   const makeMoveMutation = useMutation({
-    mutationFn: async ({ from, to, piece, captured, boardId, voidTransfer, promoted }: { from: string; to: string; piece: string; captured?: string; boardId?: 0|1; voidTransfer?: any; promoted?: 'queen'|'rook'|'bishop'|'knight' }) => {
+    mutationFn: async ({ from, to, boardId, voidTransfer, promoted, promotion }: { from: string; to: string; piece?: string; captured?: string; boardId?: 0|1; voidTransfer?: any; promoted?: 'queen'|'rook'|'bishop'|'knight'; promotion?: 'queen'|'rook'|'bishop'|'knight' }) => {
       if (!game) throw new Error("No active game");
       const payload: any = {
-        moveNumber: Math.floor(moves.length / 2) + 1,
-        player: game.currentTurn,
         from,
         to,
-        piece,
-        captured,
-        fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // This would be calculated properly
       };
+      if (promotion) payload.promotion = promotion;
       if (typeof boardId !== 'undefined') payload.boardId = boardId;
       if (voidTransfer) payload.voidTransfer = { ...voidTransfer, promoted };
       const response = await apiRequest("POST", `/api/games/${gameId}/moves`, payload);
@@ -1471,8 +1467,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     makeMoveMutation.mutate({
       from: promotionMove.from,
       to: promotionMove.to,
-      piece: `${promotionMove.piece.color}-${pieceType}`,
-      captured,
+      promotion: pieceType,
       boardId: typeof voidBoardId !== 'undefined' ? voidBoardId : undefined,
     });
     (window as any).__voidPromotionBoardId = undefined;

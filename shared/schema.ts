@@ -120,21 +120,19 @@ export const joinGameRequestSchema = z.object({
   shareId: z.string().min(1).max(64),
 }).strict();
 
+const promotionPieceSchema = z.enum(["queen", "rook", "bishop", "knight"]);
+
 export const moveRequestSchema = z.object({
-  moveNumber: z.number().int().positive(),
-  player: z.enum(["white", "black"]),
   from: boardSquareSchema,
   to: boardSquareSchema,
-  piece: z.string().min(2),
-  captured: z.string().optional(),
-  fen: z.string().min(1),
+  promotion: promotionPieceSchema.optional(),
   boardId: z.union([z.literal(0), z.literal(1)]).optional(),
   voidTransfer: z.object({
     fromBoardId: z.union([z.literal(0), z.literal(1)]),
     fromSquare: boardSquareSchema,
     toBoardId: z.union([z.literal(0), z.literal(1)]),
     toSquare: boardSquareSchema,
-    promoted: z.enum(["queen", "rook", "bishop", "knight"]).optional(),
+    promoted: promotionPieceSchema.optional(),
   }).optional(),
 }).strict();
 
