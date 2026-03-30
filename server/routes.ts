@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertGameSchema, insertMoveSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
-import { ChessGameState, Game, ChessPiece } from "@shared/schema";
+import { ChessGameState, ClockState, Game, ChessPiece } from "@shared/schema";
 import { generateFischerBackRankFromSeed } from "./chess960";
 import bcrypt from "bcryptjs";
 import { GameRole, generateUniqueMatchId, getGameRole, isParticipantRole, resolveViewerRole } from "./match-access";
@@ -897,10 +897,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return resolveViewerRole(getSessionUserId(req), game);
   }
 
-  function serializeGameForViewer(req: any, game: Game) {
+  const terminalStatuses = new Set(["completed", "draw", "resigned", "timeout"]);
+
+  function isVoidTimerGame(game: Game) {
+    return Array.isArray(game.rules) && game.rules.includes("void");
+  }
+
+  function isTerminalStatus(status: string) {
+    return terminalStatuses.has(status);
+  }
+
+  function getInitialClockState(game: Game): ClockState {
+    const initialMs = game.timeControlSeconds * 1000;
     return {
-      ...game,
-      viewerRole: getViewerRole(req, game),
+      whiteRemainingMs: initialMs,
+      blackRemainingMs: initialMs,
+      activeColor: null,
+      lastUpdatedAt: null,
+      isPaused: true,
+    };
+  }
+
+  function normalizeClockState(game: Game): ClockState {
+    const clockState = game.clockState ?? getInitialClockState(game);
+    return {
+      whiteRemainingMs: Math.max(clockState.whiteRemainingMs ?? 0, 0),
+      blackRemainingMs: Math.max(clockState.blackRemainingMs ?? 0, 0),
+      activeColor: clockState.activeColor ?? null,
+      lastUpdatedAt: clockState.lastUpdatedAt ?? null,
+      isPaused: clockState.isPaused ?? true,
+    };
+  }
+
+  function getRemainingMs(clockState: ClockState, color: "white" | "black") {
+    return color === "white" ? clockState.whiteRemainingMs : clockState.blackRemainingMs;
+  }
+
+  function pauseClock(clockState: ClockState, now: Date) {
+    return {
+      ...clockState,
+      activeColor: null,
+      lastUpdatedAt: now.toISOString(),
+      isPaused: true,
+    } satisfies ClockState;
+  }
+
+  function startClock(clockState: ClockState, activeColor: "white" | "black", now: Date) {
+    return {
+      ...clockState,
+      activeColor,
+      lastUpdatedAt: now.toISOString(),
+      isPaused: false,
+    } satisfies ClockState;
+  }
+
+  function getEffectiveClockState(game: Game, now = new Date()): ClockState {
+    const clockState = normalizeClockState(game);
+    if (clockState.isPaused || !clockState.activeColor || !clockState.lastUpdatedAt) {
+      return clockState;
+    }
+
+    const elapsedMs = Math.max(0, now.getTime() - new Date(clockState.lastUpdatedAt).getTime());
+    if (!Number.isFinite(elapsedMs)) {
+      return clockState;
+    }
+
+    const activeKey = clockState.activeColor === "white" ? "whiteRemainingMs" : "blackRemainingMs";
+    return {
+      ...clockState,
+      [activeKey]: Math.max(clockState[activeKey] - elapsedMs, 0),
+    };
+  }
+
+  async function syncGameClockState(game: Game, now = new Date()) {
+    const effectiveClockState = getEffectiveClockState(game, now);
+    if (
+      game.status === "active" &&
+      effectiveClockState.isPaused &&
+      effectiveClockState.activeColor === null &&
+      !game.gameState?.isCheckmate &&
+      !game.gameState?.isStalemate
+    ) {
+      const restartedClockState = startClock(effectiveClockState, game.currentTurn as "white" | "black", now);
+      const updatedGame = await storage.updateGameClockState(game.id, restartedClockState);
+      return { ...updatedGame, clockState: restartedClockState };
+    }
+
+    if (!effectiveClockState.isPaused && effectiveClockState.activeColor) {
+      const expiredColor = effectiveClockState.activeColor;
+      if (getRemainingMs(effectiveClockState, expiredColor) <= 0) {
+        const timedOutClockState = pauseClock(
+          {
+            ...effectiveClockState,
+            [expiredColor === "white" ? "whiteRemainingMs" : "blackRemainingMs"]: 0,
+          },
+          now,
+        );
+        await storage.updateGameClockState(game.id, timedOutClockState);
+        const winner = expiredColor === "white" ? "black" : "white";
+        const timedOutGame = await storage.updateGameStatus(game.id, "timeout", winner);
+        broadcast(game.id, "status", { type: "status", gameId: game.id, status: "timeout", winner });
+        return { ...timedOutGame, clockState: timedOutClockState };
+      }
+    }
+
+    if (isTerminalStatus(game.status) && (!effectiveClockState.isPaused || effectiveClockState.activeColor !== null)) {
+      const pausedClockState = pauseClock(effectiveClockState, now);
+      const updatedGame = await storage.updateGameClockState(game.id, pausedClockState);
+      return { ...updatedGame, clockState: pausedClockState };
+    }
+
+    return { ...game, clockState: effectiveClockState };
+  }
+
+  async function serializeGameForViewer(req: any, game: Game) {
+    const syncedGame = await syncGameClockState(game);
+    return {
+      ...syncedGame,
+      viewerRole: getViewerRole(req, syncedGame),
     };
   }
 
@@ -1663,7 +1777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const game = await storage.createGame(gameWithPlayer);
-      res.json(serializeGameForViewer(req, game));
+      res.json(await serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1677,7 +1791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!game) {
         return res.status(404).json({ message: "Game not found" });
       }
-      res.json(serializeGameForViewer(req, game));
+      res.json(await serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1690,7 +1804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!game) {
         return res.status(404).json({ message: "Game not found" });
       }
-      res.json(serializeGameForViewer(req, game));
+      res.json(await serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1704,7 +1818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!game) {
         return res.status(404).json({ message: "Game not found" });
       }
-      res.json(serializeGameForViewer(req, game));
+      res.json(await serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1730,11 +1844,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const existingRole = getGameRole(existingGame, user.id);
       if (existingRole !== "spectator") {
-        return res.json(serializeGameForViewer(req, existingGame));
+        return res.json(await serializeGameForViewer(req, existingGame));
       }
 
       const game = await storage.joinGame(normalizedShareId, user.id);
-      res.json(serializeGameForViewer(req, game));
+      res.json(await serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1753,11 +1867,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const existingRole = getGameRole(existingGame, user.id);
       if (existingRole !== "spectator") {
-        return res.json(serializeGameForViewer(req, existingGame));
+        return res.json(await serializeGameForViewer(req, existingGame));
       }
 
       const game = await storage.joinGame(shareId, user.id);
-      res.json(serializeGameForViewer(req, game));
+      res.json(await serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -1771,7 +1885,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!context) return;
 
       const { game, role } = context;
-      if (role !== game.currentTurn) {
+      const isVoid = isVoidTimerGame(game);
+      const currentGame = await syncGameClockState(game);
+      if (currentGame.status === "timeout") {
+        return res.status(409).json({ message: "Time expired" });
+      }
+      if (isTerminalStatus(currentGame.status)) {
+        return res.status(400).json({ message: "Game is already finished" });
+      }
+      if (currentGame.status !== "active") {
+        return res.status(400).json({ message: "Game is not active" });
+      }
+      if (role !== currentGame.currentTurn) {
         return res.status(403).json({ message: "Only the current player can make a move" });
       }
 
@@ -1781,15 +1906,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Update the board state by making the move
-      let gameState = game.gameState as any;
-      const isVoid = Array.isArray(game.rules) && (game.rules as any).includes('void');
+      let gameState = currentGame.gameState as any;
+      const clockStateBeforeMove = currentGame.clockState as ClockState;
       if (isVoid) {
         // Void mode: handle transfer or sub-move on a specific board, then return
         if (!gameState.voidMode || !gameState.voidBoards) {
           return res.status(400).json({ message: 'Void mode not initialized' });
         }
 
-        const color = game.currentTurn as 'white' | 'black';
+        const color = currentGame.currentTurn as 'white' | 'black';
         const body: any = (req as any).body || {};
         const broadcastAndReturn = async (saved: any) => {
           broadcast(gameId, 'move', { type: 'move', gameId, move: saved });
@@ -1828,6 +1953,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           gameState.currentTurn = nextTurn;
           await storage.updateGameTurn(gameId, nextTurn);
+          return nextTurn;
         };
 
         // Transfer token usage
@@ -1885,8 +2011,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Important: finalize full turn first so per-board currentTurn and flags are updated,
           // then persist the full updated gameState (so isCheck/isCheckmate/isStalemate are saved correctly)
-          await finalizeVoidTurn();
+          const nextTurn = await finalizeVoidTurn();
+          const moveClockState = startClock(clockStateBeforeMove, nextTurn, new Date());
           await storage.updateGameState(gameId, gameState);
+          await storage.updateGameClockState(gameId, moveClockState);
 
           const saved = await storage.addMove({
             gameId,
@@ -1898,6 +2026,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             captured: undefined,
             special: `void-transfer:${fromBoardId}->${toBoardId}`,
             fen: moveData.fen,
+            clockState: moveClockState,
           } as any);
           return broadcastAndReturn(saved);
         }
@@ -2099,6 +2228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Pending management with Double-Knight awareness
         if (!gameState.voidMeta) gameState.voidMeta = { pending: null, tokens: { white: 0, black: 0 }, playerTurnCount: { white: 0, black: 0 } };
         const dkAfter = (gameState.voidBoards[boardId] as any).doubleKnightMove as undefined | { knightSquare: string; color: 'white'|'black' };
+        let nextActiveColor: 'white' | 'black' = color;
         if (!gameState.voidMeta.pending) {
           // First sub-move just made on boardId
           const otherId = (boardId === 0 ? 1 : 0) as 0|1;
@@ -2110,7 +2240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else if (!otherHasMoves) {
             // No moves on the other board: auto-finish turn
             gameState.voidMeta.pending = null;
-            await finalizeVoidTurn();
+            nextActiveColor = await finalizeVoidTurn();
           } else {
             gameState.voidMeta.pending = { color, movedBoards: [boardId] };
           }
@@ -2130,7 +2260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             // Finish the full turn
             gameState.voidMeta.pending = null;
-            await finalizeVoidTurn();
+            nextActiveColor = await finalizeVoidTurn();
           }
         } else if (gameState.voidMeta.pending.color === color && gameState.voidMeta.pending.movedBoards.includes(boardId)) {
           // Same-board second sub-move: permitted ONLY if this is the DK second hop; do not finalize yet—require the other board
@@ -2146,7 +2276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (startedAsSecond) {
               // DK started on second sub-move; DK completion ends the full turn immediately
               gameState.voidMeta.pending = null;
-              await finalizeVoidTurn();
+              nextActiveColor = await finalizeVoidTurn();
             } else {
               if (otherHasMoves) {
                 // Keep pending and require a move on the other board to complete the full turn
@@ -2154,7 +2284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               } else {
                 // Other board has no moves; after finishing DK sequence, finalize
                 gameState.voidMeta.pending = null;
-                await finalizeVoidTurn();
+                nextActiveColor = await finalizeVoidTurn();
               }
             }
           } else {
@@ -2162,8 +2292,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
+        const moveClockState = startClock(clockStateBeforeMove, nextActiveColor, new Date());
         await storage.updateGameState(gameId, gameState);
-        const saved = await storage.addMove({ ...moveData, captured: serverCaptured, special: `void:board=${boardId}` } as any);
+        await storage.updateGameClockState(gameId, moveClockState);
+        const saved = await storage.addMove({ ...moveData, captured: serverCaptured, special: `void:board=${boardId}`, clockState: moveClockState } as any);
         return broadcastAndReturn(saved);
       }
   const piece = gameState.board[moveData.from];
@@ -2482,12 +2614,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         nextTurn = gameState.currentTurn;
       } else {
         // Standard rules - toggle turn normally
-        nextTurn = game.currentTurn === 'white' ? 'black' : 'white';
+        nextTurn = currentGame.currentTurn === 'white' ? 'black' : 'white';
         gameState.currentTurn = nextTurn;
       }
 
   // End-of-turn bookkeeping: increment only when previous player was black AND turn handed to white
-  if (game.currentTurn === 'black' && nextTurn === 'white') {
+  if (currentGame.currentTurn === 'black' && nextTurn === 'white') {
         gameState.fullmoveNumber++;
         // Trigger meteor strike (if due) after a full move completes
         maybeTriggerMeteor(gameState, game.rules as any);
@@ -2512,12 +2644,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       gameState.isCheck = isCheck;
       gameState.isCheckmate = isCheck && !hasMovesAvailable;
       gameState.isStalemate = !isCheck && !hasMovesAvailable;
+
+      const moveClockState = clockStateBeforeMove
+        ? (gameState.isCheckmate || gameState.isStalemate
+            ? pauseClock(clockStateBeforeMove, new Date())
+            : startClock(clockStateBeforeMove, nextTurn, new Date()))
+        : null;
       
       // Update game state on server (includes the new turn)
       await storage.updateGameState(gameId, gameState);
       
       // Update current turn in database
       await storage.updateGameTurn(gameId, nextTurn);
+      if (moveClockState) {
+        await storage.updateGameClockState(gameId, moveClockState);
+      }
       
       // Add the move to history
       // DoubleKnight: если это второй ход конём подряд, то оба хода должны быть отдельными объектами
@@ -2539,7 +2680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       if (shouldAddMove) {
-        const moveToSave = { ...moveData, captured: serverCaptured };
+        const moveToSave = { ...moveData, captured: serverCaptured, clockState: moveClockState ?? undefined };
         await storage.addMove(moveToSave as any);
       }
   // Возвращаем весь массив ходов, чтобы клиент всегда получал актуальную историю
@@ -2570,6 +2711,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const context = await requireGameParticipant(req, res, gameId);
       if (!context) return;
       const { game } = context;
+      const currentGame = await syncGameClockState(game);
+      if (currentGame.status === "timeout") {
+        return res.status(409).json({ message: "Time expired" });
+      }
+      if (isTerminalStatus(currentGame.status)) {
+        return res.status(400).json({ message: "Game is already finished" });
+      }
 
       // delete last move
       const deleted = await storage.deleteLastMove(gameId);
@@ -2582,6 +2730,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update current turn explicitly from rebuilt
       await storage.updateGameTurn(gameId, rebuilt.currentTurn);
+      const now = new Date();
+      const latestClockSnapshot = remainingMoves[remainingMoves.length - 1]?.clockState as ClockState | undefined;
+      const restoredClockBase = latestClockSnapshot ?? getInitialClockState(currentGame);
+      const restoredClockState = currentGame.status === "active"
+        ? startClock(pauseClock(restoredClockBase, now), rebuilt.currentTurn, now)
+        : pauseClock(restoredClockBase, now);
+      await storage.updateGameClockState(gameId, restoredClockState);
 
   // Notify subscribers
   broadcast(gameId, 'undo', { type: 'undo', gameId });
@@ -2597,10 +2752,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gameId = parseInt(req.params.id);
       const context = await requireGameParticipant(req, res, gameId);
       if (!context) return;
+      const syncedGame = await syncGameClockState(context.game);
+      if (syncedGame.status === "timeout") {
+        return res.status(409).json({ message: "Time expired" });
+      }
       const { status, winner } = req.body;
+      let pausedClockState: ClockState | null = null;
+      if (isTerminalStatus(status)) {
+        pausedClockState = pauseClock(syncedGame.clockState as ClockState, new Date());
+        await storage.updateGameClockState(gameId, pausedClockState);
+      }
       const game = await storage.updateGameStatus(gameId, status, winner);
   broadcast(gameId, 'status', { type: 'status', gameId, status: game.status, winner: game.winner });
-      res.json(game);
+      res.json(pausedClockState ? { ...game, clockState: pausedClockState } : game);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -2827,7 +2991,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gameId = parseInt(req.params.id);
       const context = await requireGameParticipant(req, res, gameId);
       if (!context) return;
-      const { game, role } = context;
+      const syncedGame = await syncGameClockState(context.game);
+      if (syncedGame.status === "timeout") {
+        return res.status(409).json({ message: "Time expired" });
+      }
+      if (isTerminalStatus(syncedGame.status)) {
+        return res.status(400).json({ message: "Game is already finished" });
+      }
+      const { role } = context;
       const { player } = req.body;
       
       if (!player || !['white', 'black'].includes(player)) {
@@ -2839,7 +3010,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if draw already offered by this player
-      if (game.drawOfferedBy === player) {
+      if (syncedGame.drawOfferedBy === player) {
         return res.status(400).json({ message: "Draw already offered by this player" });
       }
       
@@ -2857,19 +3028,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gameId = parseInt(req.params.id);
       const context = await requireGameParticipant(req, res, gameId);
       if (!context) return;
-      const { game, role } = context;
+      const syncedGame = await syncGameClockState(context.game);
+      if (syncedGame.status === "timeout") {
+        return res.status(409).json({ message: "Time expired" });
+      }
+      if (isTerminalStatus(syncedGame.status)) {
+        return res.status(400).json({ message: "Game is already finished" });
+      }
+      const { role } = context;
       
-      if (!game.drawOfferedBy) {
+      if (!syncedGame.drawOfferedBy) {
         return res.status(400).json({ message: "No draw offer to accept" });
       }
 
-      if (game.drawOfferedBy === role) {
+      if (syncedGame.drawOfferedBy === role) {
         return res.status(403).json({ message: "You cannot accept your own draw offer" });
       }
-      
-  const updatedGame = await storage.acceptDraw(gameId);
-  broadcast(gameId, 'draw', { type: 'draw-accept', gameId });
-      res.json(updatedGame);
+
+      let pausedClockState: ClockState | null = null;
+      pausedClockState = pauseClock(syncedGame.clockState as ClockState, new Date());
+      await storage.updateGameClockState(gameId, pausedClockState);
+
+      const updatedGame = await storage.acceptDraw(gameId);
+      broadcast(gameId, 'draw', { type: 'draw-accept', gameId });
+      res.json(pausedClockState ? { ...updatedGame, clockState: pausedClockState } : updatedGame);
     } catch (error) {
       console.error('Error accepting draw:', error);
       res.status(500).json({ message: 'Ошибка принятия ничьей' });
@@ -2881,13 +3063,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gameId = parseInt(req.params.id);
       const context = await requireGameParticipant(req, res, gameId);
       if (!context) return;
-      const { game, role } = context;
+      const syncedGame = await syncGameClockState(context.game);
+      if (syncedGame.status === "timeout") {
+        return res.status(409).json({ message: "Time expired" });
+      }
+      if (isTerminalStatus(syncedGame.status)) {
+        return res.status(400).json({ message: "Game is already finished" });
+      }
+      const { role } = context;
       
-      if (!game.drawOfferedBy) {
+      if (!syncedGame.drawOfferedBy) {
         return res.status(400).json({ message: "No draw offer to decline" });
       }
 
-      if (game.drawOfferedBy === role) {
+      if (syncedGame.drawOfferedBy === role) {
         return res.status(403).json({ message: "You cannot decline your own draw offer" });
       }
       

@@ -4,11 +4,13 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import ChessBoard from "@/components/chess-board";
 import RuleSelectionModal from "@/components/rule-selection-modal";
+import TimeControlModal from "@/components/time-control-modal";
 import PawnPromotionModal from "@/components/pawn-promotion-modal";
 import GameOverModal from "@/components/game-over-modal";
 import GameTypeModal from "@/components/game-type-modal";
 import InviteModal from "@/components/invite-modal";
 import JoinGameModal from "@/components/join-game-modal";
+import GameClock from "@/components/game-clock";
 import GameStatus from "@/components/game-status";
 import MoveHistory from "@/components/move-history";
 import TransfersPanel, { type TransferEvent } from "@/components/transfers-panel";
@@ -25,9 +27,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ChessPiece, ChessGameState, GameRules, GameRulesArray, Game, Move } from "@shared/schema";
+import { ChessPiece, ChessGameState, ClockState, GameRules, GameRulesArray, Game, Move } from "@shared/schema";
 import { ChessLogic } from "@/lib/chess-logic";
 import { getLegalCastlingDestinationFromRookClick } from "@/lib/castling";
+import { formatTimeControl, getLiveClockState } from "@/lib/clock";
 import { extractInvitePath, normalizeShareId } from "@/lib/match-links";
 import { Sword, Crown, Plus, Settings, Users, Share2, LogOut, SplitSquareVertical } from "lucide-react";
 
@@ -50,6 +53,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
   const [voidLastMoveSquares, setVoidLastMoveSquares] = useState<{ [key: number]: { from: string; to: string } | null }>({});
   const [showGameTypeModal, setShowGameTypeModal] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
+  const [showTimeControlModal, setShowTimeControlModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showPromotionModal, setShowPromotionModal] = useState(false);
@@ -61,9 +65,11 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
   const [promotionMove, setPromotionMove] = useState<{from: string, to: string, piece: any} | null>(null);
   const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState("00:00");
+  const [clockNow, setClockNow] = useState(() => Date.now());
   const [lastMoveCount, setLastMoveCount] = useState(0);
   const [isResolvingMatch, setIsResolvingMatch] = useState(!!initialMatchId || !!initialShareId);
   const [matchLookupFailed, setMatchLookupFailed] = useState(false);
+  const [pendingRules, setPendingRules] = useState<GameRulesArray | null>(null);
   const { toast } = useToast();
 
   const chessLogic = new ChessLogic();
@@ -148,6 +154,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
 
   const isSpectator = game?.viewerRole === 'spectator';
   const viewerColor = isSpectator ? null : getCurrentPlayerColor();
+  const controlsDisabled = isSpectator || game?.status !== "active";
   const openSeatColor = game
     ? (game.whitePlayerId == null ? "white" : game.blackPlayerId == null ? "black" : null)
     : null;
@@ -273,6 +280,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
 
   // Derived flags
   const isVoidMode = Array.isArray((game as any)?.rules) && ((game as any)?.rules as any[]).includes('void');
+  const liveClock = getLiveClockState((game?.clockState as ClockState | undefined) ?? null, clockNow);
   const getEffectiveVoidBoard = (id: 0 | 1): ChessGameState | null => {
     if (!game?.gameState || !Array.isArray((game.gameState as any).voidBoards)) {
       return null;
@@ -284,9 +292,10 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
 
   // Create new game mutation
   const createGameMutation = useMutation({
-    mutationFn: async (rules: GameRulesArray) => {
+    mutationFn: async ({ rules, timeControlSeconds }: { rules: GameRulesArray; timeControlSeconds: number }) => {
       const response = await apiRequest("POST", "/api/games", {
         rules,
+        timeControlSeconds,
       });
       return response.json();
     },
@@ -870,6 +879,25 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     return () => clearInterval(interval);
   }, [gameStartTime]);
 
+  useEffect(() => {
+    if (!liveClock || liveClock.isPaused || !liveClock.activeColor || game?.status !== "active") {
+      setClockNow(Date.now());
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setClockNow(Date.now());
+    }, 250);
+
+    return () => clearInterval(interval);
+  }, [game?.status, liveClock?.activeColor, liveClock?.isPaused]);
+
+  useEffect(() => {
+    if (!gameId || !liveClock?.expiredColor || game?.status !== "active") return;
+
+    queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
+  }, [game?.status, gameId, liveClock?.expiredColor]);
+
   // Game over detection effect
   useEffect(() => {
     if (!game || !game.gameState || gameOverShown) return;
@@ -894,7 +922,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     }
     
     // Check if game is already completed
-    if (game.status === 'completed' || game.status === 'draw') {
+    if (game.status === 'completed' || game.status === 'draw' || game.status === 'timeout') {
       setShowGameOverModal(true);
     }
   }, [game]);
@@ -1155,8 +1183,21 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
   };
 
   const handleRuleSelection = (rules: GameRulesArray) => {
-    createGameMutation.mutate(rules);
     setShowRuleModal(false);
+    setPendingRules(rules);
+    setShowTimeControlModal(true);
+  };
+
+  const handleTimeControlSelection = (timeControlSeconds: number) => {
+    if (!pendingRules) return;
+    createGameMutation.mutate({ rules: pendingRules, timeControlSeconds });
+    setShowTimeControlModal(false);
+    setPendingRules(null);
+  };
+
+  const handleTimeControlBack = () => {
+    setShowTimeControlModal(false);
+    setShowRuleModal(true);
   };
 
   const handleJoinGame = (inviteValue: string) => {
@@ -1236,6 +1277,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     setVoidLastMoveSquares({});
     setShowGameTypeModal(false);
     setShowRuleModal(false);
+    setShowTimeControlModal(false);
     setShowJoinModal(false);
     setShowInviteModal(false);
     setShowPromotionModal(false);
@@ -1269,6 +1311,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
       setValidMoves([]);
       setGameStartTime(null);
       setElapsedTime("00:00");
+      setShowTimeControlModal(false);
+      setPendingRules(null);
       setVoidSelected({});
       setVoidValidMoves({});
       setVoidLocalBoards({});
@@ -1365,6 +1409,13 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
       return {
         result: 'draw' as const,
         winner: null
+      };
+    }
+
+    if (game.status === 'timeout' && game.winner) {
+      return {
+        result: 'timeout' as const,
+        winner: game.winner as 'white' | 'black'
       };
     }
     
@@ -1609,6 +1660,13 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
           onRuleSelect={handleRuleSelection}
         />
 
+        <TimeControlModal
+          open={showTimeControlModal}
+          onOpenChange={setShowTimeControlModal}
+          onBack={handleTimeControlBack}
+          onConfirm={handleTimeControlSelection}
+        />
+
         <JoinGameModal
           open={showJoinModal}
           onOpenChange={setShowJoinModal}
@@ -1697,6 +1755,17 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
 
           {/* Center Column: Board(s) */}
           <div className="lg:col-span-6 flex flex-col items-center">
+            <div className="mb-5 grid w-full gap-3">
+              <GameClock
+                label="Black"
+                remainingMs={liveClock?.blackMs ?? game!.timeControlSeconds * 1000}
+                active={liveClock?.activeColor === "black"}
+                shared={isVoidMode}
+              />
+              <div className="text-center text-xs uppercase tracking-[0.2em] text-white/60">
+                {formatTimeControl(game!.timeControlSeconds)} {isVoidMode ? "shared across both Void boards" : "per side"}
+              </div>
+            </div>
             {!isVoidMode && (
               <>
                 <ChessBoard
@@ -1774,19 +1843,27 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
                 )}
               </div>
             )}
+            <div className="mt-5 grid w-full gap-3">
+              <GameClock
+                label="White"
+                remainingMs={liveClock?.whiteMs ?? game!.timeControlSeconds * 1000}
+                active={liveClock?.activeColor === "white"}
+                shared={isVoidMode}
+              />
+            </div>
 
             {/* Game Controls */}
-            <div className={`flex items-center space-x-4 mt-6 ${isSpectator ? "pointer-events-none opacity-45" : ""}`}>
-              <Button variant="outline" onClick={() => undoMoveMutation.mutate()} disabled={undoMoveMutation.isPending}>
+            <div className={`flex items-center space-x-4 mt-6 ${controlsDisabled ? "pointer-events-none opacity-45" : ""}`}>
+              <Button variant="outline" onClick={() => undoMoveMutation.mutate()} disabled={undoMoveMutation.isPending || controlsDisabled}>
                 Undo
               </Button>
               <Button variant="outline" disabled>
                 Redo
               </Button>
-              <Button variant="destructive" onClick={handleResign}>
+              <Button variant="destructive" onClick={handleResign} disabled={controlsDisabled}>
                 Сдаться
               </Button>
-              <Button variant="outline" className="border-white/15 bg-white text-black hover:bg-neutral-200" onClick={handleOfferDraw}>
+              <Button variant="outline" className="border-white/15 bg-white text-black hover:bg-neutral-200" onClick={handleOfferDraw} disabled={controlsDisabled}>
                 Ничья
               </Button>
             </div>
@@ -1832,6 +1909,13 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
         open={showRuleModal}
         onOpenChange={setShowRuleModal}
         onRuleSelect={handleRuleSelection}
+      />
+
+      <TimeControlModal
+        open={showTimeControlModal}
+        onOpenChange={setShowTimeControlModal}
+        onBack={handleTimeControlBack}
+        onConfirm={handleTimeControlSelection}
       />
       
       {promotionMove && (

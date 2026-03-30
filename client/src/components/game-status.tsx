@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Info, Scroll, Edit } from "lucide-react";
+import { formatTimeControl } from "@/lib/clock";
 
 interface GameStatusProps {
   game: Game;
@@ -319,6 +320,11 @@ export default function GameStatus({ game, elapsedTime, onChangeRules, canChange
           <div className="flex items-center justify-between">
             <span className="text-neutral-600">Game Time:</span>
             <span className="font-medium text-neutral-900">{elapsedTime}</span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-600">Time Control:</span>
+            <span className="font-medium text-neutral-900">{formatTimeControl(game.timeControlSeconds)}</span>
           </div>
 
           <div className="flex items-center justify-between">

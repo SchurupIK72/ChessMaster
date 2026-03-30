@@ -1,4 +1,4 @@
-import { users, games, moves, type User, type InsertUser, type Game, type InsertGame, type Move, type InsertMove, type ChessGameState, type ChessPiece, type GameRules, type GameRulesArray } from "@shared/schema";
+import { users, games, moves, type User, type InsertUser, type Game, type InsertGame, type Move, type InsertMove, type ChessGameState, type ChessPiece, type GameRules, type GameRulesArray, type ClockState } from "@shared/schema";
 import { generateFischerBackRankFromSeed } from "./chess960";
 import { db } from "./db";
 import { eq, or } from "drizzle-orm";
@@ -15,6 +15,7 @@ export interface IStorage {
   getGameByMatchId(matchId: string): Promise<Game | undefined>;
   getGameByShareId(shareId: string): Promise<Game | undefined>;
   updateGameState(id: number, gameState: ChessGameState): Promise<Game>;
+  updateGameClockState(id: number, clockState: ClockState): Promise<Game>;
   updateGameStatus(id: number, status: string, winner?: string): Promise<Game>;
   joinGame(shareId: string, playerId: number): Promise<Game>;
   getGamesByPlayer(playerId: number): Promise<Game[]>;
@@ -32,6 +33,26 @@ export interface IStorage {
   offerDraw(id: number, player: 'white' | 'black'): Promise<Game>;
   acceptDraw(id: number): Promise<Game>;
   declineDraw(id: number): Promise<Game>;
+}
+
+function createInitialClockState(timeControlSeconds: number): ClockState {
+  const initialMs = timeControlSeconds * 1000;
+  return {
+    whiteRemainingMs: initialMs,
+    blackRemainingMs: initialMs,
+    activeColor: null,
+    lastUpdatedAt: null,
+    isPaused: true,
+  };
+}
+
+function createStartedClockState(clockState: ClockState, activeColor: 'white' | 'black'): ClockState {
+  return {
+    ...clockState,
+    activeColor,
+    lastUpdatedAt: new Date().toISOString(),
+    isPaused: false,
+  };
 }
 
 export class DatabaseStorage implements IStorage {
@@ -61,9 +82,11 @@ export class DatabaseStorage implements IStorage {
   async createGame(insertGame: InsertGame): Promise<Game> {
     const rulesArray = Array.isArray(insertGame.rules) ? insertGame.rules : 
                       insertGame.rules ? [insertGame.rules] : ['standard'];
-    
-  const initialGameState: ChessGameState = this.getInitialGameState(rulesArray as GameRulesArray, insertGame.shareId || undefined);
-    
+    const timeControlSeconds = insertGame.timeControlSeconds ?? 300;
+
+    const initialGameState: ChessGameState = this.getInitialGameState(rulesArray as GameRulesArray, insertGame.shareId || undefined);
+    const initialClockState = createInitialClockState(timeControlSeconds);
+
     const [game] = await db
       .insert(games)
       .values({
@@ -73,11 +96,13 @@ export class DatabaseStorage implements IStorage {
         blackPlayerId: insertGame.blackPlayerId || null,
         gameState: initialGameState,
         rules: rulesArray as GameRulesArray,
+        timeControlSeconds,
+        clockState: initialClockState,
         gameStartTime: new Date(),
         status: 'waiting'
       })
       .returning();
-    
+
     return game;
   }
 
@@ -109,6 +134,7 @@ export class DatabaseStorage implements IStorage {
     } else if (game.blackPlayerId === null) {
       updateData.blackPlayerId = playerId;
       updateData.status = 'active';
+      updateData.clockState = createStartedClockState(game.clockState, 'white');
     } else {
       throw new Error("Game is already full");
     }
@@ -129,6 +155,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(games.id, id))
       .returning();
     
+    return game;
+  }
+
+  async updateGameClockState(id: number, clockState: ClockState): Promise<Game> {
+    const [game] = await db
+      .update(games)
+      .set({ clockState })
+      .where(eq(games.id, id))
+      .returning();
+
     return game;
   }
 
@@ -163,14 +199,14 @@ export class DatabaseStorage implements IStorage {
   async addMove(insertMove: InsertMove): Promise<Move> {
     const [move] = await db
       .insert(moves)
-      .values(insertMove)
+      .values(insertMove as any)
       .returning();
     
     return move;
   }
 
   async getGameMoves(gameId: number): Promise<Move[]> {
-    // Сортируем по уникальному id, чтобы порядок всегда был корректным
+    // РЎРѕСЂС‚РёСЂСѓРµРј РїРѕ СѓРЅРёРєР°Р»СЊРЅРѕРјСѓ id, С‡С‚РѕР±С‹ РїРѕСЂСЏРґРѕРє РІСЃРµРіРґР° Р±С‹Р» РєРѕСЂСЂРµРєС‚РЅС‹Рј
     const movesList = await db
       .select()
       .from(moves)

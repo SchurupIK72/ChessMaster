@@ -19,8 +19,10 @@ export const games = pgTable("games", {
   blackPlayerId: integer("black_player_id"),
   gameState: jsonb("game_state").$type<ChessGameState>().notNull(),
   currentTurn: text("current_turn").notNull().default("white"),
-  status: text("status").notNull().default("waiting"), // waiting, active, completed, draw, resigned
+  status: text("status").notNull().default("waiting"), // waiting, active, completed, draw, resigned, timeout
   rules: jsonb("rules").$type<GameRulesArray>().notNull().default(["standard"]),
+  timeControlSeconds: integer("time_control_seconds").notNull().default(300),
+  clockState: jsonb("clock_state").$type<ClockState>().notNull(),
   moveHistory: jsonb("move_history").notNull().default([]),
   capturedPieces: jsonb("captured_pieces").notNull().default({ white: [], black: [] }),
   gameStartTime: timestamp("game_start_time").defaultNow(),
@@ -40,6 +42,7 @@ export const moves = pgTable("moves", {
   captured: text("captured"),
   special: text("special"), // castling, en_passant, promotion
   fen: text("fen").notNull(),
+  clockState: jsonb("clock_state").$type<ClockState>(),
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
@@ -49,13 +52,13 @@ export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   phone: true,
 }).extend({
-  password: z.string().min(6, "Пароль должен содержать минимум 6 символов")
-    .regex(/^[a-zA-Z0-9]+$/, "Пароль должен содержать только английские буквы и цифры"),
-  username: z.string().min(2, "Никнейм должен содержать минимум 2 символа")
-    .max(50, "Никнейм не может быть длиннее 50 символов"),
-  email: z.string().email("Неправильный формат email"),
-  phone: z.string().min(10, "Номер телефона должен содержать минимум 10 цифр")
-    .max(20, "Номер телефона не может быть длиннее 20 символов"),
+  password: z.string().min(6, "РџР°СЂРѕР»СЊ РґРѕР»Р¶РµРЅ СЃРѕРґРµСЂР¶Р°С‚СЊ РјРёРЅРёРјСѓРј 6 СЃРёРјРІРѕР»РѕРІ")
+    .regex(/^[a-zA-Z0-9]+$/, "РџР°СЂРѕР»СЊ РґРѕР»Р¶РµРЅ СЃРѕРґРµСЂР¶Р°С‚СЊ С‚РѕР»СЊРєРѕ Р°РЅРіР»РёР№СЃРєРёРµ Р±СѓРєРІС‹ Рё С†РёС„СЂС‹"),
+  username: z.string().min(2, "РќРёРєРЅРµР№Рј РґРѕР»Р¶РµРЅ СЃРѕРґРµСЂР¶Р°С‚СЊ РјРёРЅРёРјСѓРј 2 СЃРёРјРІРѕР»Р°")
+    .max(50, "РќРёРєРЅРµР№Рј РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РґР»РёРЅРЅРµРµ 50 СЃРёРјРІРѕР»РѕРІ"),
+  email: z.string().email("РќРµРїСЂР°РІРёР»СЊРЅС‹Р№ С„РѕСЂРјР°С‚ email"),
+  phone: z.string().min(10, "РќРѕРјРµСЂ С‚РµР»РµС„РѕРЅР° РґРѕР»Р¶РµРЅ СЃРѕРґРµСЂР¶Р°С‚СЊ РјРёРЅРёРјСѓРј 10 С†РёС„СЂ")
+    .max(20, "РќРѕРјРµСЂ С‚РµР»РµС„РѕРЅР° РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РґР»РёРЅРЅРµРµ 20 СЃРёРјРІРѕР»РѕРІ"),
 });
 
 export const insertGameSchema = createInsertSchema(games).pick({
@@ -65,6 +68,7 @@ export const insertGameSchema = createInsertSchema(games).pick({
   rules: true,
 }).extend({
   matchId: z.string().optional(),
+  timeControlSeconds: z.number().int().positive().optional().default(300),
 });
 
 export const insertMoveSchema = createInsertSchema(moves).pick({
@@ -77,6 +81,7 @@ export const insertMoveSchema = createInsertSchema(moves).pick({
   captured: true,
   special: true,
   fen: true,
+  clockState: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -85,6 +90,16 @@ export type InsertGame = z.infer<typeof insertGameSchema>;
 export type Game = typeof games.$inferSelect;
 export type InsertMove = z.infer<typeof insertMoveSchema>;
 export type Move = typeof moves.$inferSelect;
+
+export type ClockActiveColor = 'white' | 'black' | null;
+
+export type ClockState = {
+  whiteRemainingMs: number;
+  blackRemainingMs: number;
+  activeColor: ClockActiveColor;
+  lastUpdatedAt: string | null;
+  isPaused: boolean;
+};
 
 // Chess game types
 export type ChessPiece = {
@@ -128,7 +143,7 @@ export type BaseBoardState = {
   isCheck: boolean;
   isCheckmate: boolean;
   isStalemate: boolean;
-  // Meteor shower rule — list of permanently burned squares (cannot be occupied or crossed)
+  // Meteor shower rule вЂ” list of permanently burned squares (cannot be occupied or crossed)
   burnedSquares?: string[];
   // Counter of half-moves since last meteor strike (increments each move when rule is active)
   meteorCounter?: number;

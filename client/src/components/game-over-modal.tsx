@@ -4,8 +4,8 @@ import { Crown, Trophy, Handshake } from "lucide-react";
 
 interface GameOverModalProps {
   open: boolean;
-  result: 'checkmate' | 'stalemate' | 'draw' | 'resignation';
-  winner?: 'white' | 'black' | null;
+  result: "checkmate" | "stalemate" | "draw" | "resignation" | "timeout";
+  winner?: "white" | "black" | null;
   onNewGame: () => void;
   onClose: () => void;
 }
@@ -13,70 +13,62 @@ interface GameOverModalProps {
 export default function GameOverModal({ open, result, winner, onNewGame, onClose }: GameOverModalProps) {
   const getTitle = () => {
     switch (result) {
-      case 'checkmate':
-        return winner === 'white' ? 'Белые победили!' : 'Черные победили!';
-      case 'stalemate':
-        return 'Пат!';
-      case 'draw':
-        return 'Ничья!';
-      case 'resignation':
-        return winner === 'white' ? 'Белые победили!' : 'Черные победили!';
+      case "checkmate":
+      case "resignation":
+        return winner === "white" ? "White wins!" : "Black wins!";
+      case "timeout":
+        return winner === "white" ? "White wins on time!" : "Black wins on time!";
+      case "stalemate":
+        return "Stalemate";
+      case "draw":
+        return "Draw";
       default:
-        return 'Игра завершена';
+        return "Game over";
     }
   };
 
   const getDescription = () => {
     switch (result) {
-      case 'checkmate':
-        return `Мат! ${winner === 'white' ? 'Белые' : 'Черные'} выиграли партию.`;
-      case 'stalemate':
-        return 'Король не находится под шахом, но не может сделать ход. Ничья.';
-      case 'draw':
-        return 'Игроки договорились о ничьей.';
-      case 'resignation':
-        return `${winner === 'white' ? 'Черные' : 'Белые'} сдались. ${winner === 'white' ? 'Белые' : 'Черные'} победили!`;
+      case "checkmate":
+        return `Checkmate. ${winner === "white" ? "White" : "Black"} finished the game.`;
+      case "stalemate":
+        return "No legal moves remain, but the king is not in check.";
+      case "draw":
+        return "The game ended in a draw.";
+      case "resignation":
+        return `${winner === "white" ? "Black" : "White"} resigned.`;
+      case "timeout":
+        return `${winner === "white" ? "White" : "Black"} won because the opponent's clock reached 00:00.`;
       default:
-        return 'Игра завершена.';
+        return "The game has ended.";
     }
   };
 
   const getIcon = () => {
-    if (result === 'checkmate' || result === 'resignation') {
+    if (result === "checkmate" || result === "resignation" || result === "timeout") {
       return <Trophy className="h-16 w-16 text-yellow-500" />;
-    } else if (result === 'draw' || result === 'stalemate') {
+    }
+    if (result === "draw" || result === "stalemate") {
       return <Handshake className="h-16 w-16 text-blue-500" />;
     }
-    return <Crown className="h-16 w-16 text-purple-500" />;
+    return <Crown className="h-16 w-16 text-neutral-900" />;
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md text-center">
         <DialogHeader>
-          <div className="flex justify-center mb-4">
-            {getIcon()}
-          </div>
-          <DialogTitle className="text-2xl font-bold text-slate-800">
-            {getTitle()}
-          </DialogTitle>
-          <p className="text-slate-600 mt-2">{getDescription()}</p>
+          <div className="mb-4 flex justify-center">{getIcon()}</div>
+          <DialogTitle className="text-2xl font-bold text-slate-800">{getTitle()}</DialogTitle>
+          <p className="mt-2 text-slate-600">{getDescription()}</p>
         </DialogHeader>
 
-        <div className="flex flex-col gap-3 mt-6">
-          <Button 
-            onClick={onNewGame}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-            size="lg"
-          >
-            Новая игра
+        <div className="mt-6 flex flex-col gap-3">
+          <Button onClick={onNewGame} className="bg-black text-white hover:bg-neutral-800" size="lg">
+            New game
           </Button>
-          <Button 
-            onClick={onClose}
-            variant="outline"
-            size="lg"
-          >
-            Закрыть
+          <Button onClick={onClose} variant="outline" size="lg">
+            Close
           </Button>
         </div>
       </DialogContent>

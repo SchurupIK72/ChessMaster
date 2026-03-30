@@ -4,6 +4,7 @@ import { log } from "./vite";
 
 export async function ensureDatabaseCompatibility() {
   await ensureMatchIdColumn();
+  await ensureClockColumns();
 }
 
 async function ensureMatchIdColumn() {
@@ -42,6 +43,51 @@ async function ensureMatchIdColumn() {
     log("database compatibility ensured: games.match_id");
   } catch (error) {
     log(`database compatibility failed: ${(error as Error).message}`);
+    throw error;
+  }
+}
+
+async function ensureClockColumns() {
+  try {
+    await db.execute(sql.raw(`
+      ALTER TABLE games
+      ADD COLUMN IF NOT EXISTS time_control_seconds integer,
+      ADD COLUMN IF NOT EXISTS clock_state jsonb;
+    `));
+
+    await db.execute(sql.raw(`
+      UPDATE games
+      SET time_control_seconds = 300
+      WHERE time_control_seconds IS NULL;
+    `));
+
+    await db.execute(sql.raw(`
+      UPDATE games
+      SET clock_state = jsonb_build_object(
+        'whiteRemainingMs', time_control_seconds * 1000,
+        'blackRemainingMs', time_control_seconds * 1000,
+        'activeColor', NULL,
+        'lastUpdatedAt', NULL,
+        'isPaused', true
+      )
+      WHERE clock_state IS NULL;
+    `));
+
+    await db.execute(sql.raw(`
+      ALTER TABLE games
+      ALTER COLUMN time_control_seconds SET DEFAULT 300,
+      ALTER COLUMN time_control_seconds SET NOT NULL,
+      ALTER COLUMN clock_state SET NOT NULL;
+    `));
+
+    await db.execute(sql.raw(`
+      ALTER TABLE moves
+      ADD COLUMN IF NOT EXISTS clock_state jsonb;
+    `));
+
+    log("database compatibility ensured: games.clock_state, games.time_control_seconds, moves.clock_state");
+  } catch (error) {
+    log(`database clock compatibility failed: ${(error as Error).message}`);
     throw error;
   }
 }

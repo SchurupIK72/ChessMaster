@@ -64,6 +64,12 @@ Thumbs.db
 *.tmp
 *.temp
 
+# Python tooling
+__pycache__/
+.pytest_cache/
+.uv-cache/
+*.py[cod]
+
 # Replit specific
 .replit
 .upm/
