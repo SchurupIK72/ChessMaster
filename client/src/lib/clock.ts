@@ -8,6 +8,8 @@ export type LiveClockState = {
   expiredColor: "white" | "black" | null;
 };
 
+export type ClockDisplayColor = "white" | "black";
+
 function clampMs(value: number | undefined) {
   return Math.max(0, value ?? 0);
 }
@@ -61,6 +63,14 @@ export function formatTimeControl(seconds: number) {
   }
 
   return formatClockMs(seconds * 1000);
+}
+
+export function getClockDisplayOrder(
+  viewerColor: ClockDisplayColor | null | undefined,
+): { top: ClockDisplayColor; bottom: ClockDisplayColor } {
+  return viewerColor === "black"
+    ? { top: "white", bottom: "black" }
+    : { top: "black", bottom: "white" };
 }
 
 export function isLowTime(ms: number) {

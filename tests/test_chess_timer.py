@@ -20,7 +20,7 @@ def run_ts_json(source: str) -> dict:
 def test_clock_helpers_support_live_countdown_and_reconnect_rendering():
     result = run_ts_json(
         """
-        import { getLiveClockState, formatClockMs, formatTimeControl, isLowTime } from "./client/src/lib/clock.ts";
+        import { getClockDisplayOrder, getLiveClockState, formatClockMs, formatTimeControl, isLowTime } from "./client/src/lib/clock.ts";
 
         const active = getLiveClockState(
           {
@@ -51,6 +51,9 @@ def test_clock_helpers_support_live_countdown_and_reconnect_rendering():
           lowTime: isLowTime(25000),
           timeControlMinutes: formatTimeControl(300),
           timeControlMixed: formatTimeControl(75),
+          whitePerspective: getClockDisplayOrder("white"),
+          blackPerspective: getClockDisplayOrder("black"),
+          spectatorPerspective: getClockDisplayOrder(null),
         }));
         """
     )
@@ -73,6 +76,9 @@ def test_clock_helpers_support_live_countdown_and_reconnect_rendering():
     assert result["lowTime"] is True
     assert result["timeControlMinutes"] == "5 min"
     assert result["timeControlMixed"] == "01:15"
+    assert result["whitePerspective"] == {"top": "black", "bottom": "white"}
+    assert result["blackPerspective"] == {"top": "white", "bottom": "black"}
+    assert result["spectatorPerspective"] == {"top": "black", "bottom": "white"}
 
 
 def test_client_timeout_modal_and_clock_rendering_are_wired_on_game_page():
@@ -80,11 +86,15 @@ def test_client_timeout_modal_and_clock_rendering_are_wired_on_game_page():
     modal_text = (ROOT / "client" / "src" / "components" / "game-over-modal.tsx").read_text(encoding="utf-8")
 
     assert 'import GameClock from "@/components/game-clock";' in page_text
+    assert 'getClockDisplayOrder' in page_text
     assert 'getLiveClockState' in page_text
     assert 'queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });' in page_text
     assert "if (game.status === 'timeout' && game.winner)" in page_text
     assert "result: 'timeout' as const" in page_text
     assert "shared across both Void boards" in page_text
+    assert 'const clockDisplayOrder = getClockDisplayOrder(viewerColor);' in page_text
+    assert 'clockDisplayState[clockDisplayOrder.top]' in page_text
+    assert 'clockDisplayState[clockDisplayOrder.bottom]' in page_text
     assert '"checkmate" | "stalemate" | "draw" | "resignation" | "timeout"' in modal_text
     assert 'wins on time' in modal_text
 

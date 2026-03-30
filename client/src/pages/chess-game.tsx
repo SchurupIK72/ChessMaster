@@ -30,7 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ChessPiece, ChessGameState, ClockState, GameRules, GameRulesArray, Game, Move } from "@shared/schema";
 import { ChessLogic } from "@/lib/chess-logic";
 import { getLegalCastlingDestinationFromRookClick } from "@/lib/castling";
-import { formatTimeControl, getLiveClockState } from "@/lib/clock";
+import { formatTimeControl, getClockDisplayOrder, getLiveClockState } from "@/lib/clock";
 import { extractInvitePath, normalizeShareId } from "@/lib/match-links";
 import { Sword, Crown, Plus, Settings, Users, Share2, LogOut, SplitSquareVertical } from "lucide-react";
 
@@ -1681,8 +1681,25 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     return <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">Loading...</div>;
   }
 
+  if (!game) {
+    return null;
+  }
+
   // Fog of War: use the same helper for consistency across UI
     const fogActive = computeFogActive(game?.rules as any, moves, game);
+  const clockDisplayOrder = getClockDisplayOrder(viewerColor);
+  const clockDisplayState = {
+    white: {
+      label: "White",
+      remainingMs: liveClock?.whiteMs ?? game.timeControlSeconds * 1000,
+      active: liveClock?.activeColor === "white",
+    },
+    black: {
+      label: "Black",
+      remainingMs: liveClock?.blackMs ?? game.timeControlSeconds * 1000,
+      active: liveClock?.activeColor === "black",
+    },
+  } as const;
   return (
   <div className="min-h-screen bg-neutral-950 text-white">
       <header className="border-b border-white/10 bg-black/70 backdrop-blur">
@@ -1757,9 +1774,9 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
           <div className="lg:col-span-6 flex flex-col items-center">
             <div className="mb-5 grid w-full gap-3">
               <GameClock
-                label="Black"
-                remainingMs={liveClock?.blackMs ?? game!.timeControlSeconds * 1000}
-                active={liveClock?.activeColor === "black"}
+                label={clockDisplayState[clockDisplayOrder.top].label}
+                remainingMs={clockDisplayState[clockDisplayOrder.top].remainingMs}
+                active={clockDisplayState[clockDisplayOrder.top].active}
                 shared={isVoidMode}
               />
               <div className="text-center text-xs uppercase tracking-[0.2em] text-white/60">
@@ -1845,9 +1862,9 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
             )}
             <div className="mt-5 grid w-full gap-3">
               <GameClock
-                label="White"
-                remainingMs={liveClock?.whiteMs ?? game!.timeControlSeconds * 1000}
-                active={liveClock?.activeColor === "white"}
+                label={clockDisplayState[clockDisplayOrder.bottom].label}
+                remainingMs={clockDisplayState[clockDisplayOrder.bottom].remainingMs}
+                active={clockDisplayState[clockDisplayOrder.bottom].active}
                 shared={isVoidMode}
               />
             </div>
