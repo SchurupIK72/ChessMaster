@@ -2905,6 +2905,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Email уже зарегистрирован' });
       }
 
+      const existingPhone = await storage.getUserByPhone(validatedData.phone);
+      if (existingPhone) {
+        return res.status(400).json({ message: 'Phone already registered' });
+      }
+
       // Hash password before saving
       const hashedPassword = await bcrypt.hash(validatedData.password, 10);
 
@@ -2932,6 +2937,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Ошибка валидации',
           errors: error.errors
         });
+      }
+      if (error instanceof Error && /phone/i.test(error.message)) {
+        return res.status(400).json({ message: 'Phone already registered' });
       }
       console.error('Registration error:', error);
       res.status(500).json({ message: 'Ошибка регистрации' });

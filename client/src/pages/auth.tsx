@@ -143,8 +143,6 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
           title: "Успех",
           description: `Гостевая сессия создана для ${data.user.username}`,
         });
-        // Store guest user data in localStorage temporarily
-        localStorage.setItem('guestUser', JSON.stringify(data.user));
         onSuccess();
       } else {
         throw new Error(data.message || "Ошибка создания гостевой сессии");

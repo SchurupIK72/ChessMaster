@@ -1236,8 +1236,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     }
 
     const guestData = await guestResponse.json();
-    if (guestData?.user) {
-      localStorage.setItem("guestUser", JSON.stringify(guestData.user));
+    if (!guestData?.user) {
+      throw new Error("Не удалось получить гостевую сессию");
     }
   };
 
