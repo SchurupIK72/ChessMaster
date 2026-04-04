@@ -1816,7 +1816,13 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
                       return (
                         <div className="flex items-center gap-3">
                           <span>Токены переноса: <b>{myTokens}</b></span>
-                          <Button size="sm" variant={canTransfer ? "default" : "outline"} disabled={!canTransfer} onClick={() => setTransferMode(v => !v)}>
+                          <Button
+                            size="sm"
+                            variant={canTransfer ? "default" : "outline"}
+                            className="border-white/15 bg-white text-black hover:bg-neutral-200 disabled:bg-white/70 disabled:text-black/80 disabled:opacity-100"
+                            disabled={!canTransfer}
+                            onClick={() => setTransferMode(v => !v)}
+                          >
                             Перенос {transferMode ? 'ON' : 'OFF'}
                           </Button>
                         </div>
@@ -2036,5 +2042,4 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     </div>
   );
 }
-
 
