@@ -1,5 +1,23 @@
 ﻿## [Unreleased]
 
+### Changed - UI Visual Consistency
+- [client/src/pages/chess-game.tsx](../client/src/pages/chess-game.tsx): Aligned the in-match controls around a single settings entry point
+  - Removes the extra `Change Rules` and `Redo` controls from the live match flow
+  - Makes the header settings button interactive and wires it to a placeholder settings dialog
+  - Keeps `Undo` readable against the light control style used on the board screen
+- [client/src/components/game-status.tsx](../client/src/components/game-status.tsx): Simplified the status sidebar
+  - Removes the duplicate rules CTA and the redundant elapsed-time row
+  - Keeps only the active status information that complements the board clocks
+- [client/src/pages/auth.tsx](../client/src/pages/auth.tsx): Reduced auth-screen visual noise and fixed input contrast
+  - Removes the extra `ChessMaster` badge above the main heading
+  - Ensures entered text stays readable on the light input background for login and registration
+- [client/src/components/game-settings-placeholder.tsx](../client/src/components/game-settings-placeholder.tsx): Added a styled placeholder dialog for future settings work
+
+### Added - UI Regression Coverage
+- [tests/test_ui_visual_consistency.py](../tests/test_ui_visual_consistency.py): Added regression coverage for the visual consistency bugfix
+  - Verifies auth branding simplification and readable input styling
+  - Verifies `GameStatus` cleanup, settings placeholder wiring, and removal of `Redo`
+
 ### Added - Chess Timer
 - [shared/schema.ts](../shared/schema.ts): Added persisted time-control and `clockState` contract for games and move snapshots
   - Stores `timeControlSeconds` on each game with a default rapid preset
@@ -45,3 +63,5 @@
 - [tests/test_match_links_and_spectators.py](../tests/test_match_links_and_spectators.py): Covers route guards and participant-only mutating access
 - [tests/test_chess_timer.py](../tests/test_chess_timer.py): Adds host-clock join regression coverage
   - Verifies the host receives a status refresh when the opponent connects and clocks start live
+
+
