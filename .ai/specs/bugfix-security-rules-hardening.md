@@ -1,8 +1,9 @@
 # Security & Rules Hardening - Bugfix Specification
 > **Дата создания:** 2026-03-30
+> **Дата завершения:** 2026-04-04
 > **Ветка:** `bugfix/security-rules-hardening`
 > **Тип:** bugfix
-> **Статус:** В работе
+> **Статус:** Завершён
 > **Источник:** `fixed spec.md`
 
 ---
