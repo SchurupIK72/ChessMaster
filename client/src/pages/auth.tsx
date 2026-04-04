@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { loginRequestSchema, registerRequestSchema } from "@shared/schema";
@@ -27,6 +27,8 @@ interface AuthPageProps {
 export default function AuthPage({ onSuccess }: AuthPageProps) {
   const [activeTab, setActiveTab] = useState("login");
   const { toast } = useToast();
+  const authInputClassName =
+    "border-neutral-200 bg-white text-neutral-950 placeholder:text-neutral-500 focus-visible:ring-white/70 focus-visible:ring-offset-neutral-950";
 
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginRequestSchema),
@@ -56,12 +58,12 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
         credentials: "include",
         body: JSON.stringify(data),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Ошибка авторизации");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -90,12 +92,12 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
         credentials: "include",
         body: JSON.stringify(data),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Ошибка регистрации");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -131,13 +133,13 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
         },
         credentials: "include",
       });
-      
+
       if (!response.ok) {
         throw new Error("Ошибка создания гостевой сессии");
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         toast({
           title: "Успех",
@@ -162,11 +164,8 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
         <CardHeader className="text-center space-y-3">
           <a
             href="/"
-            className="mx-auto flex w-fit flex-col items-center gap-3 rounded-2xl px-3 py-2 transition-opacity hover:opacity-80"
+            className="mx-auto flex w-fit flex-col items-center rounded-2xl px-3 py-2 transition-opacity hover:opacity-80"
           >
-            <div className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.35em] text-white/60">
-              ChessMaster
-            </div>
             <CardTitle className="text-4xl font-bold text-white">
               ChessMaster
             </CardTitle>
@@ -181,7 +180,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
               <TabsTrigger value="login">Вход</TabsTrigger>
               <TabsTrigger value="register">Регистрация</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="login" className="space-y-4">
               <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                 <div className="space-y-2">
@@ -190,6 +189,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
                     id="login-username"
                     {...loginForm.register("username")}
                     placeholder="Введите никнейм"
+                    className={authInputClassName}
                   />
                   {loginForm.formState.errors.username && (
                     <p className="text-sm text-red-500">
@@ -197,7 +197,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
                     </p>
                   )}
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Пароль</Label>
                   <Input
@@ -205,6 +205,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
                     type="password"
                     {...loginForm.register("password")}
                     placeholder="Введите пароль"
+                    className={authInputClassName}
                   />
                   {loginForm.formState.errors.password && (
                     <p className="text-sm text-red-500">
@@ -212,7 +213,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
                     </p>
                   )}
                 </div>
-                
+
                 <Button
                   type="submit"
                   className="w-full bg-white text-black hover:bg-neutral-200"
@@ -222,7 +223,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
                 </Button>
               </form>
             </TabsContent>
-            
+
             <TabsContent value="register" className="space-y-4">
               <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
                 <div className="space-y-2">
@@ -231,6 +232,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
                     id="register-username"
                     {...registerForm.register("username")}
                     placeholder="Выберите никнейм (2-50 символов)"
+                    className={authInputClassName}
                   />
                   {registerForm.formState.errors.username && (
                     <p className="text-sm text-red-500">
@@ -238,7 +240,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
                     </p>
                   )}
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="register-password">Пароль</Label>
                   <Input
@@ -246,6 +248,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
                     type="password"
                     {...registerForm.register("password")}
                     placeholder="Минимум 6 символов (буквы и цифры)"
+                    className={authInputClassName}
                   />
                   {registerForm.formState.errors.password && (
                     <p className="text-sm text-red-500">
@@ -253,7 +256,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
                     </p>
                   )}
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="register-email">Email</Label>
                   <Input
@@ -261,6 +264,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
                     type="email"
                     {...registerForm.register("email")}
                     placeholder="email@example.com"
+                    className={authInputClassName}
                   />
                   {registerForm.formState.errors.email && (
                     <p className="text-sm text-red-500">
@@ -268,13 +272,14 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
                     </p>
                   )}
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="register-phone">Телефон</Label>
                   <Input
                     id="register-phone"
                     {...registerForm.register("phone")}
                     placeholder="+7 (999) 123-45-67"
+                    className={authInputClassName}
                   />
                   {registerForm.formState.errors.phone && (
                     <p className="text-sm text-red-500">
@@ -282,7 +287,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
                     </p>
                   )}
                 </div>
-                
+
                 <Button
                   type="submit"
                   className="w-full bg-white text-black hover:bg-neutral-200"
@@ -293,7 +298,7 @@ export default function AuthPage({ onSuccess }: AuthPageProps) {
               </form>
             </TabsContent>
           </Tabs>
-          
+
           <div className="mt-6 text-center">
             <Button
               variant="outline"

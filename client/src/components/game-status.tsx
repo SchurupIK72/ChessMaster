@@ -1,32 +1,28 @@
-import { Game, Move } from "@shared/schema";
-import { Button } from "@/components/ui/button";
+﻿import { Game, Move } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Info, Scroll, Edit } from "lucide-react";
+import { Info, Scroll } from "lucide-react";
 import { formatTimeControl } from "@/lib/clock";
 
 interface GameStatusProps {
   game: Game;
-  elapsedTime: string;
-  onChangeRules: () => void;
-  canChangeRules?: boolean;
   moves?: Move[]; // used to compute meteor timing similar to Fog of War
 }
 
 const ruleDescriptions: Record<string, { name: string; description: string; status: 'active' | 'inactive' }> = {
-  standard: { name: 'Стандартные шахматы', description: 'Классические правила', status: 'active' },
-  'double-knight': { name: 'Двойной конь', description: 'Нужно ходить конем дважды подряд', status: 'active' },
-  'pawn-rotation': { name: 'Поворот пешек', description: 'Пешки могут ходить горизонтально и делать неограниченные двойные ходы', status: 'active' },
-  'xray-bishop': { name: 'Рентген слон', description: 'Слон проходит сквозь фигуры', status: 'active' },
-  'pawn-wall': { name: 'Стена пешек', description: 'Двойные ряды пешек на 2-3 и 6-7 линиях', status: 'active' },
-  'blink': { name: 'Блинк', description: 'Король может телепортироваться раз за игру на любую пустую клетку', status: 'active' },
-  'fog-of-war': { name: 'Туман войны', description: 'Первые 5 ходов видна только своя половина доски; история ходов скрыта', status: 'active' },
-  'meteor-shower': { name: 'Метеоритный дождь', description: 'Каждые 5 ходов случайная пустая клетка сгорает и становится недоступной', status: 'active' },
-  'fischer-random': { name: 'Шахматы Фишера (Chess960)', description: 'Случайная расстановка на 1-й и 8-й горизонталях (разноцветные слоны, король между ладьями)', status: 'active' },
-  'void': { name: 'Void Mode', description: 'Две независимые доски; один ход = два под-хода на разных досках; перенос фигур между досками за токены (короля переносить нельзя)', status: 'active' },
+  standard: { name: 'РЎС‚Р°РЅРґР°СЂС‚РЅС‹Рµ С€Р°С…РјР°С‚С‹', description: 'РљР»Р°СЃСЃРёС‡РµСЃРєРёРµ РїСЂР°РІРёР»Р°', status: 'active' },
+  'double-knight': { name: 'Р”РІРѕР№РЅРѕР№ РєРѕРЅСЊ', description: 'РќСѓР¶РЅРѕ С…РѕРґРёС‚СЊ РєРѕРЅРµРј РґРІР°Р¶РґС‹ РїРѕРґСЂСЏРґ', status: 'active' },
+  'pawn-rotation': { name: 'РџРѕРІРѕСЂРѕС‚ РїРµС€РµРє', description: 'РџРµС€РєРё РјРѕРіСѓС‚ С…РѕРґРёС‚СЊ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅРѕ Рё РґРµР»Р°С‚СЊ РЅРµРѕРіСЂР°РЅРёС‡РµРЅРЅС‹Рµ РґРІРѕР№РЅС‹Рµ С…РѕРґС‹', status: 'active' },
+  'xray-bishop': { name: 'Р РµРЅС‚РіРµРЅ СЃР»РѕРЅ', description: 'РЎР»РѕРЅ РїСЂРѕС…РѕРґРёС‚ СЃРєРІРѕР·СЊ С„РёРіСѓСЂС‹', status: 'active' },
+  'pawn-wall': { name: 'РЎС‚РµРЅР° РїРµС€РµРє', description: 'Р”РІРѕР№РЅС‹Рµ СЂСЏРґС‹ РїРµС€РµРє РЅР° 2-3 Рё 6-7 Р»РёРЅРёСЏС…', status: 'active' },
+  'blink': { name: 'Р‘Р»РёРЅРє', description: 'РљРѕСЂРѕР»СЊ РјРѕР¶РµС‚ С‚РµР»РµРїРѕСЂС‚РёСЂРѕРІР°С‚СЊСЃСЏ СЂР°Р· Р·Р° РёРіСЂСѓ РЅР° Р»СЋР±СѓСЋ РїСѓСЃС‚СѓСЋ РєР»РµС‚РєСѓ', status: 'active' },
+  'fog-of-war': { name: 'РўСѓРјР°РЅ РІРѕР№РЅС‹', description: 'РџРµСЂРІС‹Рµ 5 С…РѕРґРѕРІ РІРёРґРЅР° С‚РѕР»СЊРєРѕ СЃРІРѕСЏ РїРѕР»РѕРІРёРЅР° РґРѕСЃРєРё; РёСЃС‚РѕСЂРёСЏ С…РѕРґРѕРІ СЃРєСЂС‹С‚Р°', status: 'active' },
+  'meteor-shower': { name: 'РњРµС‚РµРѕСЂРёС‚РЅС‹Р№ РґРѕР¶РґСЊ', description: 'РљР°Р¶РґС‹Рµ 5 С…РѕРґРѕРІ СЃР»СѓС‡Р°Р№РЅР°СЏ РїСѓСЃС‚Р°СЏ РєР»РµС‚РєР° СЃРіРѕСЂР°РµС‚ Рё СЃС‚Р°РЅРѕРІРёС‚СЃСЏ РЅРµРґРѕСЃС‚СѓРїРЅРѕР№', status: 'active' },
+  'fischer-random': { name: 'РЁР°С…РјР°С‚С‹ Р¤РёС€РµСЂР° (Chess960)', description: 'РЎР»СѓС‡Р°Р№РЅР°СЏ СЂР°СЃСЃС‚Р°РЅРѕРІРєР° РЅР° 1-Р№ Рё 8-Р№ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЏС… (СЂР°Р·РЅРѕС†РІРµС‚РЅС‹Рµ СЃР»РѕРЅС‹, РєРѕСЂРѕР»СЊ РјРµР¶РґСѓ Р»Р°РґСЊСЏРјРё)', status: 'active' },
+  'void': { name: 'Void Mode', description: 'Р”РІРµ РЅРµР·Р°РІРёСЃРёРјС‹Рµ РґРѕСЃРєРё; РѕРґРёРЅ С…РѕРґ = РґРІР° РїРѕРґ-С…РѕРґР° РЅР° СЂР°Р·РЅС‹С… РґРѕСЃРєР°С…; РїРµСЂРµРЅРѕСЃ С„РёРіСѓСЂ РјРµР¶РґСѓ РґРѕСЃРєР°РјРё Р·Р° С‚РѕРєРµРЅС‹ (РєРѕСЂРѕР»СЏ РїРµСЂРµРЅРѕСЃРёС‚СЊ РЅРµР»СЊР·СЏ)', status: 'active' },
 };
 
-export default function GameStatus({ game, elapsedTime, onChangeRules, canChangeRules = true, moves = [] }: GameStatusProps) {
+export default function GameStatus({ game, moves = [] }: GameStatusProps) {
   const activeRules = Array.isArray(game.rules) ? game.rules : [game.rules];
   const isStandardOnly = activeRules.length === 1 && activeRules[0] === 'standard';
   const gameState = game.gameState as any;
@@ -108,10 +104,10 @@ export default function GameStatus({ game, elapsedTime, onChangeRules, canChange
                           <p className="text-sm text-neutral-600">{rule.description}</p>
                           <div className="mt-2 flex space-x-3">
                             <span className={`text-xs px-2 py-1 rounded ${blinkUsed.white ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-700 border border-black/10'}`}>
-                              Белые: {blinkUsed.white ? 'Использован' : 'Доступен'}
+                              Р‘РµР»С‹Рµ: {blinkUsed.white ? 'РСЃРїРѕР»СЊР·РѕРІР°РЅ' : 'Р”РѕСЃС‚СѓРїРµРЅ'}
                             </span>
                             <span className={`text-xs px-2 py-1 rounded ${blinkUsed.black ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-700 border border-black/10'}`}>
-                              Черные: {blinkUsed.black ? 'Использован' : 'Доступен'}
+                              Р§РµСЂРЅС‹Рµ: {blinkUsed.black ? 'РСЃРїРѕР»СЊР·РѕРІР°РЅ' : 'Р”РѕСЃС‚СѓРїРµРЅ'}
                             </span>
                           </div>
                         </div>
@@ -138,10 +134,10 @@ export default function GameStatus({ game, elapsedTime, onChangeRules, canChange
                             <p className="font-medium text-neutral-900">{rule.name}</p>
                             <p className="text-sm text-neutral-600">{rule.description}</p>
                             <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">Сгоревшие клетки A: {burnedA.length}</span>
-                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">Сгоревшие клетки B: {burnedB.length}</span>
-                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">До следующего метеора A (полных ходов): <span className="font-semibold">{remainA}</span></span>
-                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">До следующего метеора B (полных ходов): <span className="font-semibold">{remainB}</span></span>
+                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">РЎРіРѕСЂРµРІС€РёРµ РєР»РµС‚РєРё A: {burnedA.length}</span>
+                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">РЎРіРѕСЂРµРІС€РёРµ РєР»РµС‚РєРё B: {burnedB.length}</span>
+                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">Р”Рѕ СЃР»РµРґСѓСЋС‰РµРіРѕ РјРµС‚РµРѕСЂР° A (РїРѕР»РЅС‹С… С…РѕРґРѕРІ): <span className="font-semibold">{remainA}</span></span>
+                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">Р”Рѕ СЃР»РµРґСѓСЋС‰РµРіРѕ РјРµС‚РµРѕСЂР° B (РїРѕР»РЅС‹С… С…РѕРґРѕРІ): <span className="font-semibold">{remainB}</span></span>
                             </div>
                           </div>
                           <div className="w-3 h-3 bg-black rounded-full" />
@@ -160,8 +156,8 @@ export default function GameStatus({ game, elapsedTime, onChangeRules, canChange
                             <p className="font-medium text-neutral-900">{rule.name}</p>
                             <p className="text-sm text-neutral-600">{rule.description}</p>
                             <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">Сгоревшие клетки: {burned.length}</span>
-                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">До следующего метеора (полных ходов): <span className="font-semibold">{movesUntilNext}</span></span>
+                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">РЎРіРѕСЂРµРІС€РёРµ РєР»РµС‚РєРё: {burned.length}</span>
+                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">Р”Рѕ СЃР»РµРґСѓСЋС‰РµРіРѕ РјРµС‚РµРѕСЂР° (РїРѕР»РЅС‹С… С…РѕРґРѕРІ): <span className="font-semibold">{movesUntilNext}</span></span>
                             </div>
                           </div>
                           <div className="w-3 h-3 bg-black rounded-full" />
@@ -184,7 +180,7 @@ export default function GameStatus({ game, elapsedTime, onChangeRules, canChange
                             <p className="font-medium text-neutral-900">{rule.name}</p>
                             <p className="text-sm text-neutral-600">{rule.description}</p>
                             <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">Прогресс: A: <span className="font-semibold">{Math.min(completedA, 5)}</span>/5, B: <span className="font-semibold">{Math.min(completedB, 5)}</span>/5</span>
+                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">РџСЂРѕРіСЂРµСЃСЃ: A: <span className="font-semibold">{Math.min(completedA, 5)}</span>/5, B: <span className="font-semibold">{Math.min(completedB, 5)}</span>/5</span>
                             </div>
                           </div>
                           <div className="w-3 h-3 bg-black rounded-full" />
@@ -200,7 +196,7 @@ export default function GameStatus({ game, elapsedTime, onChangeRules, canChange
                             <p className="font-medium text-neutral-900">{rule.name}</p>
                             <p className="text-sm text-neutral-600">{rule.description}</p>
                             <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">Прогресс: <span className="font-semibold">{Math.min(completed, 5)}</span>/5</span>
+                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">РџСЂРѕРіСЂРµСЃСЃ: <span className="font-semibold">{Math.min(completed, 5)}</span>/5</span>
                             </div>
                           </div>
                           <div className="w-3 h-3 bg-black rounded-full" />
@@ -225,11 +221,11 @@ export default function GameStatus({ game, elapsedTime, onChangeRules, canChange
                           <p className="font-medium text-neutral-900">{rule.name}</p>
                           <p className="text-sm text-neutral-600">{rule.description}</p>
                           <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                            <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">Токены: белые {tokens.white ?? 0}, черные {tokens.black ?? 0}</span>
+                            <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">РўРѕРєРµРЅС‹: Р±РµР»С‹Рµ {tokens.white ?? 0}, С‡РµСЂРЅС‹Рµ {tokens.black ?? 0}</span>
                             {pending ? (
-                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">Под-ходы выполнены: <span className="font-semibold">{progress}</span>{moved ? ` (доски: ${moved})` : ''}</span>
+                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">РџРѕРґ-С…РѕРґС‹ РІС‹РїРѕР»РЅРµРЅС‹: <span className="font-semibold">{progress}</span>{moved ? ` (РґРѕСЃРєРё: ${moved})` : ''}</span>
                             ) : (
-                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">Под-ходы выполнены: <span className="font-semibold">0/2</span></span>
+                              <span className="px-2 py-1 rounded bg-white text-neutral-700 border border-black/10">РџРѕРґ-С…РѕРґС‹ РІС‹РїРѕР»РЅРµРЅС‹: <span className="font-semibold">0/2</span></span>
                             )}
                           </div>
                         </div>
@@ -269,15 +265,6 @@ export default function GameStatus({ game, elapsedTime, onChangeRules, canChange
               </div>
             );
           })}
-
-          <Button
-            onClick={onChangeRules}
-            disabled={!canChangeRules}
-            className="w-full bg-black text-white hover:bg-neutral-800 disabled:bg-neutral-200 disabled:text-neutral-500"
-          >
-            <Edit className="h-4 w-4 mr-2" />
-            {canChangeRules ? "Change Rules" : "Spectator Mode"}
-          </Button>
         </CardContent>
       </Card>
 
@@ -318,11 +305,6 @@ export default function GameStatus({ game, elapsedTime, onChangeRules, canChange
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-neutral-600">Game Time:</span>
-            <span className="font-medium text-neutral-900">{elapsedTime}</span>
-          </div>
-
-          <div className="flex items-center justify-between">
             <span className="text-neutral-600">Time Control:</span>
             <span className="font-medium text-neutral-900">{formatTimeControl(game.timeControlSeconds)}</span>
           </div>
@@ -357,3 +339,6 @@ export default function GameStatus({ game, elapsedTime, onChangeRules, canChange
     </div>
   );
 }
+
+
+

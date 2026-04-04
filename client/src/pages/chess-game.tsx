@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
@@ -12,6 +12,7 @@ import InviteModal from "@/components/invite-modal";
 import JoinGameModal from "@/components/join-game-modal";
 import GameClock from "@/components/game-clock";
 import GameStatus from "@/components/game-status";
+import GameSettingsPlaceholder from "@/components/game-settings-placeholder";
 import MoveHistory from "@/components/move-history";
 import TransfersPanel, { type TransferEvent } from "@/components/transfers-panel";
 import CapturedPieces from "@/components/captured-pieces";
@@ -44,7 +45,7 @@ type ViewerRole = 'white' | 'black' | 'spectator';
 type GameWithRole = Game & { viewerRole?: ViewerRole };
 
 export default function ChessGame({ onLogout, initialMatchId = null, initialShareId = null }: ChessGameProps) {
-  // Звук хода
+  // Р—РІСѓРє С…РѕРґР°
   const moveAudioRef = useRef<HTMLAudioElement | null>(null);
   const [gameId, setGameId] = useState<number | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
@@ -52,6 +53,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
   const [lastMoveSquares, setLastMoveSquares] = useState<{from: string, to: string} | null>(null);
   const [voidLastMoveSquares, setVoidLastMoveSquares] = useState<{ [key: number]: { from: string; to: string } | null }>({});
   const [showGameTypeModal, setShowGameTypeModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [showTimeControlModal, setShowTimeControlModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -309,14 +311,14 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
         setShowInviteModal(true);
       }
       toast({
-        title: "Игра создана",
-        description: "Вы играете белыми фигурами! Поделитесь ссылкой с другом.",
+        title: "РРіСЂР° СЃРѕР·РґР°РЅР°",
+        description: "Р’С‹ РёРіСЂР°РµС‚Рµ Р±РµР»С‹РјРё С„РёРіСѓСЂР°РјРё! РџРѕРґРµР»РёС‚РµСЃСЊ СЃСЃС‹Р»РєРѕР№ СЃ РґСЂСѓРіРѕРј.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Ошибка",
-        description: error.message || "Не удалось создать игру",
+        title: "РћС€РёР±РєР°",
+        description: error.message || "РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ РёРіСЂСѓ",
         variant: "destructive",
       });
     },
@@ -336,14 +338,14 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
       setShowJoinModal(false);
       queryClient.invalidateQueries({ queryKey: ["/api/games"] });
       toast({
-        title: "Присоединились к игре",
-        description: "Вы играете черными фигурами!",
+        title: "РџСЂРёСЃРѕРµРґРёРЅРёР»РёСЃСЊ Рє РёРіСЂРµ",
+        description: "Р’С‹ РёРіСЂР°РµС‚Рµ С‡РµСЂРЅС‹РјРё С„РёРіСѓСЂР°РјРё!",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Ошибка",
-        description: error.message || "Не удалось присоединиться к игре",
+        title: "РћС€РёР±РєР°",
+        description: error.message || "РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРёСЃРѕРµРґРёРЅРёС‚СЊСЃСЏ Рє РёРіСЂРµ",
         variant: "destructive",
       });
     },
@@ -365,7 +367,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
   useEffect(() => {
     if (moves.length > 0) {
       const fogActiveNow = computeFogActive(game?.rules as any, moves);
-      // Подсветка последнего хода
+      // РџРѕРґСЃРІРµС‚РєР° РїРѕСЃР»РµРґРЅРµРіРѕ С…РѕРґР°
       if (!isVoidMode) {
         const lastMove = moves[moves.length - 1];
         if (lastMove && lastMove.from && lastMove.to) {
@@ -406,12 +408,12 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
         // Only show notification if it's NOT my move and fog is not active
         if (!isMyMove && !fogActiveNow) {
           toast({
-            title: "Ход противника",
-            description: `${newMove.from} → ${newMove.to}`,
+            title: "РҐРѕРґ РїСЂРѕС‚РёРІРЅРёРєР°",
+            description: `${newMove.from} в†’ ${newMove.to}`,
             duration: 3000,
           });
         }
-          // Воспроизвести звук хода при любом новом ходе
+          // Р’РѕСЃРїСЂРѕРёР·РІРµСЃС‚Рё Р·РІСѓРє С…РѕРґР° РїСЂРё Р»СЋР±РѕРј РЅРѕРІРѕРј С…РѕРґРµ
           const audio = moveAudioRef.current;
           if (audio) {
             try { audio.currentTime = 0; audio.play(); } catch (e) {}
@@ -480,8 +482,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
       Object.values(voidLocalBoards).some(board => !!board?.doubleKnightMove);
     if (waitingForDoubleKnightSync) {
       toast({
-        title: 'Синхронизация хода',
-        description: 'Дождитесь подтверждения первого прыжка коня, затем выполните второй',
+        title: 'РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ С…РѕРґР°',
+        description: 'Р”РѕР¶РґРёС‚РµСЃСЊ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РїРµСЂРІРѕРіРѕ РїСЂС‹Р¶РєР° РєРѕРЅСЏ, Р·Р°С‚РµРј РІС‹РїРѕР»РЅРёС‚Рµ РІС‚РѕСЂРѕР№',
         duration: 1500,
       });
       return;
@@ -503,7 +505,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
         const srcPiece = (boards[otherBoardId] as any as ChessGameState).board[otherSel] as ChessPiece | null;
         if (srcPiece && srcPiece.color === playerColor) {
           if (srcPiece.type === 'king') {
-            toast({ title: 'Запрещено', description: 'Короля нельзя переносить между досками', variant: 'destructive', duration: 2000 });
+            toast({ title: 'Р—Р°РїСЂРµС‰РµРЅРѕ', description: 'РљРѕСЂРѕР»СЏ РЅРµР»СЊР·СЏ РїРµСЂРµРЅРѕСЃРёС‚СЊ РјРµР¶РґСѓ РґРѕСЃРєР°РјРё', variant: 'destructive', duration: 2000 });
             return;
           }
           // If transferring pawn to last rank, prompt promotion
@@ -543,7 +545,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
         // Choose source piece
         if (piece && myTurn && piece.color === playerColor) {
           if (piece.type === 'king') {
-            toast({ title: 'Запрещено', description: 'Короля нельзя переносить между досками', variant: 'destructive', duration: 2000 });
+            toast({ title: 'Р—Р°РїСЂРµС‰РµРЅРѕ', description: 'РљРѕСЂРѕР»СЏ РЅРµР»СЊР·СЏ РїРµСЂРµРЅРѕСЃРёС‚СЊ РјРµР¶РґСѓ РґРѕСЃРєР°РјРё', variant: 'destructive', duration: 2000 });
             return;
           }
           setTransferFrom({ boardId, square });
@@ -604,7 +606,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
         }
         if (fromPiece) {
           if (!myTurn || fromPiece.color !== playerColor) {
-            toast({ title: 'Не ваш ход', description: 'Дождитесь своей очереди', variant: 'destructive', duration: 2000 });
+            toast({ title: 'РќРµ РІР°С€ С…РѕРґ', description: 'Р”РѕР¶РґРёС‚РµСЃСЊ СЃРІРѕРµР№ РѕС‡РµСЂРµРґРё', variant: 'destructive', duration: 2000 });
             setVoidSelected({ ...voidSelected, [boardId]: null });
             setVoidValidMoves({ ...voidValidMoves, [boardId]: [] });
             return;
@@ -630,7 +632,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
             const dkKnightSquare = (dkState as any).doubleKnightMove?.knightSquare;
             const isTheDKKnight = fromPiece.type === 'knight' && boardId === dkPendingBoardId && sel === dkKnightSquare;
             if (!isTheDKKnight) {
-              toast({ title: 'Завершите двойной ход', description: 'Допускается только второй ход тем же конём', variant: 'destructive', duration: 2500 });
+              toast({ title: 'Р—Р°РІРµСЂС€РёС‚Рµ РґРІРѕР№РЅРѕР№ С…РѕРґ', description: 'Р”РѕРїСѓСЃРєР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РІС‚РѕСЂРѕР№ С…РѕРґ С‚РµРј Р¶Рµ РєРѕРЅС‘Рј', variant: 'destructive', duration: 2500 });
               setVoidSelected({ ...voidSelected, [boardId]: null });
               setVoidValidMoves({ ...voidValidMoves, [boardId]: [] });
               return;
@@ -746,7 +748,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
           const dkKnightSquare = (dkState as any).doubleKnightMove?.knightSquare;
           const isTheDKKnight = piece.type === 'knight' && boardId === dkPendingBoardId && square === dkKnightSquare;
           if (!isTheDKKnight) {
-            toast({ title: 'Завершите двойной ход', description: 'Допускается только второй ход тем же конём', variant: 'destructive', duration: 2500 });
+            toast({ title: 'Р—Р°РІРµСЂС€РёС‚Рµ РґРІРѕР№РЅРѕР№ С…РѕРґ', description: 'Р”РѕРїСѓСЃРєР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РІС‚РѕСЂРѕР№ С…РѕРґ С‚РµРј Р¶Рµ РєРѕРЅС‘Рј', variant: 'destructive', duration: 2500 });
             return;
           }
         }
@@ -775,7 +777,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
         setVoidSelected({ ...voidSelected, [boardId]: null });
         setVoidValidMoves({ ...voidValidMoves, [boardId]: [] });
         if (piece && piece.color !== playerColor && playerColor) {
-          toast({ title: 'Неверный ход', description: 'Вы можете ходить только своими фигурами', variant: 'destructive', duration: 2000 });
+          toast({ title: 'РќРµРІРµСЂРЅС‹Р№ С…РѕРґ', description: 'Р’С‹ РјРѕР¶РµС‚Рµ С…РѕРґРёС‚СЊ С‚РѕР»СЊРєРѕ СЃРІРѕРёРјРё С„РёРіСѓСЂР°РјРё', variant: 'destructive', duration: 2000 });
         }
       }
     }
@@ -798,8 +800,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     },
     onError: (error: any) => {
       toast({
-        title: "Не удалось выполнить Undo",
-        description: error?.message || "Попробуйте ещё раз",
+        title: "РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ Undo",
+        description: error?.message || "РџРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰С‘ СЂР°Р·",
         variant: "destructive",
       });
     },
@@ -825,8 +827,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
       toast({
-        title: "Предложение ничьей отправлено",
-        description: "Ожидаем ответа противника",
+        title: "РџСЂРµРґР»РѕР¶РµРЅРёРµ РЅРёС‡СЊРµР№ РѕС‚РїСЂР°РІР»РµРЅРѕ",
+        description: "РћР¶РёРґР°РµРј РѕС‚РІРµС‚Р° РїСЂРѕС‚РёРІРЅРёРєР°",
       });
     },
   });
@@ -840,8 +842,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
       queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
       setShowGameOverModal(true);
       toast({
-        title: "Ничья принята",
-        description: "Игра завершена вничью",
+        title: "РќРёС‡СЊСЏ РїСЂРёРЅСЏС‚Р°",
+        description: "РРіСЂР° Р·Р°РІРµСЂС€РµРЅР° РІРЅРёС‡СЊСЋ",
       });
     },
   });
@@ -854,8 +856,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
       toast({
-        title: "Предложение ничьей отклонено",
-        description: "Игра продолжается",
+        title: "РџСЂРµРґР»РѕР¶РµРЅРёРµ РЅРёС‡СЊРµР№ РѕС‚РєР»РѕРЅРµРЅРѕ",
+        description: "РРіСЂР° РїСЂРѕРґРѕР»Р¶Р°РµС‚СЃСЏ",
       });
     },
   });
@@ -984,8 +986,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
           // Check if it's the player's turn
           if (playerColor !== gameState.currentTurn) {
             toast({
-              title: "Не ваш ход",
-              description: "Дождитесь своей очереди",
+              title: "РќРµ РІР°С€ С…РѕРґ",
+              description: "Р”РѕР¶РґРёС‚РµСЃСЊ СЃРІРѕРµР№ РѕС‡РµСЂРµРґРё",
               variant: "destructive",
               duration: 2000,
             });
@@ -1083,7 +1085,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
           });
         }
       } else {
-        // Chess960 UX: king → rook click triggers castling to c/g using helper
+        // Chess960 UX: king в†’ rook click triggers castling to c/g using helper
         const fromPiece = gameState.board[selectedSquare];
         const targetPiece = piece;
         const rulesArray = (game?.rules as any) || [];
@@ -1109,7 +1111,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
               return;
             }
           } else {
-            toast({ title: "Не ваш ход", description: "Дождитесь своей очереди", variant: "destructive", duration: 2000 });
+            toast({ title: "РќРµ РІР°С€ С…РѕРґ", description: "Р”РѕР¶РґРёС‚РµСЃСЊ СЃРІРѕРµР№ РѕС‡РµСЂРµРґРё", variant: "destructive", duration: 2000 });
           }
         }
 
@@ -1134,8 +1136,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
         // Show message if trying to move opponent's piece
         if (piece && piece.color !== playerColor && playerColor) {
           toast({
-            title: "Неверный ход",
-            description: "Вы можете ходить только своими фигурами",
+            title: "РќРµРІРµСЂРЅС‹Р№ С…РѕРґ",
+            description: "Р’С‹ РјРѕР¶РµС‚Рµ С…РѕРґРёС‚СЊ С‚РѕР»СЊРєРѕ СЃРІРѕРёРјРё С„РёРіСѓСЂР°РјРё",
             variant: "destructive",
             duration: 2000,
           });
@@ -1207,8 +1209,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     }
 
     toast({
-      title: "Ошибка",
-      description: "Введите ссылку матча ChessMaster или 6-значный код игры",
+      title: "РћС€РёР±РєР°",
+      description: "Р’РІРµРґРёС‚Рµ СЃСЃС‹Р»РєСѓ РјР°С‚С‡Р° ChessMaster РёР»Рё 6-Р·РЅР°С‡РЅС‹Р№ РєРѕРґ РёРіСЂС‹",
       variant: "destructive",
     });
   };
@@ -1232,12 +1234,12 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     });
 
     if (!guestResponse.ok) {
-      throw new Error("Не удалось создать гостевую сессию");
+      throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ РіРѕСЃС‚РµРІСѓСЋ СЃРµСЃСЃРёСЋ");
     }
 
     const guestData = await guestResponse.json();
     if (!guestData?.user) {
-      throw new Error("Не удалось получить гостевую сессию");
+      throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РіРѕСЃС‚РµРІСѓСЋ СЃРµСЃСЃРёСЋ");
     }
   };
 
@@ -1249,8 +1251,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
       joinGameMutation.mutate(game.shareId);
     } catch (error: any) {
       toast({
-        title: "Ошибка",
-        description: error.message || "Не удалось присоединиться к матчу",
+        title: "РћС€РёР±РєР°",
+        description: error.message || "РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРёСЃРѕРµРґРёРЅРёС‚СЊСЃСЏ Рє РјР°С‚С‡Сѓ",
         variant: "destructive",
       });
     }
@@ -1313,8 +1315,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
       onLogout?.();
 
       toast({
-        title: "Выход выполнен",
-        description: "Вы вышли из аккаунта",
+        title: "Р’С‹С…РѕРґ РІС‹РїРѕР»РЅРµРЅ",
+        description: "Р’С‹ РІС‹С€Р»Рё РёР· Р°РєРєР°СѓРЅС‚Р°",
       });
     }
   };
@@ -1334,8 +1336,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     setShowGameOverModal(true);
     setShowResignConfirm(false);
     toast({
-      title: "Партия завершена",
-      description: `${resigningColor === 'white' ? 'Белые' : 'Черные'} сдались. ${winner === 'white' ? 'Белые' : 'Черные'} победили!`,
+      title: "РџР°СЂС‚РёСЏ Р·Р°РІРµСЂС€РµРЅР°",
+      description: `${resigningColor === 'white' ? 'Р‘РµР»С‹Рµ' : 'Р§РµСЂРЅС‹Рµ'} СЃРґР°Р»РёСЃСЊ. ${winner === 'white' ? 'Р‘РµР»С‹Рµ' : 'Р§РµСЂРЅС‹Рµ'} РїРѕР±РµРґРёР»Рё!`,
     });
   };
 
@@ -1598,7 +1600,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
                 type="button"
                 onClick={handleBrandClick}
                 className="flex items-center space-x-3 rounded-full px-1 py-1 text-left transition-opacity hover:opacity-80"
-                title="Перейти на главную"
+                title="РџРµСЂРµР№С‚Рё РЅР° РіР»Р°РІРЅСѓСЋ"
               >
                 <Crown className="h-8 w-8 text-white" />
                 <h1 className="text-2xl font-bold text-white">ChessMaster</h1>
@@ -1609,10 +1611,10 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
                   onClick={handleLogout} 
                   variant="outline"
                   className="border-white/15 bg-transparent text-white hover:bg-white/10"
-                  title="Выйти из аккаунта"
+                  title="Р’С‹Р№С‚Рё РёР· Р°РєРєР°СѓРЅС‚Р°"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
-                  Выйти
+                  Р’С‹Р№С‚Рё
                 </Button>
               </div>
             </div>
@@ -1623,16 +1625,16 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
           <div className="text-center">
             <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-12 shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
               <Sword className="h-24 w-24 text-white/35 mx-auto mb-6" />
-              <h2 className="text-4xl font-bold text-white mb-4">Добро пожаловать в ChessMaster</h2>
-              <p className="text-lg text-white/65 mb-8">Начните новую игру или присоединитесь к игре друга</p>
+              <h2 className="text-4xl font-bold text-white mb-4">Р”РѕР±СЂРѕ РїРѕР¶Р°Р»РѕРІР°С‚СЊ РІ ChessMaster</h2>
+              <p className="text-lg text-white/65 mb-8">РќР°С‡РЅРёС‚Рµ РЅРѕРІСѓСЋ РёРіСЂСѓ РёР»Рё РїСЂРёСЃРѕРµРґРёРЅРёС‚РµСЃСЊ Рє РёРіСЂРµ РґСЂСѓРіР°</p>
               <div className="flex gap-4 justify-center">
                 <Button onClick={handleNewGame} size="lg" className="bg-white text-black hover:bg-neutral-200">
                   <Plus className="h-5 w-5 mr-2" />
-                  Начать игру
+                  РќР°С‡Р°С‚СЊ РёРіСЂСѓ
                 </Button>
                 <Button onClick={handleJoinGameClick} size="lg" variant="outline" className="border-white/15 bg-transparent text-white hover:bg-white/10 hover:text-white">
                   <Users className="h-5 w-5 mr-2" />
-                  Присоединиться
+                  РџСЂРёСЃРѕРµРґРёРЅРёС‚СЊСЃСЏ
                 </Button>
               </div>
             </div>
@@ -1701,7 +1703,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
               type="button"
               onClick={handleBrandClick}
               className="flex items-center space-x-3 rounded-full px-1 py-1 text-left transition-opacity hover:opacity-80"
-              title="Перейти на главную"
+              title="РџРµСЂРµР№С‚Рё РЅР° РіР»Р°РІРЅСѓСЋ"
             >
               <Crown className="h-8 w-8 text-white" />
               <h1 className="text-2xl font-bold text-white">ChessMaster</h1>
@@ -1715,7 +1717,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
                   className="bg-white text-black hover:bg-neutral-200"
                 >
                   <Users className="h-4 w-4 mr-2" />
-                  {joinGameMutation.isPending ? "Подключение..." : `Играть за ${openSeatColor === "white" ? "белых" : "черных"}`}
+                  {joinGameMutation.isPending ? "РџРѕРґРєР»СЋС‡РµРЅРёРµ..." : `РРіСЂР°С‚СЊ Р·Р° ${openSeatColor === "white" ? "Р±РµР»С‹С…" : "С‡РµСЂРЅС‹С…"}`}
                 </Button>
               )}
               {game?.shareId && (
@@ -1725,24 +1727,30 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
                   className="border-white/15 bg-transparent text-white hover:bg-white/10 hover:text-white"
                 >
                   <Share2 className="h-4 w-4 mr-2" />
-                  Поделиться
+                  РџРѕРґРµР»РёС‚СЊСЃСЏ
                 </Button>
               )}
               <Button onClick={handleNewGame} className="bg-white text-black hover:bg-neutral-200">
                 <Plus className="h-4 w-4 mr-2" />
-                Новая игра
+                РќРѕРІР°СЏ РёРіСЂР°
               </Button>
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/10 hover:text-white"
+                onClick={() => setShowSettingsModal(true)}
+                aria-label="Открыть настройки"
+              >
                 <Settings className="h-5 w-5" />
               </Button>
               <Button 
                 onClick={handleLogout} 
                 variant="outline"
                 className="border-white/15 bg-transparent text-white hover:bg-white/10 hover:text-white"
-                title="Выйти из аккаунта"
+                title="Р’С‹Р№С‚Рё РёР· Р°РєРєР°СѓРЅС‚Р°"
               >
                 <LogOut className="h-4 w-4 mr-2" />
-                Выйти
+                Р’С‹Р№С‚Рё
               </Button>
             </div>
           </div>
@@ -1755,9 +1763,6 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
           <div className="lg:col-span-3 space-y-6">
             <GameStatus
               game={game!}
-              elapsedTime={elapsedTime}
-              onChangeRules={() => setShowRuleModal(true)}
-              canChangeRules={!isSpectator}
               moves={moves}
             />
           </div>
@@ -1810,9 +1815,9 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
                       }
                       return (
                         <div className="flex items-center gap-3">
-                          <span>Токены переноса: <b>{myTokens}</b></span>
+                          <span>РўРѕРєРµРЅС‹ РїРµСЂРµРЅРѕСЃР°: <b>{myTokens}</b></span>
                           <Button size="sm" variant={canTransfer ? "default" : "outline"} disabled={!canTransfer} onClick={() => setTransferMode(v => !v)}>
-                            Перенос {transferMode ? 'ON' : 'OFF'}
+                            РџРµСЂРµРЅРѕСЃ {transferMode ? 'ON' : 'OFF'}
                           </Button>
                         </div>
                       );
@@ -1848,7 +1853,7 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
                   lastMoveSquares={(voidLastMoveSquares as any)[1] || null}
                 />
                 {transferMode && !isSpectator && (
-                  <div className="mt-2 text-center text-sm text-white/70">Выберите фигуру для переноса, затем пустую клетку на другой доске</div>
+                  <div className="mt-2 text-center text-sm text-white/70">Р’С‹Р±РµСЂРёС‚Рµ С„РёРіСѓСЂСѓ РґР»СЏ РїРµСЂРµРЅРѕСЃР°, Р·Р°С‚РµРј РїСѓСЃС‚СѓСЋ РєР»РµС‚РєСѓ РЅР° РґСЂСѓРіРѕР№ РґРѕСЃРєРµ</div>
                 )}
               </div>
             )}
@@ -1863,17 +1868,19 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
 
             {/* Game Controls */}
             <div className={`flex items-center space-x-4 mt-6 ${controlsDisabled ? "pointer-events-none opacity-45" : ""}`}>
-              <Button variant="outline" onClick={() => undoMoveMutation.mutate()} disabled={undoMoveMutation.isPending || controlsDisabled}>
+              <Button
+                variant="outline"
+                className="border-white/15 bg-white text-black hover:bg-neutral-200"
+                onClick={() => undoMoveMutation.mutate()}
+                disabled={undoMoveMutation.isPending || controlsDisabled}
+              >
                 Undo
               </Button>
-              <Button variant="outline" disabled>
-                Redo
-              </Button>
               <Button variant="destructive" onClick={handleResign} disabled={controlsDisabled}>
-                Сдаться
+                РЎРґР°С‚СЊСЃСЏ
               </Button>
               <Button variant="outline" className="border-white/15 bg-white text-black hover:bg-neutral-200" onClick={handleOfferDraw} disabled={controlsDisabled}>
-                Ничья
+                РќРёС‡СЊСЏ
               </Button>
             </div>
             {isSpectator && (
@@ -1892,8 +1899,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
                 const mh = formatMoveHistory() as any;
                 return (
                   <div className="grid grid-cols-1 gap-4">
-                    <MoveHistory title="Board A — History" moves={mh.board0 || []} />
-                    <MoveHistory title="Board B — History" moves={mh.board1 || []} />
+                    <MoveHistory title="Board A вЂ” History" moves={mh.board0 || []} />
+                    <MoveHistory title="Board B вЂ” History" moves={mh.board1 || []} />
                     <TransfersPanel events={transfers} />
                   </div>
                 );
@@ -1905,8 +1912,8 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
                 <CapturedPieces capturedPieces={caps} />
               ) : (
                 <div className="grid grid-cols-1 gap-4">
-                  <CapturedPieces title="Board A — Captured" capturedPieces={caps.board0 || { white: [], black: [] }} />
-                  <CapturedPieces title="Board B — Captured" capturedPieces={caps.board1 || { white: [], black: [] }} />
+                  <CapturedPieces title="Board A вЂ” Captured" capturedPieces={caps.board0 || { white: [], black: [] }} />
+                  <CapturedPieces title="Board B вЂ” Captured" capturedPieces={caps.board1 || { white: [], black: [] }} />
                 </div>
               );
             })()}
@@ -1925,6 +1932,11 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
         onOpenChange={setShowTimeControlModal}
         onBack={handleTimeControlBack}
         onConfirm={handleTimeControlSelection}
+      />
+
+      <GameSettingsPlaceholder
+        open={showSettingsModal}
+        onOpenChange={setShowSettingsModal}
       />
       
       {promotionMove && (
@@ -1974,15 +1986,15 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
       <AlertDialog open={showResignConfirm} onOpenChange={setShowResignConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Подтвердить сдачу</AlertDialogTitle>
+            <AlertDialogTitle>РџРѕРґС‚РІРµСЂРґРёС‚СЊ СЃРґР°С‡Сѓ</AlertDialogTitle>
             <AlertDialogDescription>
-              Вы уверены, что хотите сдаться? Эта игра будет завершена, и ваш противник победит.
+              Р’С‹ СѓРІРµСЂРµРЅС‹, С‡С‚Рѕ С…РѕС‚РёС‚Рµ СЃРґР°С‚СЊСЃСЏ? Р­С‚Р° РёРіСЂР° Р±СѓРґРµС‚ Р·Р°РІРµСЂС€РµРЅР°, Рё РІР°С€ РїСЂРѕС‚РёРІРЅРёРє РїРѕР±РµРґРёС‚.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Отменить</AlertDialogCancel>
+            <AlertDialogCancel>РћС‚РјРµРЅРёС‚СЊ</AlertDialogCancel>
             <AlertDialogAction onClick={confirmResign} className="bg-red-600 hover:bg-red-700">
-              Да, сдаться
+              Р”Р°, СЃРґР°С‚СЊСЃСЏ
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1991,15 +2003,15 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
       <AlertDialog open={showDrawConfirm} onOpenChange={setShowDrawConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Предложить ничью</AlertDialogTitle>
+            <AlertDialogTitle>РџСЂРµРґР»РѕР¶РёС‚СЊ РЅРёС‡СЊСЋ</AlertDialogTitle>
             <AlertDialogDescription>
-              Вы хотите предложить ничью вашему противнику? Он сможет принять или отклонить предложение.
+              Р’С‹ С…РѕС‚РёС‚Рµ РїСЂРµРґР»РѕР¶РёС‚СЊ РЅРёС‡СЊСЋ РІР°С€РµРјСѓ РїСЂРѕС‚РёРІРЅРёРєСѓ? РћРЅ СЃРјРѕР¶РµС‚ РїСЂРёРЅСЏС‚СЊ РёР»Рё РѕС‚РєР»РѕРЅРёС‚СЊ РїСЂРµРґР»РѕР¶РµРЅРёРµ.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Отменить</AlertDialogCancel>
+            <AlertDialogCancel>РћС‚РјРµРЅРёС‚СЊ</AlertDialogCancel>
             <AlertDialogAction onClick={confirmOfferDraw} className="bg-black text-white hover:bg-neutral-800">
-              Да, предложить ничью
+              Р”Р°, РїСЂРµРґР»РѕР¶РёС‚СЊ РЅРёС‡СЊСЋ
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -2008,15 +2020,15 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
       <AlertDialog open={showDrawOffer} onOpenChange={setShowDrawOffer}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Предложение ничьей</AlertDialogTitle>
+            <AlertDialogTitle>РџСЂРµРґР»РѕР¶РµРЅРёРµ РЅРёС‡СЊРµР№</AlertDialogTitle>
             <AlertDialogDescription>
-              Ваш противник предлагает ничью. Хотите ли вы принять это предложение и завершить игру вничью?
+              Р’Р°С€ РїСЂРѕС‚РёРІРЅРёРє РїСЂРµРґР»Р°РіР°РµС‚ РЅРёС‡СЊСЋ. РҐРѕС‚РёС‚Рµ Р»Рё РІС‹ РїСЂРёРЅСЏС‚СЊ СЌС‚Рѕ РїСЂРµРґР»РѕР¶РµРЅРёРµ Рё Р·Р°РІРµСЂС€РёС‚СЊ РёРіСЂСѓ РІРЅРёС‡СЊСЋ?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleDeclineDraw}>Отклонить</AlertDialogCancel>
+            <AlertDialogCancel onClick={handleDeclineDraw}>РћС‚РєР»РѕРЅРёС‚СЊ</AlertDialogCancel>
             <AlertDialogAction onClick={handleAcceptDraw} className="bg-black text-white hover:bg-neutral-800">
-              Принять ничью
+              РџСЂРёРЅСЏС‚СЊ РЅРёС‡СЊСЋ
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -2024,3 +2036,6 @@ export default function ChessGame({ onLogout, initialMatchId = null, initialShar
     </div>
   );
 }
+
+
+
