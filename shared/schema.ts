@@ -52,13 +52,13 @@ export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   phone: true,
 }).extend({
-  password: z.string().min(6, "РџР°СЂРѕР»СЊ РґРѕР»Р¶РµРЅ СЃРѕРґРµСЂР¶Р°С‚СЊ РјРёРЅРёРјСѓРј 6 СЃРёРјРІРѕР»РѕРІ")
-    .regex(/^[a-zA-Z0-9]+$/, "РџР°СЂРѕР»СЊ РґРѕР»Р¶РµРЅ СЃРѕРґРµСЂР¶Р°С‚СЊ С‚РѕР»СЊРєРѕ Р°РЅРіР»РёР№СЃРєРёРµ Р±СѓРєРІС‹ Рё С†РёС„СЂС‹"),
-  username: z.string().min(2, "РќРёРєРЅРµР№Рј РґРѕР»Р¶РµРЅ СЃРѕРґРµСЂР¶Р°С‚СЊ РјРёРЅРёРјСѓРј 2 СЃРёРјРІРѕР»Р°")
-    .max(50, "РќРёРєРЅРµР№Рј РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РґР»РёРЅРЅРµРµ 50 СЃРёРјРІРѕР»РѕРІ"),
-  email: z.string().email("РќРµРїСЂР°РІРёР»СЊРЅС‹Р№ С„РѕСЂРјР°С‚ email"),
-  phone: z.string().min(10, "РќРѕРјРµСЂ С‚РµР»РµС„РѕРЅР° РґРѕР»Р¶РµРЅ СЃРѕРґРµСЂР¶Р°С‚СЊ РјРёРЅРёРјСѓРј 10 С†РёС„СЂ")
-    .max(20, "РќРѕРјРµСЂ С‚РµР»РµС„РѕРЅР° РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РґР»РёРЅРЅРµРµ 20 СЃРёРјРІРѕР»РѕРІ"),
+  password: z.string().min(6, "Пароль должен содержать минимум 6 символов")
+    .regex(/^[a-zA-Z0-9]+$/, "Пароль должен содержать только английские буквы и цифры"),
+  username: z.string().min(2, "Никнейм должен содержать минимум 2 символа")
+    .max(50, "Никнейм не может быть длиннее 50 символов"),
+  email: z.string().email("Неправильный формат email"),
+  phone: z.string().min(10, "Номер телефона должен содержать минимум 10 цифр")
+    .max(20, "Номер телефона не может быть длиннее 20 символов"),
 });
 
 export const insertGameSchema = createInsertSchema(games).pick({
@@ -204,7 +204,7 @@ export type BaseBoardState = {
   isCheck: boolean;
   isCheckmate: boolean;
   isStalemate: boolean;
-  // Meteor shower rule вЂ” list of permanently burned squares (cannot be occupied or crossed)
+  // Meteor shower rule — list of permanently burned squares (cannot be occupied or crossed)
   burnedSquares?: string[];
   // Counter of half-moves since last meteor strike (increments each move when rule is active)
   meteorCounter?: number;
