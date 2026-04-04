@@ -29,3 +29,19 @@
 ### Added - Test Coverage
 - [tests/test_chess_timer.py](../tests/test_chess_timer.py): Added timer-focused regression coverage
   - Verifies live countdown helpers, timeout wiring, and `Void`/undo clock snapshot behavior
+
+### Fixed - Security & Session Hardening
+- [shared/schema.ts](../shared/schema.ts): Split public API request schemas from DB insert schemas
+  - Keeps auth, create game, join, draw, resign, and move payloads server-facing without trusting DB models as public contracts
+- [server/routes.ts](../server/routes.ts): Hardened session ownership, move normalization, explicit terminal flows, and host clock sync on join
+  - Restricts mutating actions to game participants resolved from `session.userId`
+  - Normalizes server-owned move fields and removes dangerous direct state mutations
+  - Broadcasts `status` when the second player joins so the host clock starts without a manual refresh
+- [server/storage.ts](../server/storage.ts): Starts persisted clock state deterministically when the second seat is filled
+- [client/src/App.tsx](../client/src/App.tsx): Clears client auth state from React Query and local storage only after server logout
+- [client/src/pages/auth.tsx](../client/src/pages/auth.tsx): Uses hardened auth contracts and clearer duplicate-field handling
+- [client/src/pages/chess-game.tsx](../client/src/pages/chess-game.tsx): Stops client-owned terminal transitions and relies on server-authoritative logout flow
+- [server/index.ts](../server/index.ts): Final route error handler now logs and returns safely without rethrowing into the Node process
+- [tests/test_match_links_and_spectators.py](../tests/test_match_links_and_spectators.py): Covers route guards and participant-only mutating access
+- [tests/test_chess_timer.py](../tests/test_chess_timer.py): Adds host-clock join regression coverage
+  - Verifies the host receives a status refresh when the opponent connects and clocks start live

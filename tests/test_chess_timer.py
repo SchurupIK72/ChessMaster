@@ -110,3 +110,13 @@ def test_server_clock_flow_persists_void_snapshots_and_restores_undo_state():
     assert "const restoredClockState =" in routes_text
     assert "await storage.updateGameClockState(gameId, restoredClockState);" in routes_text
     assert "updateData.clockState = createStartedClockState(game.clockState, 'white');" in storage_text
+
+def test_joining_match_broadcasts_status_to_refresh_host_clock_state():
+    routes_text = (ROOT / "server" / "routes.ts").read_text(encoding="utf-8")
+
+    assert (
+        routes_text.count(
+            'broadcast(game.id, "status", { type: "status", gameId: game.id, status: game.status, winner: game.winner });'
+        )
+        >= 2
+    )

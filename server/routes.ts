@@ -1901,6 +1901,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const game = await storage.joinGame(normalizedShareId, user.id);
+      broadcast(game.id, "status", { type: "status", gameId: game.id, status: game.status, winner: game.winner });
       res.json(await serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1924,6 +1925,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const game = await storage.joinGame(shareId, user.id);
+      broadcast(game.id, "status", { type: "status", gameId: game.id, status: game.status, winner: game.winner });
       res.json(await serializeGameForViewer(req, game));
     } catch (error: any) {
       res.status(400).json({ message: error.message });
